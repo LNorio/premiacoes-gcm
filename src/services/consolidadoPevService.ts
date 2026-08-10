@@ -4,6 +4,7 @@ export interface LinhaConsolidadoPev {
   vendedorId: string;
   vendedorNome: string;
   cpf: string;
+  filial: string;
   /** valor de PEV por mês do intervalo filtrado, chaveado por "YYYY-MM" */
   porMes: Record<string, number>;
   totalAcumulado: number;

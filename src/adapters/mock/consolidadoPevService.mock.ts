@@ -33,6 +33,7 @@ export const consolidadoPevServiceMock: ConsolidadoPevService = {
         vendedorId: colaborador.id,
         vendedorNome: colaborador.nome,
         cpf: colaborador.cpf,
+        filial: colaborador.filial,
         porMes,
         totalAcumulado,
         baseCalculo,

@@ -55,6 +55,12 @@
 - **Motivo:** pedido do usuário — o formulário inline ocupava espaço permanente no topo da tela mesmo quando ninguém estava cadastrando; a modal deixa a tabela como foco principal da tela.
 - **Impacto:** `CadastroColaboradores.tsx` ganhou `abrirParaAdicionar`/`abrirParaEditar`/`fecharModal` e estado `modalAberto`; os campos do formulário passaram de células de tabela para divs `.grade-formulario`/`.campo` dentro da modal; `src/components/ui/index.ts` passou a exportar `Modal`.
 
+### 2026-08-10 — Coluna Filial na Planilha de Premiação e no Consolidado PEV
+
+- **O que foi modificado:** a Planilha de Premiação (`src/views/premiacao/Premiacao.tsx`, F3.PREM-03) e o Consolidado PEV (`src/views/consolidadoPev/ConsolidadoPev.tsx`, F3.PEV-03) ganharam uma coluna Filial, visível apenas quando o Admin está em "Todas as filiais" (mesmo padrão já usado no Cadastro de Colaboradores). `LinhaConsolidadoPev` (`src/services/consolidadoPevService.ts`) ganhou o campo `filial`, populado em `src/adapters/mock/consolidadoPevService.mock.ts` a partir do colaborador de cada linha.
+- **Motivo:** pedido do usuário — com o Admin vendo todas as filiais ao mesmo tempo nessas duas telas, era preciso identificar visualmente a qual filial cada linha pertence (a Planilha de Premiação já resolvia isso agrupando por `vendedor.filial` internamente, mas não expunha a coluna).
+- **Impacto:** nenhuma mudança de contrato para os demais perfis (a coluna só aparece para o Admin em "Todas as filiais"); testes de `Premiacao.test.tsx` e `ConsolidadoPev.test.tsx` atualizados para cobrir a nova coluna.
+
 ## Correções em funcionalidades prontas
 
 ### 2026-08-10 — `consolidadoPevServiceMock` (adapter mock, F1)

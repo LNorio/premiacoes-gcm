@@ -192,6 +192,7 @@ export function Premiacao() {
                 <th>Código</th>
                 <th>Colaborador</th>
                 <th>CPF</th>
+                {mostrarFilial ? <th>Filial</th> : null}
                 {CATEGORIAS_PREMIACAO.map((categoria) => (
                   <th key={categoria}>{ROTULOS_CATEGORIA[categoria]}</th>
                 ))}
@@ -202,7 +203,7 @@ export function Premiacao() {
             <tbody>
               {colaboradores.length === 0 ? (
                 <tr className="linha-vazia">
-                  <td colSpan={10}>
+                  <td colSpan={10 + (mostrarFilial ? 1 : 0)}>
                     <MensagemVazia mensagem="Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)." />
                   </td>
                 </tr>
@@ -216,6 +217,7 @@ export function Premiacao() {
                       <td>{colaborador.codigo || "—"}</td>
                       <td>{colaborador.nome}</td>
                       <td>{colaborador.cpf}</td>
+                      {mostrarFilial ? <td>Filial {colaborador.filial}</td> : null}
                       {CATEGORIAS_PREMIACAO.map((categoria) => (
                         <td key={categoria} className="celula-input">
                           <input
@@ -238,7 +240,7 @@ export function Premiacao() {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3}>Total geral da planilha</td>
+                <td colSpan={3 + (mostrarFilial ? 1 : 0)}>Total geral da planilha</td>
                 {CATEGORIAS_PREMIACAO.map((categoria) => (
                   <td key={categoria} className="celula-numerica celula-total">
                     {formatarMoeda(totaisPorCategoria[categoria])}

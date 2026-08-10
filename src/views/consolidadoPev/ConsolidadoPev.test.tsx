@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { premiacaoServiceMock } from "../../adapters/mock/premiacaoService.mock";
@@ -46,6 +46,28 @@ describe("ConsolidadoPev — estrutura e colunas dinâmicas (F3.PEV-01/02/03)", 
     const linha = screen.getByText("Carlos Silva").closest("tr")!;
     expect(linha.textContent).toContain(formatarMoeda(1000)); // Total Acumulado
     expect(linha.textContent).toContain(formatarMoeda(280)); // Base de Cálculo = 28%
+  });
+
+  it("Admin numa filial específica não vê a coluna Filial", async () => {
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.queryByRole("columnheader", { name: "Filial" })).not.toBeInTheDocument();
+  });
+
+  it("Admin em 'Todas as filiais' vê a coluna Filial com a filial de cada colaborador", async () => {
+    render(
+      <SessaoProvider>
+        <ComSessao usuario="admin" senha="admin123">
+          <ConsolidadoPev />
+        </ComSessao>
+      </SessaoProvider>,
+    );
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.getByRole("columnheader", { name: "Filial" })).toBeInTheDocument();
+    const linhaCarlos = screen.getByText("Carlos Silva").closest("tr")!;
+    expect(within(linhaCarlos).getByText("Filial 100")).toBeInTheDocument();
+    const linhaRoberto = screen.getByText("Roberto Santos").closest("tr")!;
+    expect(within(linhaRoberto).getByText("Filial 401")).toBeInTheDocument();
   });
 });
 

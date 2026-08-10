@@ -3,6 +3,7 @@ import { consolidadoPevService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
 import { calcularPremiacaoAdicionalReceber, type LinhaConsolidadoPev } from "../../services/consolidadoPevService";
 import { useSessao } from "../../state/SessaoContext";
+import { FILIAL_TODAS } from "../../types";
 import { baixarCSV } from "../../utils/exportar";
 import { formatarMoeda } from "../../utils/formatadores";
 import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesesCicloPEV } from "../../utils/periodo";
@@ -21,6 +22,7 @@ export function ConsolidadoPev() {
 
   const filialAtiva = sessao?.filialAtiva ?? "";
   const podeEditarAdiantamento = sessao?.role === "admin";
+  const mostrarFilial = filialAtiva === FILIAL_TODAS;
   const mesesExibidos = de > ate ? [] : gerarIntervaloMeses(de, ate);
 
   useEffect(() => {
@@ -123,6 +125,7 @@ export function ConsolidadoPev() {
               <tr>
                 <th>CPF</th>
                 <th>Nome</th>
+                {mostrarFilial ? <th>Filial</th> : null}
                 {mesesExibidos.map((mes) => (
                   <th key={mes}>{nomeCurtoMes(mes)}</th>
                 ))}
@@ -135,7 +138,7 @@ export function ConsolidadoPev() {
             <tbody>
               {linhas.length === 0 ? (
                 <tr className="linha-vazia">
-                  <td colSpan={6 + mesesExibidos.length}>
+                  <td colSpan={6 + (mostrarFilial ? 1 : 0) + mesesExibidos.length}>
                     <MensagemVazia mensagem="Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)." />
                   </td>
                 </tr>
@@ -147,6 +150,7 @@ export function ConsolidadoPev() {
                     <tr key={linha.vendedorId}>
                       <td>{linha.cpf}</td>
                       <td>{linha.vendedorNome}</td>
+                      {mostrarFilial ? <td>Filial {linha.filial}</td> : null}
                       {mesesExibidos.map((mes) => (
                         <td key={mes} className="celula-numerica">
                           {formatarMoeda(linha.porMes[mes] ?? 0)}
@@ -182,7 +186,7 @@ export function ConsolidadoPev() {
             {linhas.length > 0 ? (
               <tfoot>
                 <tr>
-                  <td colSpan={2}>Total geral</td>
+                  <td colSpan={2 + (mostrarFilial ? 1 : 0)}>Total geral</td>
                   {totaisPorMes.map((total, i) => (
                     <td key={mesesExibidos[i]} className="celula-numerica celula-total">
                       {formatarMoeda(total)}

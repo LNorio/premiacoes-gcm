@@ -68,7 +68,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 **Tela: Planilha de Premiação** — código `F3.PREM`
 - [x] **F3.PREM-01** Estrutura: filtros (mês) + grade.
 - [x] **F3.PREM-02** Serviço + mock: `listarPremiacoes(filial, mes)`, `salvarPremiacoes(...)`. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap).
-- [x] **F3.PREM-03** Render das linhas (Código, Colaborador, CPF + 5 categorias) + estados.
+- [x] **F3.PREM-03** Render das linhas (Código, Colaborador, CPF + 5 categorias) + estados. **Alterado em 2026-08-10:** coluna Filial adicionada quando o Admin está em "Todas as filiais"; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PREM-04** Edição das **5 categorias** (pev, iconic, filtros, campanhasFornecedores, inadimplencia) + salvar.
 - [x] **F3.PREM-05** Totais: **Total** = soma das 5; **Planilha Deivson** = Total − PEV (preview); rodapé por categoria + Total + Deivson, sem perder foco.
 - [x] **F3.PREM-07** Bloqueio `premiacao` (editor Gerente; Admin nunca bloqueado).
@@ -79,7 +79,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 **Tela: Consolidado PEV** — código `F3.PEV`
 - [x] **F3.PEV-01** Estrutura: filtros (ano-ciclo, de/até) + grade dinâmica.
 - [x] **F3.PEV-02** Serviço + mock: `listarConsolidadoPev(filial, ciclo, intervalo)`, `salvarAdiantamento(...)`. → já existia de F1; ganhou filtro por `telas.premiacoes` (ver eventos-roadmap).
-- [x] **F3.PEV-03** Render com **colunas dinâmicas por mês** do intervalo + colunas finais (Total Acumulado, Base 28%, Adiantamento, Premiação Adicional a Receber) + estados.
+- [x] **F3.PEV-03** Render com **colunas dinâmicas por mês** do intervalo + colunas finais (Total Acumulado, Base 28%, Adiantamento, Premiação Adicional a Receber) + estados. **Alterado em 2026-08-10:** coluna Filial adicionada quando o Admin está em "Todas as filiais"; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PEV-04** Lançamento do **Adiantamento de Férias** (somente Admin) + salvar.
 - [x] **F3.PEV-05** Derivados: Base = Total × 0,28; A Receber = Base − Adiantamento; rodapé soma meses + 4 colunas.
 - [x] **F3.PEV-06** Visibilidade da coluna Adiantamento conforme perfil.
