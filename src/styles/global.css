@@ -1,0 +1,151 @@
+@import "./tokens.css";
+
+/* Reset — porta do protótipo (ver documento técnico) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body,
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+li,
+form,
+fieldset,
+table,
+th,
+td {
+  margin: 0;
+  padding: 0;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
+ul {
+  list-style: none;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+a {
+  color: inherit;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: var(--fonte-base);
+  background: var(--cor-background);
+  color: var(--cor-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cor-text-primary);
+}
+:focus-visible {
+  outline: 3px solid var(--cor-accent);
+  outline-offset: 2px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/*
+  Primitivas de layout de view, usadas por toda tela (ver "Template de
+  decomposição de TELA" no ROADMAP.md): cabeçalho da view, conteúdo com
+  largura máxima, e a fileira de ações rápidas do painel inicial.
+*/
+.conteudo {
+  flex: 1;
+  padding: var(--esp-6) var(--esp-5);
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+}
+.view {
+  animation: surgir 320ms ease both;
+}
+.view > h2 {
+  font-size: 1.4rem;
+  margin-bottom: var(--esp-5);
+}
+.view-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-5);
+}
+.view-cabecalho h2 {
+  margin-bottom: 0;
+}
+.view-subtitulo {
+  color: var(--cor-text-muted);
+  font-size: 0.9rem;
+}
+.acoes-rapidas {
+  display: flex;
+  gap: var(--esp-3);
+  flex-wrap: wrap;
+}
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .conteudo {
+    padding: var(--esp-5) var(--esp-4);
+  }
+}

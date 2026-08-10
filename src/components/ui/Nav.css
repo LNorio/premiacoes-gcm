@@ -1,0 +1,41 @@
+.navegacao {
+  display: flex;
+  gap: 2px;
+  background: var(--cor-primary-hover);
+  padding: 0 var(--esp-3);
+  overflow-x: auto;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px var(--esp-2);
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-bottom: 3px solid transparent;
+  transition:
+    color var(--transicao),
+    border-color var(--transicao);
+  white-space: nowrap;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.nav-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.nav-item:hover {
+  color: var(--cor-text-on-fill);
+}
+.nav-item.ativo {
+  color: var(--cor-text-on-fill);
+  border-bottom-color: var(--cor-accent);
+}
+
+@media (max-width: 640px) {
+  .navegacao {
+    padding: 0 var(--esp-4);
+  }
+}

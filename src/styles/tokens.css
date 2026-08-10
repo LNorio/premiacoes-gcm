@@ -1,0 +1,69 @@
+/*
+  Design tokens do Sistema de Premiações.
+  Fonte: Claude/DESIGN.md (paleta) e o protótipo HTML (tipografia, espaçamento,
+  raio, sombra) — ver Claude/documento-tecnico-sistema-premiacoes-v2.
+  Nenhum componente deve usar hex/px soltos: sempre um destes tokens ou os
+  papéis semânticos abaixo.
+*/
+:root {
+  /* --- tokens crus de cor --- */
+  --azul-principal: #0063b3;
+  --azul-escuro: #00457e;
+  --azul-claro: #eaf3fb;
+  --azul-borda: #cfe3f5;
+  --branco: #ffffff;
+  --cinza-950: #1b2430;
+  --cinza-700: #45505e;
+  --cinza-500: #728093;
+  --cinza-300: #c9d2dc;
+  --cinza-100: #f4f7fa;
+  --dourado: #c49a4e;
+  --dourado-escuro: #9d7b3e;
+  --dourado-claro: #f6f0e4;
+  --sucesso: #1e8e5a;
+  --sucesso-claro: #e4f5ec;
+  --alerta: #d64545;
+  --alerta-claro: #fbe8e8;
+
+  /* --- papéis semânticos de cor (usar estes, não os crus) --- */
+  --cor-primary: var(--azul-principal);
+  --cor-primary-hover: var(--azul-escuro);
+  --cor-primary-subtle: var(--azul-claro);
+  --cor-border: var(--azul-borda);
+  --cor-background: var(--cinza-100);
+  --cor-surface: var(--branco);
+  --cor-divider: var(--cinza-300);
+  --cor-text-primary: var(--cinza-950);
+  --cor-text-secondary: var(--cinza-700);
+  --cor-text-muted: var(--cinza-500);
+  --cor-text-on-fill: var(--branco);
+  --cor-accent: var(--dourado);
+  --cor-accent-text: var(--dourado-escuro);
+  --cor-accent-subtle: var(--dourado-claro);
+  --cor-success: var(--sucesso);
+  --cor-success-subtle: var(--sucesso-claro);
+  --cor-danger: var(--alerta);
+  --cor-danger-subtle: var(--alerta-claro);
+
+  /* --- tipografia --- */
+  --fonte-base: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* --- espaçamento --- */
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 24px;
+  --esp-6: 32px;
+  --esp-7: 48px;
+
+  /* --- raios e sombras --- */
+  --raio-sm: 8px;
+  --raio-md: 14px;
+  --raio-lg: 22px;
+  --sombra-sm: 0 1px 3px rgba(20, 40, 70, 0.08);
+  --sombra-md: 0 8px 24px rgba(20, 40, 70, 0.12);
+  --sombra-lg: 0 16px 40px rgba(20, 40, 70, 0.18);
+
+  --transicao: 180ms ease;
+}

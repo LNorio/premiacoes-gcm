@@ -1,0 +1,40 @@
+.badge-info {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--cor-text-on-fill);
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.badge-perfil {
+  background: var(--cor-accent-subtle);
+  color: var(--cor-accent-text);
+}
+.badge-tela {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--cor-primary-subtle);
+  color: var(--cor-primary-hover);
+  margin: 2px;
+}
+.selo {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.selo-sucesso {
+  background: var(--cor-success-subtle);
+  color: var(--cor-success);
+}
+.selo-alerta {
+  background: var(--cor-danger-subtle);
+  color: var(--cor-danger);
+}

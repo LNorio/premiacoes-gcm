@@ -1,0 +1,60 @@
+.campo-flutuante {
+  position: relative;
+  margin-bottom: var(--esp-5);
+}
+.campo-flutuante label {
+  position: absolute;
+  top: -9px;
+  left: 14px;
+  background: var(--cor-surface);
+  padding: 0 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--cor-text-muted);
+  transition: color var(--transicao);
+  pointer-events: none;
+}
+.campo-flutuante input,
+.campo-flutuante select {
+  width: 100%;
+  padding: 15px 16px;
+  border: 1.5px solid var(--cor-divider);
+  border-radius: var(--raio-sm);
+  background: var(--cor-surface);
+  transition:
+    border-color var(--transicao),
+    box-shadow var(--transicao);
+}
+.campo-flutuante.com-icone input {
+  padding-right: 46px;
+}
+.campo-flutuante:focus-within label {
+  color: var(--cor-primary);
+}
+.campo-flutuante:focus-within input,
+.campo-flutuante:focus-within select {
+  border-color: var(--cor-primary);
+  box-shadow: 0 0 0 4px var(--cor-primary-subtle);
+  outline: none;
+}
+.botao-alternar-senha {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--cor-text-muted);
+}
+.botao-alternar-senha:hover {
+  color: var(--cor-primary);
+  background: var(--cor-primary-subtle);
+}
+.botao-alternar-senha svg {
+  width: 20px;
+  height: 20px;
+}

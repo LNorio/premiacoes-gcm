@@ -1,0 +1,99 @@
+.tabela-wrapper {
+  background: var(--cor-surface);
+  border: 1px solid var(--cor-divider);
+  border-radius: var(--raio-md);
+  overflow-x: auto;
+  box-shadow: var(--sombra-sm);
+}
+.tabela {
+  min-width: 640px;
+}
+.tabela thead th {
+  text-align: left;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-text-muted);
+  background: var(--cor-background);
+  padding: 12px var(--esp-4);
+  border-bottom: 1px solid var(--cor-divider);
+}
+.tabela tbody td {
+  padding: 12px var(--esp-4);
+  border-bottom: 1px solid var(--cor-background);
+  font-size: 0.92rem;
+}
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+.tabela tbody tr:hover {
+  background: var(--cor-primary-subtle);
+}
+.tabela tfoot td {
+  padding: 14px var(--esp-4);
+  font-weight: 700;
+  background: var(--cor-background);
+  border-top: 2px solid var(--cor-divider);
+}
+.celula-numerica {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.celula-bloqueada {
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--cor-danger-subtle);
+  color: var(--cor-danger);
+}
+.celula-checkbox {
+  text-align: center;
+}
+.celula-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.linha-vazia td {
+  text-align: center;
+  color: var(--cor-text-muted);
+  padding: var(--esp-6);
+  font-size: 0.9rem;
+}
+
+/* Planilha editável (telas de Premiação e Cadastro de Colaboradores) */
+.tabela-planilha td.celula-input {
+  padding: 8px 10px;
+}
+.celula-acoes-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.tabela-planilha input,
+.tabela-planilha select {
+  width: 100%;
+  min-width: 100px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--cor-divider);
+  border-radius: var(--raio-sm);
+  background: var(--cor-surface);
+  transition:
+    border-color var(--transicao),
+    box-shadow var(--transicao);
+}
+.tabela-planilha input[type="number"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tabela-planilha input:focus,
+.tabela-planilha select:focus {
+  border-color: var(--cor-primary);
+  box-shadow: 0 0 0 3px var(--cor-primary-subtle);
+  outline: none;
+}
+.tabela-planilha td.celula-total {
+  font-weight: 700;
+  color: var(--cor-accent-text);
+}

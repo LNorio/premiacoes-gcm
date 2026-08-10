@@ -1,0 +1,41 @@
+.grade-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--esp-4);
+  margin-bottom: var(--esp-6);
+}
+.cartao {
+  background: var(--cor-surface);
+  border: 1px solid var(--cor-divider);
+  border-radius: var(--raio-md);
+  padding: var(--esp-5);
+  box-shadow: var(--sombra-sm);
+  transition:
+    transform var(--transicao),
+    box-shadow var(--transicao);
+}
+.cartao:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sombra-md);
+}
+.cartao h3 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-text-muted);
+  font-weight: 700;
+  margin-bottom: var(--esp-2);
+}
+.cartao p {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--cor-primary);
+}
+.cartao-destaque {
+  background: linear-gradient(135deg, var(--cor-accent-subtle), var(--cor-surface));
+  border-color: var(--cor-accent);
+}
+.cartao-destaque h3,
+.cartao-destaque p {
+  color: var(--cor-accent-text);
+}
