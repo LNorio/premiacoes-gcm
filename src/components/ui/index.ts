@@ -7,3 +7,4 @@ export { Toast } from "./Toast";
 export { Header } from "./Header";
 export { Nav } from "./Nav";
 export type { NavItemData } from "./Nav";
+export { Carregando, MensagemErro, MensagemVazia } from "./Estado";

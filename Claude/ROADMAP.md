@@ -47,21 +47,21 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 ## F2 — Shell, autenticação e cadastros
 
 **Shell & Auth**
-- **F2.SHELL-01** Estrutura do app: cabeçalho fixo + `ajuste de espaço` + `main`.
-- **F2.SHELL-02** Navegação renderizada por perfil (`NAV_POR_PAPEL`) e roteamento entre telas (`mostrarView`).
-- **F2.SHELL-03** Seletor de filial (Admin) × badge de filial fixa (demais); re-render ao trocar filial.
-- **F2.SHELL-04** Guarda de rotas no cliente (bloquear view fora do perfil).
-- **F2.AUTH-01** Tela de login (markup + campo flutuante + mostrar/ocultar senha).
-- **F2.AUTH-02** `login`/`logout` via serviço (mock); montar sessão; tratar erro; alternar login/app.
-- **F2.UI-01** Componentes de estado **carregando / vazio / erro** reutilizáveis para todas as telas.
+- [x] **F2.SHELL-01** Estrutura do app: cabeçalho fixo + `ajuste de espaço` + `main`. → `src/views/shell/Shell.tsx` (ResizeObserver mede o cabeçalho e aplica padding-top).
+- [x] **F2.SHELL-02** Navegação renderizada por perfil (`NAV_POR_PAPEL`) e roteamento entre telas (`mostrarView`). → `Shell.tsx` (estado `viewAtiva` + `Nav`).
+- [x] **F2.SHELL-03** Seletor de filial (Admin) × badge de filial fixa (demais); re-render ao trocar filial. → `Shell.tsx` (`<select>` para Admin, `BadgeInfo` para os demais).
+- [x] **F2.SHELL-04** Guarda de rotas no cliente (bloquear view fora do perfil). → `Shell.tsx` (mesma regra do protótipo: fora de `NAV_POR_PAPEL` cai em `inicio`).
+- [x] **F2.AUTH-01** Tela de login (markup + campo flutuante + mostrar/ocultar senha). → `src/views/auth/Login.tsx`.
+- [x] **F2.AUTH-02** `login`/`logout` via serviço (mock); montar sessão; tratar erro; alternar login/app. → `src/state/SessaoContext.tsx` + `App.tsx`.
+- [x] **F2.UI-01** Componentes de estado **carregando / vazio / erro** reutilizáveis para todas as telas. → `src/components/ui/Estado.tsx`.
 
 **Tela: Cadastro de Colaboradores** — código `F2.CAD`
-- **F2.CAD-01** Estrutura: formulário + tabela da filial.
-- **F2.CAD-02** Serviço + mock: `listarColaboradores`, `salvarColaborador`, `removerColaborador`.
-- **F2.CAD-03** Render da tabela + estados.
-- **F2.CAD-04** Formulário: campos (código, nome, CPF c/ máscara, cargo, e-mail, usuário/senha de acesso), **5 checkboxes de habilitação de tela**, validação (exige código, nome, CPF; exige filial específica), salvar/editar/cancelar/remover.
-- **F2.CAD-06** Visibilidade: apenas perfis com acesso à tela.
-- **F2.CAD-10** Testes da tela.
+- [x] **F2.CAD-01** Estrutura: formulário + tabela da filial. → `src/views/vendedores/CadastroColaboradores.tsx`.
+- [x] **F2.CAD-02** Serviço + mock: `listarColaboradores`, `salvarColaborador`, `removerColaborador`. → já implementado em F1 (`src/services`/`src/adapters/mock`).
+- [x] **F2.CAD-03** Render da tabela + estados.
+- [x] **F2.CAD-04** Formulário: campos (código, nome, CPF c/ máscara, cargo, e-mail, usuário/senha de acesso), **5 checkboxes de habilitação de tela**, validação (exige código, nome, CPF; exige filial específica), salvar/editar/cancelar/remover.
+- [x] **F2.CAD-06** Visibilidade: apenas perfis com acesso à tela. → guarda de rota do Shell + formulário/Ações visíveis só para Admin numa filial específica.
+- [x] **F2.CAD-10** Testes da tela. → `Claude/testes/f2-shell-auth-cadastro.md` (88 testes no total do projeto).
 
 ## F3 — Núcleo de Premiação
 

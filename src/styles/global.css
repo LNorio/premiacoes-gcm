@@ -1,4 +1,5 @@
 @import "./tokens.css";
+@import "./formularios.css";
 
 /* Reset — porta do protótipo (ver documento técnico) */
 *,
@@ -99,6 +100,11 @@ h3 {
   decomposição de TELA" no ROADMAP.md): cabeçalho da view, conteúdo com
   largura máxima, e a fileira de ações rápidas do painel inicial.
 */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 .conteudo {
   flex: 1;
   padding: var(--esp-6) var(--esp-5);

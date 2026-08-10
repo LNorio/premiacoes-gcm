@@ -20,3 +20,13 @@
 - Wrapper HTTP genérico preparado e ainda não usado (`src/adapters/http/httpClient.ts`), pronto para F7/F8.
 - Formato de retorno padronizado `Resultado<T>` (`src/types/resultado.ts`) e utilitários compartilhados (`src/utils/`): formatação de moeda/mês, máscara de CPF, ciclo PEV, `mostrarToast`, helpers de filial.
 - 68 testes unitários no total (27 de F0 + 41 novos), todos passando (`Claude/testes/f1-camada-de-dados.md`).
+
+### 2026-08-10 — F2: Shell, autenticação e cadastros
+
+- Sessão (login/logout/erro/troca de filial) em `src/state/SessaoContext.tsx`, consumindo `authServiceMock`.
+- Tela de login (`src/views/auth/Login.tsx`) com campo flutuante e mostrar/ocultar senha.
+- Shell do app (`src/views/shell/Shell.tsx`): cabeçalho fixo com ajuste de espaço automático (ResizeObserver), navegação por `NAV_POR_PAPEL`, seletor de filial para o Admin vs. badge fixo para os demais, guarda de rota.
+- Componentes de estado carregando/vazio/erro (`src/components/ui/Estado.tsx`) e `ToastHost` para a fila de `mostrarToast`.
+- Tela de Cadastro de Colaboradores completa (`src/views/vendedores/CadastroColaboradores.tsx`): formulário com máscara de CPF e checklist de telas, validação, CRUD, visibilidade restrita a Admin numa filial específica.
+- 88 testes unitários no total (68 de F0+F1 + 20 novos), todos passando (`Claude/testes/f2-shell-auth-cadastro.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless (login → shell → cadastro → logout, sem erros de console).
+- **Pendência sinalizada, fora do escopo de F2:** o conteúdo real do Painel Geral (cartões com estatísticas) não tem subtarefa própria no `ROADMAP.md`; `Inicio.tsx` ficou como placeholder mínimo até isso ser agendado.

@@ -1,0 +1,46 @@
+.tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cor-primary);
+  padding: var(--esp-5);
+}
+.login-cartao {
+  width: min(92vw, 460px);
+  background: var(--cor-surface);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-lg);
+  padding: var(--esp-7) var(--esp-6);
+  animation: surgir 420ms ease both;
+}
+.login-titulo {
+  margin-top: 0;
+  margin-bottom: var(--esp-5);
+  text-align: center;
+  color: var(--cor-primary);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.login-acoes {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--esp-6);
+}
+.login-botao-entrar {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 14px 52px;
+}
+.login-dica {
+  margin-top: var(--esp-5);
+  font-size: 0.8rem;
+  color: var(--cor-text-muted);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .login-cartao {
+    padding: var(--esp-6) var(--esp-4);
+  }
+}

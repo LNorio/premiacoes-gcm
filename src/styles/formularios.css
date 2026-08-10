@@ -1,0 +1,91 @@
+/* Primitivas de formulário (F2.CAD e telas seguintes) */
+.campo {
+  margin-bottom: var(--esp-4);
+}
+.campo label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cor-text-secondary);
+  margin-bottom: var(--esp-1);
+}
+.campo input,
+.campo select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--cor-divider);
+  border-radius: var(--raio-sm);
+  background: var(--cor-surface);
+  transition:
+    border-color var(--transicao),
+    box-shadow var(--transicao);
+}
+.campo input:focus,
+.campo select:focus {
+  border-color: var(--cor-primary);
+  box-shadow: 0 0 0 4px var(--cor-primary-subtle);
+  outline: none;
+}
+
+.formulario {
+  background: var(--cor-surface);
+  border: 1px solid var(--cor-divider);
+  border-radius: var(--raio-md);
+  padding: var(--esp-5);
+  box-shadow: var(--sombra-sm);
+  margin-bottom: var(--esp-5);
+}
+.grade-formulario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--esp-4);
+  align-items: end;
+}
+.grade-formulario .campo {
+  margin-bottom: 0;
+}
+.grade-formulario .campo-largo {
+  grid-column: 1 / -1;
+}
+.formulario-rodape {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--esp-3);
+  flex-wrap: wrap;
+  margin-top: var(--esp-2);
+}
+.dica-campo {
+  font-size: 0.78rem;
+  color: var(--cor-text-muted);
+  margin-top: 4px;
+}
+
+.checklist-telas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-4);
+  background: var(--cor-primary-subtle);
+  border: 1px solid var(--cor-border);
+  border-radius: var(--raio-sm);
+  padding: var(--esp-3) var(--esp-4);
+  margin-top: var(--esp-4);
+}
+.checklist-telas-titulo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cor-primary-hover);
+}
+.checklist-telas label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--cor-text-secondary);
+}
+.checklist-telas input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cor-primary);
+}
