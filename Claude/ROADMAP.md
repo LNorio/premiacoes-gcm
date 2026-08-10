@@ -66,35 +66,35 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 ## F3 — Núcleo de Premiação
 
 **Tela: Planilha de Premiação** — código `F3.PREM`
-- **F3.PREM-01** Estrutura: filtros (mês) + grade.
-- **F3.PREM-02** Serviço + mock: `listarPremiacoes(filial, mes)`, `salvarPremiacoes(...)`.
-- **F3.PREM-03** Render das linhas (Código, Colaborador, CPF + 5 categorias) + estados.
-- **F3.PREM-04** Edição das **5 categorias** (pev, iconic, filtros, campanhasFornecedores, inadimplencia) + salvar.
-- **F3.PREM-05** Totais: **Total** = soma das 5; **Planilha Deivson** = Total − PEV (preview); rodapé por categoria + Total + Deivson, sem perder foco.
-- **F3.PREM-07** Bloqueio `premiacao` (editor Gerente; Admin nunca bloqueado).
-- **F3.PREM-08** Filtro de mês + reação à filial.
-- **F3.PREM-09** Exportação CSV (CPF, Nome, Valor Total, Observações).
-- **F3.PREM-10** Testes da tela.
+- [x] **F3.PREM-01** Estrutura: filtros (mês) + grade.
+- [x] **F3.PREM-02** Serviço + mock: `listarPremiacoes(filial, mes)`, `salvarPremiacoes(...)`. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap).
+- [x] **F3.PREM-03** Render das linhas (Código, Colaborador, CPF + 5 categorias) + estados.
+- [x] **F3.PREM-04** Edição das **5 categorias** (pev, iconic, filtros, campanhasFornecedores, inadimplencia) + salvar.
+- [x] **F3.PREM-05** Totais: **Total** = soma das 5; **Planilha Deivson** = Total − PEV (preview); rodapé por categoria + Total + Deivson, sem perder foco.
+- [x] **F3.PREM-07** Bloqueio `premiacao` (editor Gerente; Admin nunca bloqueado).
+- [x] **F3.PREM-08** Filtro de mês + reação à filial.
+- [x] **F3.PREM-09** Exportação CSV (CPF, Nome, Valor Total, Observações).
+- [x] **F3.PREM-10** Testes da tela. → `Claude/testes/f3-nucleo-premiacao.md`.
 
 **Tela: Consolidado PEV** — código `F3.PEV`
-- **F3.PEV-01** Estrutura: filtros (ano-ciclo, de/até) + grade dinâmica.
-- **F3.PEV-02** Serviço + mock: `listarConsolidadoPev(filial, ciclo, intervalo)`, `salvarAdiantamento(...)`.
-- **F3.PEV-03** Render com **colunas dinâmicas por mês** do intervalo + colunas finais (Total Acumulado, Base 28%, Adiantamento, Premiação Adicional a Receber) + estados.
-- **F3.PEV-04** Lançamento do **Adiantamento de Férias** (somente Admin) + salvar.
-- **F3.PEV-05** Derivados: Base = Total × 0,28; A Receber = Base − Adiantamento; rodapé soma meses + 4 colunas.
-- **F3.PEV-06** Visibilidade da coluna Adiantamento conforme perfil.
-- **F3.PEV-08** Filtros de ciclo e intervalo de meses.
-- **F3.PEV-09** Exportação CSV (CPF, Nome, Premiação Adicional a Receber).
-- **F3.PEV-10** Testes da tela.
+- [x] **F3.PEV-01** Estrutura: filtros (ano-ciclo, de/até) + grade dinâmica.
+- [x] **F3.PEV-02** Serviço + mock: `listarConsolidadoPev(filial, ciclo, intervalo)`, `salvarAdiantamento(...)`. → já existia de F1; ganhou filtro por `telas.premiacoes` (ver eventos-roadmap).
+- [x] **F3.PEV-03** Render com **colunas dinâmicas por mês** do intervalo + colunas finais (Total Acumulado, Base 28%, Adiantamento, Premiação Adicional a Receber) + estados.
+- [x] **F3.PEV-04** Lançamento do **Adiantamento de Férias** (somente Admin) + salvar.
+- [x] **F3.PEV-05** Derivados: Base = Total × 0,28; A Receber = Base − Adiantamento; rodapé soma meses + 4 colunas.
+- [x] **F3.PEV-06** Visibilidade da coluna Adiantamento conforme perfil.
+- [x] **F3.PEV-08** Filtros de ciclo e intervalo de meses.
+- [x] **F3.PEV-09** Exportação CSV (CPF, Nome, Premiação Adicional a Receber).
+- [x] **F3.PEV-10** Testes da tela. → `Claude/testes/f3-nucleo-premiacao.md`.
 
 **Tela: Consulta por Período** — código `F3.CONS` *(somente leitura)*
-- **F3.CONS-01** Estrutura: filtros (de/até) + área de cartões.
-- **F3.CONS-02** Serviço + mock: `listarConsulta(filtro, escopo)`.
-- **F3.CONS-03** Render de **um cartão por mês** (5 categorias + Total) + rodapé por mês + estados.
-- **F3.CONS-06** Perfil vendedor: filtrado ao próprio; rótulo "Minhas Premiações".
-- **F3.CONS-08** Filtros de período + limpar filtro.
-- **F3.CONS-09** Exportação CSV.
-- **F3.CONS-10** Testes da tela.
+- [x] **F3.CONS-01** Estrutura: filtros (de/até) + área de cartões.
+- [x] **F3.CONS-02** Serviço + mock: `listarConsulta(filial, filtro, escopo)`. → assinatura ganhou `filial` (era uma lacuna de F1, ver eventos-roadmap).
+- [x] **F3.CONS-03** Render de **um cartão por mês** (5 categorias + Total) + rodapé por mês + estados.
+- [x] **F3.CONS-06** Perfil vendedor: filtrado ao próprio; rótulo "Minhas Premiações por Período".
+- [x] **F3.CONS-08** Filtros de período + limpar filtro.
+- [x] **F3.CONS-09** Exportação CSV.
+- [x] **F3.CONS-10** Testes da tela. → `Claude/testes/f3-nucleo-premiacao.md`.
 
 ## F4 — Comissão e Descontos
 

@@ -1,32 +1,14 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useEffect, useRef, type ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SessaoProvider, useSessao } from "../../state/SessaoContext";
+import { SessaoProvider } from "../../state/SessaoContext";
+import { ComoAdminNaFilial } from "../../testUtils/ComoAdminNaFilial";
 import { ComSessao } from "../../testUtils/ComSessao";
 import { CadastroColaboradores } from "./CadastroColaboradores";
 
 beforeEach(() => {
   localStorage.clear();
 });
-
-/** Loga como Admin e move a sessão para uma filial específica (sai de FILIAL_TODAS). */
-function ComoAdminNaFilial({ filial, children }: { filial: string; children: ReactNode }) {
-  const { sessao, entrar, definirFilialAtiva } = useSessao();
-  const jaTrocou = useRef(false);
-
-  useEffect(() => {
-    if (!sessao) {
-      void entrar("admin", "admin123");
-    } else if (!jaTrocou.current) {
-      jaTrocou.current = true;
-      definirFilialAtiva(filial);
-    }
-  }, [sessao, entrar, definirFilialAtiva, filial]);
-
-  if (!sessao || sessao.filialAtiva !== filial) return null;
-  return <>{children}</>;
-}
 
 function renderComoGerente() {
   return render(

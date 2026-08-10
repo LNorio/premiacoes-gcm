@@ -7,5 +7,5 @@ export function rotuloFilial(filial: string): string {
 
 /** Trecho usado no nome dos arquivos exportados (ver Seção 4 do documento técnico) */
 export function trechoFilialParaArquivo(filial: string): string {
-  return filial === FILIAL_TODAS ? "todas-filiais" : filial;
+  return filial === FILIAL_TODAS ? "todas-filiais" : `filial-${filial}`;
 }

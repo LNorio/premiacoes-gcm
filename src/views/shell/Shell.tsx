@@ -5,7 +5,10 @@ import type { Tela } from "../../types";
 import { FILIAL_TODAS } from "../../types";
 import { FILIAIS, NAV_POR_PAPEL, ROTULOS_TELAS } from "../../utils/constantes";
 import { rotuloFilial } from "../../utils/filial";
+import { ConsolidadoPev } from "../consolidadoPev/ConsolidadoPev";
+import { ConsultaPeriodo } from "../consulta/ConsultaPeriodo";
 import { Inicio } from "../inicio/Inicio";
+import { Premiacao } from "../premiacao/Premiacao";
 import { CadastroColaboradores } from "../vendedores/CadastroColaboradores";
 import { EmConstrucao } from "./EmConstrucao";
 
@@ -25,6 +28,12 @@ function renderizarView(view: Tela) {
       return <Inicio />;
     case "vendedores":
       return <CadastroColaboradores />;
+    case "premiacao":
+      return <Premiacao />;
+    case "consolidado-pev":
+      return <ConsolidadoPev />;
+    case "consulta":
+      return <ConsultaPeriodo />;
     default:
       return <EmConstrucao titulo={ROTULOS_TELAS[view]} />;
   }

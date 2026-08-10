@@ -31,6 +31,16 @@
 - 88 testes unitários no total (68 de F0+F1 + 20 novos), todos passando (`Claude/testes/f2-shell-auth-cadastro.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless (login → shell → cadastro → logout, sem erros de console).
 - **Pendência sinalizada, fora do escopo de F2:** o conteúdo real do Painel Geral (cartões com estatísticas) não tem subtarefa própria no `ROADMAP.md`; `Inicio.tsx` ficou como placeholder mínimo até isso ser agendado.
 
+### 2026-08-10 — F3: Núcleo de Premiação
+
+- Planilha de Premiação (`src/views/premiacao/Premiacao.tsx`): grade editável das 5 categorias, totais/Planilha Deivson em tempo real sem perder foco, bloqueio (Admin bloqueia/desbloqueia, Gerente fica travado quando bloqueado), filtro de mês, exportação CSV.
+- Consolidado PEV (`src/views/consolidadoPev/ConsolidadoPev.tsx`): colunas dinâmicas por mês, adiantamento de férias editável só pelo Admin, derivados (Base 28%, Adicional a Receber) recalculados ao vivo, filtros de ciclo/período, exportação CSV.
+- Consulta por Período (`src/views/consulta/ConsultaPeriodo.tsx`): cartões por mês, escopo restrito ao próprio vendedor com título "Minhas Premiações por Período", coluna Filial quando Admin vê todas, filtro de período, exportação CSV reaproveitando as mesmas colunas da Planilha.
+- Utilitário de exportação CSV (`src/utils/exportar.ts`, `exportarPremiacoesCSV` em `src/services/premiacaoService.ts`) replicando exatamente o padrão da Seção 4 do documento técnico (separador `;`, BOM UTF-8, nome de arquivo).
+- As três telas ligadas ao Shell, substituindo o placeholder `EmConstrucao`.
+- 107 testes unitários no total (88 de F0+F1+F2 + 19 novos), todos passando (`Claude/testes/f3-nucleo-premiacao.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless (Premiação → Consolidado PEV → Consulta, dados fluindo corretamente entre as três telas, sem erros de console).
+- **Ao construir estas telas, quatro lacunas/bugs do adapter mock de F1 foram descobertos e corrigidos** (commits `fix(F1)` anteriores a este) — nenhum tinha sido pego pelos testes isolados de F1 porque não exercitavam os cenários reais das telas (Admin em "Todas as filiais", filtro vazio, etc.).
+
 ## Correções em funcionalidades prontas
 
 ### 2026-08-10 — `consolidadoPevServiceMock` (adapter mock, F1)
