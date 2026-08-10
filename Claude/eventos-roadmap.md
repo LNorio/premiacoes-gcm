@@ -42,3 +42,8 @@
 
 - **Erro/incompatibilidade encontrada:** ao construir a tela de Planilha de Premiação (F3.PREM), o protótipo mostrou que, com o Admin em "Todas as filiais", a planilha lista **todos** os colaboradores de todas as filiais e cada lançamento salvo grava a filial real do colaborador (`v.filial`), não uma filial única passada por parâmetro. O `premiacaoServiceMock` de F1 só filtrava/gravava por igualdade exata de filial, sem tratar `FILIAL_TODAS` — não sustentava esse caso.
 - **O que foi alterado para corrigir:** `listarPremiacoes`/`salvarPremiacoes` (`src/adapters/mock/premiacaoService.mock.ts`) passaram a tratar `FILIAL_TODAS` como "sem filtro de filial" na leitura, e a gravar cada registro com a filial do próprio colaborador (`vendedor.filial`) em vez da filial recebida por parâmetro — mesmo padrão que `colaboradoresServiceMock` já usava desde F1.
+
+### 2026-08-10 — `gerarIntervaloMeses` (utils, F1)
+
+- **Erro/incompatibilidade encontrada:** ao construir o Consolidado PEV (F3.PEV), o protótipo mostrou que `gerarIntervaloMeses(de, ate)` gera os meses **cronologicamente entre `de` e `ate`, sem depender do ciclo Dez-Nov** — o ciclo (`anoCiclo`) é só uma sugestão inicial para preencher os filtros, não uma restrição. A versão de F1 exigia um `anoCiclo` e recortava dentro de um único ciclo de 12 meses, então um intervalo que cruzasse dois ciclos (ou anos distantes) retornava vazio incorretamente.
+- **O que foi alterado para corrigir:** `gerarIntervaloMeses` (`src/utils/periodo.ts`) mudou de assinatura — `gerarIntervaloMeses(de, ate)`, sem `anoCiclo` — e passou a caminhar mês a mês cronologicamente entre as duas datas, replicando a função do protótipo. Testes de `src/utils/periodo.test.ts` atualizados de acordo.

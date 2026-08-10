@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gerarIntervaloMeses, obterAnoCicloAtual, obterMesesCicloPEV } from "./periodo";
+import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesAtualISO, obterMesesCicloPEV } from "./periodo";
 
 describe("obterAnoCicloAtual", () => {
   it("usa o ano corrente para meses de janeiro a novembro", () => {
@@ -22,19 +22,36 @@ describe("obterMesesCicloPEV", () => {
 });
 
 describe("gerarIntervaloMeses", () => {
-  it("recorta o intervalo [de, ate] inclusive dentro do ciclo", () => {
-    expect(gerarIntervaloMeses(2026, "2026-01", "2026-03")).toEqual(["2026-01", "2026-02", "2026-03"]);
+  it("gera os meses entre 'de' e 'ate' (inclusive), cronologicamente", () => {
+    expect(gerarIntervaloMeses("2026-01", "2026-03")).toEqual(["2026-01", "2026-02", "2026-03"]);
   });
 
-  it("inclui dezembro do ano anterior quando faz parte do intervalo", () => {
-    expect(gerarIntervaloMeses(2026, "2025-12", "2026-01")).toEqual(["2025-12", "2026-01"]);
+  it("atravessa a virada de ano normalmente", () => {
+    expect(gerarIntervaloMeses("2025-11", "2026-02")).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
+  });
+
+  it("não fica preso ao ciclo Dez-Nov — aceita qualquer intervalo, mesmo de anos distantes", () => {
+    expect(gerarIntervaloMeses("2024-06", "2024-08")).toEqual(["2024-06", "2024-07", "2024-08"]);
   });
 
   it("retorna vazio se 'de' vier depois de 'ate'", () => {
-    expect(gerarIntervaloMeses(2026, "2026-03", "2026-01")).toEqual([]);
+    expect(gerarIntervaloMeses("2026-03", "2026-01")).toEqual([]);
   });
 
-  it("retorna vazio para um mês fora do ciclo informado", () => {
-    expect(gerarIntervaloMeses(2026, "2024-01", "2026-01")).toEqual([]);
+  it("retorna um único mês quando de === ate", () => {
+    expect(gerarIntervaloMeses("2026-05", "2026-05")).toEqual(["2026-05"]);
+  });
+});
+
+describe("obterMesAtualISO", () => {
+  it("formata a data informada como 'YYYY-MM'", () => {
+    expect(obterMesAtualISO(new Date(2026, 6, 15))).toBe("2026-07");
+  });
+});
+
+describe("nomeCurtoMes", () => {
+  it("retorna a abreviação de 3 letras do mês", () => {
+    expect(nomeCurtoMes("2026-01")).toBe("jan");
+    expect(nomeCurtoMes("2026-12")).toBe("dez");
   });
 });

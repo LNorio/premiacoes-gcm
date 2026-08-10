@@ -21,11 +21,39 @@ export function obterMesesCicloPEV(anoCiclo: number): string[] {
   return meses;
 }
 
-/** Recorta o intervalo [de, ate] (inclusive) dentro do ciclo informado */
-export function gerarIntervaloMeses(anoCiclo: number, de: string, ate: string): string[] {
-  const ciclo = obterMesesCicloPEV(anoCiclo);
-  const inicio = ciclo.indexOf(de);
-  const fim = ciclo.indexOf(ate);
-  if (inicio === -1 || fim === -1 || inicio > fim) return [];
-  return ciclo.slice(inicio, fim + 1);
+/**
+ * Gera os meses entre `de` e `ate` (inclusive), cronologicamente — não fica
+ * preso ao ciclo Dez-Nov, segue literalmente o que foi escolhido no filtro
+ * (documento técnico, Seção 3.3; o ciclo serve só de sugestão inicial).
+ */
+export function gerarIntervaloMeses(de: string, ate: string): string[] {
+  const [anoDe, mesDe] = de.split("-").map(Number);
+  const [anoAte, mesAte] = ate.split("-").map(Number);
+  const meses: string[] = [];
+  let ano = anoDe;
+  let mes = mesDe;
+  let seguranca = 0; // evita loop infinito com datas invertidas
+
+  while ((ano < anoAte || (ano === anoAte && mes <= mesAte)) && seguranca < 240) {
+    meses.push(chaveMes(ano, mes - 1));
+    mes += 1;
+    if (mes > 12) {
+      mes = 1;
+      ano += 1;
+    }
+    seguranca += 1;
+  }
+  return meses;
+}
+
+/** "YYYY-MM" atual, no fuso local — valor padrão dos filtros de mês. */
+export function obterMesAtualISO(hoje: Date = new Date()): string {
+  return chaveMes(hoje.getFullYear(), hoje.getMonth());
+}
+
+/** Abreviação de 3 letras do mês (jan, fev, ...) a partir de "YYYY-MM" */
+export function nomeCurtoMes(chave: string): string {
+  const [, mes] = chave.split("-").map(Number);
+  const nomes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  return nomes[mes - 1];
 }
