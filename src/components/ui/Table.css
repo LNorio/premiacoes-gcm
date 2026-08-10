@@ -60,6 +60,12 @@
   padding: var(--esp-6);
   font-size: 0.9rem;
 }
+.acoes-tabela {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--esp-3);
+  margin-top: var(--esp-4);
+}
 
 /* Planilha editável (telas de Premiação e Cadastro de Colaboradores) */
 .tabela-planilha td.celula-input {
