@@ -3,7 +3,7 @@ import { colaboradoresService } from "../../adapters";
 import { Carregando, MensagemErro, MensagemVazia } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type Resultado, type TelasHabilitadas } from "../../types";
-import { CARGOS_COLABORADOR, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
+import { CARGOS_COLABORADOR, FILIAIS, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
 import { mascararCpf } from "../../utils/formatadores";
 import { mostrarToast } from "../../utils/toast";
 
@@ -22,32 +22,37 @@ interface FormularioColaborador {
   nome: string;
   cpf: string;
   cargo: string;
+  filial: string;
   email: string;
   usuarioAcesso: string;
   senhaAcesso: string;
   telas: TelasHabilitadas;
 }
 
-const FORMULARIO_VAZIO: FormularioColaborador = {
-  codigo: "",
-  nome: "",
-  cpf: "",
-  cargo: CARGOS_COLABORADOR[0],
-  email: "",
-  usuarioAcesso: "",
-  senhaAcesso: "",
-  telas: TELAS_VAZIAS,
-};
+function formularioVazio(filialPadrao: string): FormularioColaborador {
+  return {
+    codigo: "",
+    nome: "",
+    cpf: "",
+    cargo: CARGOS_COLABORADOR[0],
+    filial: filialPadrao,
+    email: "",
+    usuarioAcesso: "",
+    senhaAcesso: "",
+    telas: TELAS_VAZIAS,
+  };
+}
 
 export function CadastroColaboradores() {
   const { sessao } = useSessao();
   const [resultado, setResultado] = useState<Resultado<Colaborador[]>>({ status: "carregando" });
-  const [formulario, setFormulario] = useState<FormularioColaborador>(FORMULARIO_VAZIO);
+  const filialPadrao = sessao && sessao.filialAtiva !== FILIAL_TODAS ? sessao.filialAtiva : FILIAIS[0];
+  const [formulario, setFormulario] = useState<FormularioColaborador>(() => formularioVazio(filialPadrao));
   const [idEmEdicao, setIdEmEdicao] = useState<string | null>(null);
 
   const ehAdmin = sessao?.role === "admin";
   const mostrarFilial = ehAdmin && sessao?.filialAtiva === FILIAL_TODAS;
-  const mostrarFormulario = ehAdmin && !mostrarFilial;
+  const mostrarFormulario = ehAdmin;
 
   async function carregar() {
     if (!sessao) return;
@@ -62,17 +67,18 @@ export function CadastroColaboradores() {
 
   function cancelarEdicao() {
     setIdEmEdicao(null);
-    setFormulario(FORMULARIO_VAZIO);
+    setFormulario(formularioVazio(filialPadrao));
   }
 
   function iniciarEdicao(colaborador: Colaborador) {
-    if (!ehAdmin || mostrarFilial) return;
+    if (!ehAdmin) return;
     setIdEmEdicao(colaborador.id);
     setFormulario({
       codigo: colaborador.codigo,
       nome: colaborador.nome,
       cpf: colaborador.cpf,
       cargo: colaborador.cargo,
+      filial: colaborador.filial,
       email: colaborador.email,
       usuarioAcesso: colaborador.usuarioAcesso,
       senhaAcesso: colaborador.senhaAcesso,
@@ -93,8 +99,8 @@ export function CadastroColaboradores() {
       mostrarToast("Apenas o Administrador pode cadastrar colaboradores.", "erro");
       return;
     }
-    if (sessao.filialAtiva === FILIAL_TODAS) {
-      mostrarToast("Selecione uma filial específica no cabeçalho para cadastrar um colaborador.", "erro");
+    if (!formulario.filial) {
+      mostrarToast("Selecione a filial do colaborador.", "erro");
       return;
     }
     if (!formulario.codigo || !formulario.nome || !formulario.cpf) {
@@ -117,7 +123,6 @@ export function CadastroColaboradores() {
 
     const salvo = await colaboradoresService.salvarColaborador({
       id: idEmEdicao ?? "",
-      filial: sessao.filialAtiva,
       ...formulario,
     });
 
@@ -135,16 +140,16 @@ export function CadastroColaboradores() {
   const colspanVazio = 7 + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
 
   const subtitulo = mostrarFilial
-    ? "Colaboradores de todas as filiais"
+    ? "Colaboradores de todas as filiais — escolha a filial de cada novo colaborador no formulário"
     : ehAdmin
       ? "Colaboradores da filial — cada um recebe um usuário próprio para acessar suas métricas"
       : `Consulta dos colaboradores da Filial ${sessao?.filialAtiva}`;
 
-  const mensagemVazia = mostrarFilial
-    ? "Nenhum colaborador cadastrado ainda em nenhuma filial."
-    : ehAdmin
-      ? "Nenhum colaborador cadastrado ainda nesta filial. Utilize o formulário acima."
-      : "Nenhum colaborador cadastrado ainda nesta filial.";
+  const mensagemVazia = ehAdmin
+    ? mostrarFilial
+      ? "Nenhum colaborador cadastrado ainda em nenhuma filial. Utilize o formulário acima."
+      : "Nenhum colaborador cadastrado ainda nesta filial. Utilize o formulário acima."
+    : "Nenhum colaborador cadastrado ainda nesta filial.";
 
   return (
     <section className="view">
@@ -152,10 +157,6 @@ export function CadastroColaboradores() {
         <h2>Cadastro de Colaboradores</h2>
         <span className="view-subtitulo">{subtitulo}</span>
       </div>
-
-      {ehAdmin && mostrarFilial ? (
-        <MensagemErro mensagem="Você está vendo todas as filiais ao mesmo tempo. Para cadastrar um novo colaborador, selecione uma filial específica no cabeçalho." />
-      ) : null}
 
       {mostrarFormulario ? (
         <form onSubmit={tratarSubmit}>
@@ -166,6 +167,7 @@ export function CadastroColaboradores() {
                   <th>Código</th>
                   <th>Nome completo</th>
                   <th>CPF</th>
+                  <th>Filial</th>
                   <th>Função</th>
                   <th>E-mail</th>
                   <th>Usuário de acesso</th>
@@ -203,6 +205,20 @@ export function CadastroColaboradores() {
                       value={formulario.cpf}
                       onChange={(e) => setFormulario((f) => ({ ...f, cpf: mascararCpf(e.target.value) }))}
                     />
+                  </td>
+                  <td className="celula-input">
+                    <select
+                      aria-label="Filial"
+                      required
+                      value={formulario.filial}
+                      onChange={(e) => setFormulario((f) => ({ ...f, filial: e.target.value }))}
+                    >
+                      {FILIAIS.map((filial) => (
+                        <option key={filial} value={filial}>
+                          Filial {filial}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="celula-input">
                     <select value={formulario.cargo} onChange={(e) => setFormulario((f) => ({ ...f, cargo: e.target.value }))}>
@@ -269,8 +285,8 @@ export function CadastroColaboradores() {
           </div>
 
           <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>
-            O colaborador cadastrado é vinculado automaticamente à sua filial atual e usa o usuário/senha acima para ver
-            apenas as próprias métricas.
+            O colaborador é vinculado à filial escolhida acima e usa o usuário/senha para ver apenas as próprias
+            métricas.
           </p>
         </form>
       ) : null}

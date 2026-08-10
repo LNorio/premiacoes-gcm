@@ -59,7 +59,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F2.CAD-01** Estrutura: formulário + tabela da filial. → `src/views/vendedores/CadastroColaboradores.tsx`.
 - [x] **F2.CAD-02** Serviço + mock: `listarColaboradores`, `salvarColaborador`, `removerColaborador`. → já implementado em F1 (`src/services`/`src/adapters/mock`).
 - [x] **F2.CAD-03** Render da tabela + estados.
-- [x] **F2.CAD-04** Formulário: campos (código, nome, CPF c/ máscara, cargo, e-mail, usuário/senha de acesso), **5 checkboxes de habilitação de tela**, validação (exige código, nome, CPF; exige filial específica), salvar/editar/cancelar/remover.
+- [x] **F2.CAD-04** Formulário: campos (código, nome, CPF c/ máscara, **filial**, cargo, e-mail, usuário/senha de acesso), **5 checkboxes de habilitação de tela**, validação (exige código, nome, CPF, filial), salvar/editar/cancelar/remover. **Alterado em 2026-08-10:** campo de Filial adicionado ao formulário (era implícito pelo cabeçalho); ver `Claude/eventos-roadmap.md`.
 - [x] **F2.CAD-06** Visibilidade: apenas perfis com acesso à tela. → guarda de rota do Shell + formulário/Ações visíveis só para Admin numa filial específica.
 - [x] **F2.CAD-10** Testes da tela. → `Claude/testes/f2-shell-auth-cadastro.md` (88 testes no total do projeto).
 

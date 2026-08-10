@@ -30,6 +30,16 @@ function renderComoAdminNaFilial(filial: string) {
   );
 }
 
+function renderComoAdminEmTodasAsFiliais() {
+  return render(
+    <SessaoProvider>
+      <ComSessao usuario="admin" senha="admin123">
+        <CadastroColaboradores />
+      </ComSessao>
+    </SessaoProvider>,
+  );
+}
+
 describe("CadastroColaboradores — visibilidade por perfil", () => {
   it("Gerente vê a listagem da própria filial, sem colaboradores de outra filial", async () => {
     renderComoGerente(); // gerente é da filial 100
@@ -45,17 +55,12 @@ describe("CadastroColaboradores — visibilidade por perfil", () => {
     expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
   });
 
-  it("Admin em 'Todas as filiais' vê aviso e não vê o formulário", async () => {
-    render(
-      <SessaoProvider>
-        <ComSessao usuario="admin" senha="admin123">
-          <CadastroColaboradores />
-        </ComSessao>
-      </SessaoProvider>,
-    );
+  it("Admin em 'Todas as filiais' vê o formulário com o campo de Filial e a coluna Filial na listagem", async () => {
+    renderComoAdminEmTodasAsFiliais();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(screen.getByText(/selecione uma filial específica/i)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Código")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Código")).toBeInTheDocument();
+    expect(screen.getByLabelText("Filial")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Filial" })).toBeInTheDocument();
   });
 
   it("mostra as telas habilitadas de cada colaborador como badges", async () => {
@@ -82,10 +87,12 @@ describe("CadastroColaboradores — formulário (Admin numa filial específica)"
     });
   });
 
-  it("cadastra um novo colaborador e ele aparece na tabela", async () => {
+  it("cadastra um novo colaborador e ele aparece na tabela, já com a filial padrão da sessão", async () => {
     const user = userEvent.setup();
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByPlaceholderText("Código")).toBeInTheDocument());
+
+    expect(screen.getByLabelText("Filial")).toHaveValue("100");
 
     await user.type(screen.getByPlaceholderText("Código"), "010");
     await user.type(screen.getByPlaceholderText("Nome completo"), "Novo Colaborador");
@@ -121,5 +128,25 @@ describe("CadastroColaboradores — formulário (Admin numa filial específica)"
     await user.click(screen.getAllByRole("button", { name: "Remover" })[0]);
 
     await waitFor(() => expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument());
+  });
+});
+
+describe("CadastroColaboradores — formulário (Admin em 'Todas as filiais')", () => {
+  it("cadastra um colaborador escolhendo a filial no próprio formulário", async () => {
+    const user = userEvent.setup();
+    renderComoAdminEmTodasAsFiliais();
+    await waitFor(() => expect(screen.getByPlaceholderText("Código")).toBeInTheDocument());
+
+    await user.type(screen.getByPlaceholderText("Código"), "020");
+    await user.type(screen.getByPlaceholderText("Nome completo"), "Colaborador Filial 401");
+    await user.type(screen.getByPlaceholderText("000.000.000-00"), "98765432100");
+    await user.selectOptions(screen.getByLabelText("Filial"), "401");
+    await user.type(screen.getByPlaceholderText("usuario.acesso"), "colaborador.401");
+    await user.type(screen.getByPlaceholderText("senha"), "venda123");
+    await user.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    await waitFor(() => expect(screen.getByText("Colaborador Filial 401")).toBeInTheDocument());
+    const linha = screen.getByText("Colaborador Filial 401").closest("tr")!;
+    expect(within(linha).getByText("Filial 401")).toBeInTheDocument();
   });
 });

@@ -41,6 +41,14 @@
 - 107 testes unitários no total (88 de F0+F1+F2 + 19 novos), todos passando (`Claude/testes/f3-nucleo-premiacao.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless (Premiação → Consolidado PEV → Consulta, dados fluindo corretamente entre as três telas, sem erros de console).
 - **Ao construir estas telas, quatro lacunas/bugs do adapter mock de F1 foram descobertos e corrigidos** (commits `fix(F1)` anteriores a este) — nenhum tinha sido pego pelos testes isolados de F1 porque não exercitavam os cenários reais das telas (Admin em "Todas as filiais", filtro vazio, etc.).
 
+## Alterações não planejadas
+
+### 2026-08-10 — Campo de Filial no cadastro de colaboradores
+
+- **O que foi modificado:** o formulário de Cadastro de Colaboradores (`src/views/vendedores/CadastroColaboradores.tsx`, `F2.CAD-04`) ganhou um campo `<select>` de Filial, preenchido por padrão com a filial ativa da sessão (ou a primeira filial, quando o Admin está em "Todas as filiais"). O formulário deixou de ficar bloqueado com aviso quando o Admin está em "Todas as filiais" — agora ele fica disponível e cada colaborador é salvo com a filial escolhida no próprio formulário, não mais implícita pelo cabeçalho.
+- **Motivo:** pedido do usuário — ao cadastrar um usuário, é preciso indicar explicitamente a qual filial ele está vinculado, inclusive quando o Admin está vendo todas as filiais ao mesmo tempo.
+- **Impacto:** `salvarColaborador` passou a receber `filial: formulario.filial` em vez de `sessao.filialAtiva`; a listagem ganhou uma coluna Filial quando o Admin está em "Todas as filiais".
+
 ## Correções em funcionalidades prontas
 
 ### 2026-08-10 — `consolidadoPevServiceMock` (adapter mock, F1)
