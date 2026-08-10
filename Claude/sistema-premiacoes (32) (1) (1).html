@@ -1,0 +1,3619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Premiações · Comercial Mariano</title>
+<style>
+/* ==========================================================================
+   RESET SIMPLES
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, h1, h2, h3, p, ul, ol, li, form, fieldset, table, th, td { margin: 0; padding: 0; }
+button, input, select { font: inherit; color: inherit; }
+img { max-width: 100%; display: block; }
+ul { list-style: none; }
+table { border-collapse: collapse; width: 100%; }
+button { cursor: pointer; border: none; background: none; }
+a { color: inherit; }
+
+/* Garante que o atributo [hidden] sempre vença, mesmo em elementos que
+   definem display:flex/grid em outra regra (ex.: .tela-login e .app).
+   Sem isso, o navegador pode priorizar a regra de classe e exibir um
+   elemento marcado como hidden — foi o que deixava a interface do app
+   "vazando" atrás da tela de login antes do usuário logar. */
+[hidden] { display: none !important; }
+
+/* ==========================================================================
+   VARIÁVEIS CSS (DESIGN TOKENS)
+   ========================================================================== */
+:root {
+  /* Paleta principal */
+  --azul-principal: #0063B3;
+  --azul-escuro:    #00457E;
+  --azul-claro:     #EAF3FB;
+  --azul-borda:     #CFE3F5;
+  --branco:         #FFFFFF;
+
+  /* Neutros */
+  --cinza-950: #1B2430;
+  --cinza-700: #45505E;
+  --cinza-500: #728093;
+  --cinza-300: #C9D2DC;
+  --cinza-100: #F4F7FA;
+
+  /* Acento — tema "premiação" (medalha/ouro) */
+  --dourado:        #C49A4E;
+  --dourado-escuro: #9D7B3E;
+  --dourado-claro:  #F6F0E4;
+
+  /* Estados */
+  --sucesso:        #1E8E5A;
+  --sucesso-claro:  #E4F5EC;
+  --alerta:         #D64545;
+  --alerta-claro:   #FBE8E8;
+
+  /* Tipografia */
+  --fonte-base: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Espaçamento */
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 24px;
+  --esp-6: 32px;
+  --esp-7: 48px;
+
+  /* Bordas e sombras */
+  --raio-sm: 8px;
+  --raio-md: 14px;
+  --raio-lg: 22px;
+  --sombra-sm: 0 1px 3px rgba(20, 40, 70, 0.08);
+  --sombra-md: 0 8px 24px rgba(20, 40, 70, 0.12);
+  --sombra-lg: 0 16px 40px rgba(20, 40, 70, 0.18);
+
+  --transicao: 180ms ease;
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--fonte-base);
+  background: var(--cinza-100);
+  color: var(--cinza-950);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; color: var(--cinza-950); }
+:focus-visible {
+  outline: 3px solid var(--dourado);
+  outline-offset: 2px;
+}
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ==========================================================================
+   BOTÕES (reutilizáveis)
+   ========================================================================== */
+.botao {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--esp-2);
+  padding: 12px 22px;
+  border-radius: var(--raio-sm);
+  font-weight: 600; font-size: 0.95rem;
+  transition: transform var(--transicao), box-shadow var(--transicao), background var(--transicao);
+  white-space: nowrap;
+}
+.botao:active { transform: translateY(1px) scale(0.98); }
+.botao-primario { background: var(--azul-principal); color: var(--branco); box-shadow: var(--sombra-sm); }
+.botao-primario:hover { background: var(--azul-escuro); box-shadow: var(--sombra-md); }
+.botao-dourado { background: var(--dourado); color: var(--cinza-950); box-shadow: var(--sombra-sm); }
+.botao-dourado:hover { background: var(--dourado-escuro); color: var(--branco); box-shadow: var(--sombra-md); }
+.botao-secundario { background: var(--branco); color: var(--azul-principal); border: 1.5px solid var(--azul-borda); }
+.botao-secundario:hover { background: var(--azul-claro); }
+.botao-texto { color: var(--cinza-700); padding: 8px 12px; }
+.botao-texto:hover { color: var(--azul-principal); }
+.botao-perigo { color: var(--alerta); padding: 6px 10px; border-radius: var(--raio-sm); }
+.botao-perigo:hover { background: var(--alerta-claro); }
+.botao-largo { width: 100%; }
+.botao[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* ==========================================================================
+   TELA DE LOGIN
+   ========================================================================== */
+.tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--azul-principal);
+  padding: var(--esp-5);
+}
+.login-cartao {
+  width: min(92vw, 460px);
+  background: var(--branco);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-lg);
+  padding: var(--esp-7) var(--esp-6);
+  animation: surgir 420ms ease both;
+}
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.login-logo {
+  display: block;
+  width: min(230px, 70%);
+  margin: 0 auto;
+}
+.login-titulo {
+  margin-top: var(--esp-6);
+  margin-bottom: var(--esp-5);
+  text-align: center;
+  color: var(--azul-principal);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.campo { margin-bottom: var(--esp-4); }
+.campo label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--cinza-700); margin-bottom: var(--esp-1); }
+.campo input, .campo select {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--cinza-300); border-radius: var(--raio-sm);
+  background: var(--branco);
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+.campo input:focus, .campo select:focus {
+  border-color: var(--azul-principal);
+  box-shadow: 0 0 0 4px var(--azul-claro);
+  outline: none;
+}
+
+/* Campo com rótulo flutuante sobre a borda (usado na tela de login) */
+.campo-flutuante { position: relative; margin-bottom: var(--esp-5); }
+.campo-flutuante label {
+  position: absolute; top: -9px; left: 14px;
+  background: var(--branco); padding: 0 6px;
+  font-size: 0.76rem; font-weight: 600; color: var(--cinza-500);
+  transition: color var(--transicao);
+  pointer-events: none;
+}
+.campo-flutuante input, .campo-flutuante select {
+  width: 100%; padding: 15px 16px;
+  border: 1.5px solid var(--cinza-300); border-radius: var(--raio-sm);
+  background: var(--branco);
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+.campo-flutuante.com-icone input { padding-right: 46px; }
+.campo-flutuante:focus-within label { color: var(--azul-principal); }
+.campo-flutuante:focus-within input, .campo-flutuante:focus-within select {
+  border-color: var(--azul-principal);
+  box-shadow: 0 0 0 4px var(--azul-claro);
+  outline: none;
+}
+.botao-alternar-senha {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; color: var(--cinza-500);
+}
+.botao-alternar-senha:hover { color: var(--azul-principal); background: var(--azul-claro); }
+.botao-alternar-senha svg { width: 20px; height: 20px; }
+
+.login-erro {
+  background: var(--alerta-claro); color: var(--alerta);
+  padding: 10px 14px; border-radius: var(--raio-sm);
+  font-size: 0.88rem; margin-bottom: var(--esp-4);
+  text-align: center;
+}
+.login-acoes { display: flex; justify-content: center; margin-top: var(--esp-6); }
+.login-botao-entrar { text-transform: uppercase; letter-spacing: 0.04em; padding: 14px 52px; }
+.login-dica { margin-top: var(--esp-5); font-size: 0.8rem; color: var(--cinza-500); text-align: center; }
+
+@media (max-width: 480px) {
+  .login-cartao { padding: var(--esp-6) var(--esp-4); }
+}
+
+/* ==========================================================================
+   APP — CABEÇALHO
+   ========================================================================== */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.cabecalho-fixo {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  box-shadow: var(--sombra-md);
+}
+.cabecalho {
+  background: var(--azul-principal);
+  display: flex; align-items: center; gap: var(--esp-5);
+  padding: var(--esp-3) var(--esp-5);
+  flex-wrap: wrap;
+}
+.cabecalho-logo { height: 34px; width: auto; }
+.cabecalho-filial { display: flex; align-items: center; gap: var(--esp-2); margin-left: var(--esp-4); }
+.botao-cabecalho-inicio {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: var(--raio-sm);
+  background: rgba(255,255,255,0.12); color: var(--branco); font-weight: 600; font-size: 0.88rem;
+  transition: border-color var(--transicao), background var(--transicao);
+}
+.botao-cabecalho-inicio svg { width: 16px; height: 16px; flex-shrink: 0; }
+.botao-cabecalho-inicio:hover { background: rgba(255,255,255,0.22); }
+.cabecalho-filial select {
+  padding: 8px 12px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: var(--raio-sm);
+  background: rgba(255,255,255,0.12); font-weight: 600; font-size: 0.88rem; color: var(--branco);
+  transition: border-color var(--transicao), background var(--transicao);
+}
+.cabecalho-filial select option { color: var(--cinza-950); }
+.cabecalho-filial select:hover { background: rgba(255,255,255,0.22); }
+.cabecalho-filial select:focus { border-color: var(--branco); outline: none; }
+.cabecalho-usuario { margin-left: auto; display: flex; align-items: center; gap: var(--esp-3); flex-wrap: wrap; }
+#usuario-logado { font-size: 0.9rem; color: var(--branco); font-weight: 600; }
+.badge-info {
+  display: inline-flex; align-items: center;
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(255,255,255,0.16); color: var(--branco);
+  font-weight: 700; font-size: 0.82rem; white-space: nowrap;
+}
+.badge-perfil { background: var(--dourado-claro); color: var(--dourado-escuro); }
+#botao-sair { color: var(--branco); }
+#botao-sair:hover { background: rgba(255,255,255,0.14); }
+
+/* ==========================================================================
+   NAVEGAÇÃO
+   ========================================================================== */
+.navegacao {
+  display: flex; gap: 2px;
+  background: var(--azul-escuro);
+  padding: 0 var(--esp-3);
+  overflow-x: auto;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px var(--esp-2);
+  color: rgba(255,255,255,0.72);
+  font-weight: 600; font-size: 0.8rem;
+  border-bottom: 3px solid transparent;
+  transition: color var(--transicao), border-color var(--transicao);
+  white-space: nowrap;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.nav-item:hover { color: var(--branco); }
+.nav-item.ativo { color: var(--branco); border-bottom-color: var(--dourado); }
+
+/* ==========================================================================
+   CONTEÚDO / VIEWS
+   ========================================================================== */
+.conteudo { flex: 1; padding: var(--esp-6) var(--esp-5); max-width: 1180px; margin: 0 auto; width: 100%; }
+.view { animation: surgir 320ms ease both; }
+.view > h2 { font-size: 1.4rem; margin-bottom: var(--esp-5); }
+.view-cabecalho {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--esp-3);
+  margin-bottom: var(--esp-5);
+}
+.view-cabecalho h2 { margin-bottom: 0; }
+.view-subtitulo { color: var(--cinza-500); font-size: 0.9rem; }
+
+/* Cartões do painel */
+.grade-cartoes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--esp-4); margin-bottom: var(--esp-6);
+}
+.cartao {
+  background: var(--branco); border: 1px solid var(--cinza-300); border-radius: var(--raio-md);
+  padding: var(--esp-5); box-shadow: var(--sombra-sm);
+  transition: transform var(--transicao), box-shadow var(--transicao);
+}
+.cartao:hover { transform: translateY(-3px); box-shadow: var(--sombra-md); }
+.cartao h3 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cinza-500); font-weight: 700; margin-bottom: var(--esp-2); }
+.cartao p { font-size: 1.7rem; font-weight: 700; color: var(--azul-principal); }
+.cartao-destaque { background: linear-gradient(135deg, var(--dourado-claro), var(--branco)); border-color: var(--dourado); }
+.cartao-destaque h3 { color: var(--dourado-escuro); }
+.cartao-destaque p { color: var(--dourado-escuro); }
+
+.acoes-rapidas { display: flex; gap: var(--esp-3); flex-wrap: wrap; }
+
+/* ==========================================================================
+   FORMULÁRIOS
+   ========================================================================== */
+.formulario {
+  background: var(--branco); border: 1px solid var(--cinza-300); border-radius: var(--raio-md);
+  padding: var(--esp-5); box-shadow: var(--sombra-sm); margin-bottom: var(--esp-5);
+}
+.grade-formulario {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--esp-4);
+  align-items: end;
+}
+.grade-formulario .campo { margin-bottom: 0; }
+.grade-formulario .campo-largo { grid-column: 1 / -1; }
+.formulario-rodape { grid-column: 1 / -1; display: flex; gap: var(--esp-3); flex-wrap: wrap; margin-top: var(--esp-2); }
+.dica-campo { font-size: 0.78rem; color: var(--cinza-500); margin-top: 4px; }
+
+/* Checklist de telas em que o colaborador aparece (Cadastro de Colaboradores) */
+.checklist-telas {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-4);
+  background: var(--azul-claro); border: 1px solid var(--azul-borda); border-radius: var(--raio-sm);
+  padding: var(--esp-3) var(--esp-4); margin-top: var(--esp-4);
+}
+.checklist-telas-titulo { font-size: 0.85rem; font-weight: 700; color: var(--azul-escuro); }
+.checklist-telas label { display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 600; color: var(--cinza-700); }
+.checklist-telas input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--azul-principal); }
+.badge-tela {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+  background: var(--azul-claro); color: var(--azul-escuro); margin: 2px;
+}
+
+/* ==========================================================================
+   TABELAS
+   ========================================================================== */
+.tabela-wrapper {
+  background: var(--branco); border: 1px solid var(--cinza-300); border-radius: var(--raio-md);
+  overflow-x: auto; box-shadow: var(--sombra-sm);
+}
+.tabela { min-width: 640px; }
+.tabela thead th {
+  text-align: left; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--cinza-500); background: var(--cinza-100);
+  padding: 12px var(--esp-4); border-bottom: 1px solid var(--cinza-300);
+}
+.tabela tbody td { padding: 12px var(--esp-4); border-bottom: 1px solid var(--cinza-100); font-size: 0.92rem; }
+.tabela tbody tr:last-child td { border-bottom: none; }
+.tabela tbody tr:hover { background: var(--azul-claro); }
+.tabela tfoot td { padding: 14px var(--esp-4); font-weight: 700; background: var(--cinza-100); border-top: 2px solid var(--cinza-300); }
+.celula-numerica { text-align: right; font-variant-numeric: tabular-nums; }
+.celula-bloqueada {
+  text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
+  background: var(--alerta-claro); color: var(--alerta);
+}
+.celula-checkbox { text-align: center; }
+.celula-checkbox input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.selo {
+  display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700;
+}
+.selo-sucesso { background: var(--sucesso-claro); color: var(--sucesso); }
+.selo-alerta { background: var(--alerta-claro); color: var(--alerta); }
+.linha-vazia td { text-align: center; color: var(--cinza-500); padding: var(--esp-6); font-size: 0.9rem; }
+
+.acoes-tabela { display: flex; justify-content: flex-end; gap: var(--esp-3); margin-top: var(--esp-4); }
+
+/* Planilha editável (telas de Premiação e Cadastro de Colaboradores) */
+.tabela-planilha td.celula-input { padding: 8px 10px; }
+.celula-acoes-form { display: flex; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
+.tabela-planilha input, .tabela-planilha select {
+  width: 100%; min-width: 100px; padding: 8px 10px;
+  border: 1.5px solid var(--cinza-300); border-radius: var(--raio-sm);
+  background: var(--branco);
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+.tabela-planilha input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+.tabela-planilha input:focus, .tabela-planilha select:focus {
+  border-color: var(--azul-principal); box-shadow: 0 0 0 3px var(--azul-claro); outline: none;
+}
+.tabela-planilha td.celula-total { font-weight: 700; color: var(--dourado-escuro); }
+
+/* Agrupamento mensal (tela de Consulta) */
+.cartao-mes {
+  background: var(--branco); border: 1px solid var(--cinza-300); border-radius: var(--raio-md);
+  box-shadow: var(--sombra-sm); margin-bottom: var(--esp-5); overflow: hidden;
+}
+.cartao-mes-cabecalho {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--esp-3);
+  padding: var(--esp-4) var(--esp-5); background: var(--azul-claro); border-bottom: 1px solid var(--azul-borda);
+}
+.cartao-mes-cabecalho h3 { font-size: 1rem; color: var(--azul-escuro); text-transform: capitalize; }
+.cartao-mes-resumo { display: flex; gap: var(--esp-5); font-size: 0.85rem; color: var(--cinza-700); }
+.cartao-mes-resumo strong { color: var(--dourado-escuro); font-size: 1rem; }
+.cartao-mes .tabela-wrapper { border: none; border-radius: 0; box-shadow: none; }
+.mensagem-vazia-consulta { text-align: center; color: var(--cinza-500); padding: var(--esp-7) var(--esp-4); }
+
+/* Resumo do cálculo (pré-visualização) */
+.resumo-calculo {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  gap: var(--esp-4);
+  background: var(--dourado-claro); border: 1px dashed var(--dourado);
+  border-radius: var(--raio-md); padding: var(--esp-4) var(--esp-5); margin-bottom: var(--esp-5);
+}
+.resumo-item span { display: block; font-size: 0.76rem; text-transform: uppercase; color: var(--dourado-escuro); font-weight: 700; letter-spacing: 0.03em; }
+.resumo-item strong { font-size: 1.2rem; color: var(--cinza-950); }
+
+/* ==========================================================================
+   RODAPÉ
+   ========================================================================== */
+.rodape {
+  text-align: center; padding: var(--esp-5); color: var(--cinza-500); font-size: 0.82rem;
+  border-top: 1px solid var(--cinza-300); background: var(--branco);
+}
+.rodape strong { color: var(--azul-principal); }
+
+/* ==========================================================================
+   MENSAGEM TOAST (feedback rápido)
+   ========================================================================== */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 100;
+  background: var(--cinza-950); color: var(--branco);
+  padding: 14px 20px; border-radius: var(--raio-sm); box-shadow: var(--sombra-lg);
+  font-size: 0.9rem; font-weight: 600;
+  animation: surgir 240ms ease both;
+}
+.toast.toast-erro { background: var(--alerta); }
+.toast.toast-sucesso { background: var(--sucesso); }
+
+/* ==========================================================================
+   RESPONSIVO
+   ========================================================================== */
+@media (max-width: 640px) {
+  .conteudo { padding: var(--esp-5) var(--esp-4); }
+  .cabecalho { padding: var(--esp-3) var(--esp-4); gap: var(--esp-3); }
+  .cabecalho-filial { margin-left: 0; }
+  .cabecalho-usuario { width: 100%; justify-content: flex-start; margin-left: 0; }
+  .navegacao { padding: 0 var(--esp-4); }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ==========================================================================
+     TELA DE LOGIN
+     Perfis de acesso: Administrador, Gerente, Coordenador e Colaborador.
+     Administrador e Coordenador/Gerente escolhem a filial no login (o acesso
+     fica restrito a ela durante toda a sessão). O Colaborador não escolhe filial:
+     ela é herdada automaticamente do seu próprio cadastro.
+     ========================================================================== -->
+<div id="tela-login" class="tela-login">
+  <div class="login-cartao">
+    <img src="data:image/png;base64,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" alt="Comercial Mariano" class="login-logo">
+
+    <form id="form-login" novalidate>
+      <p class="login-titulo">Entre com as suas credenciais para fazer login:</p>
+
+      <p id="login-erro" class="login-erro" role="alert" aria-live="assertive" hidden></p>
+
+      <div class="campo-flutuante">
+        <label for="login-usuario">Usuário</label>
+        <input type="text" id="login-usuario" name="usuario" autocomplete="username" required>
+      </div>
+
+      <div class="campo-flutuante com-icone">
+        <label for="login-senha">Senha</label>
+        <input type="password" id="login-senha" name="senha" autocomplete="current-password" required>
+        <button type="button" id="botao-alternar-senha" class="botao-alternar-senha" aria-label="Mostrar senha" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+
+      <div class="login-acoes">
+        <button type="submit" class="botao botao-primario login-botao-entrar">Entrar</button>
+      </div>
+
+      <p class="login-dica">Demonstração — Administrador: <strong>admin</strong> / <strong>admin123</strong> · Gerente (Filial 100): <strong>gerente</strong> / <strong>gerente123</strong> · Coordenador (Filial 100): <strong>coordenador</strong> / <strong>coord123</strong> · Colaborador (exemplo): <strong>carlos.silva</strong> / <strong>venda123</strong></p>
+    </form>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     APLICAÇÃO PRINCIPAL
+     ========================================================================== -->
+<div id="app" class="app" hidden>
+
+  <div class="cabecalho-fixo">
+  <header class="cabecalho">
+    <div class="cabecalho-marca">
+      <img src="data:image/png;base64,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" alt="Comercial Mariano" class="cabecalho-logo">
+    </div>
+
+    <div class="cabecalho-filial">
+      <button id="botao-inicio-cabecalho" class="botao botao-cabecalho-inicio" type="button" data-ir-para="inicio" title="Ir para o Início">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4h4v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+        <span>Início</span>
+      </button>
+      <!-- Seletor de filial para Admin (pode ver todas) -->
+      <select id="seletor-filial-admin" hidden style="display:none;">
+        <option value="">Selecione uma filial...</option>
+      </select>
+      <!-- Badge para Gerente/Coordenador e Colaborador (filial fixa) -->
+      <span id="badge-filial" class="badge-info">Filial —</span>
+    </div>
+
+    <div class="cabecalho-usuario">
+      <span id="usuario-logado">Olá, Usuário</span>
+      <span id="badge-perfil" class="badge-info badge-perfil">Perfil</span>
+      <button id="botao-sair" class="botao botao-texto" type="button">Sair</button>
+    </div>
+  </header>
+
+  <nav class="navegacao" id="navegacao-principal" aria-label="Navegação principal">
+    <!-- Itens inseridos dinamicamente conforme o perfil logado -->
+  </nav>
+  </div>
+
+  <main class="conteudo">
+
+    <!-- ===================== INÍCIO ===================== -->
+    <section id="view-inicio" class="view" aria-labelledby="titulo-inicio">
+      <div class="view-cabecalho">
+        <h2 id="titulo-inicio">Painel Geral</h2>
+        <span class="view-subtitulo" id="subtitulo-inicio">Visão resumida da filial selecionada</span>
+      </div>
+
+      <!-- Painel do Administrador / Coordenador-Gerente (visão da filial) -->
+      <div id="inicio-gestor" hidden>
+        <div class="grade-cartoes">
+          <article class="cartao">
+            <h3>Filial</h3>
+            <p id="cartao-filial" style="font-size:1.15rem;">-</p>
+          </article>
+          <article class="cartao">
+            <h3>Colaboradores cadastrados</h3>
+            <p id="cartao-total-vendedores">0</p>
+          </article>
+          <article class="cartao">
+            <h3>Premiações lançadas</h3>
+            <p id="cartao-total-premiacoes">0</p>
+          </article>
+          <article class="cartao cartao-destaque">
+            <h3>Total a pagar</h3>
+            <p id="cartao-total-pagar">R$ 0,00</p>
+          </article>
+        </div>
+
+        <div class="acoes-rapidas">
+          <button class="botao botao-primario" type="button" data-ir-para="vendedores">+ Cadastrar vendedor</button>
+          <button class="botao botao-dourado" type="button" data-ir-para="premiacao" id="botao-atalho-planilha">+ Preencher planilha do mês</button>
+        </div>
+      </div>
+
+      <!-- Painel do Colaborador (visão pessoal) -->
+      <div id="inicio-vendedor" hidden>
+        <div class="grade-cartoes">
+          <article class="cartao">
+            <h3>Minha filial</h3>
+            <p id="cartao-vendedor-filial" style="font-size:1.15rem;">-</p>
+          </article>
+          <article class="cartao">
+            <h3>Minha função</h3>
+            <p id="cartao-vendedor-cargo" style="font-size:1.15rem;">-</p>
+          </article>
+          <article class="cartao">
+            <h3>Premiações recebidas</h3>
+            <p id="cartao-vendedor-total-premiacoes">0</p>
+          </article>
+          <article class="cartao cartao-destaque">
+            <h3>Total a receber</h3>
+            <p id="cartao-vendedor-total-pagar">R$ 0,00</p>
+          </article>
+        </div>
+
+        <div class="acoes-rapidas">
+          <button class="botao botao-primario" type="button" data-ir-para="consulta">Ver minhas premiações por mês</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VENDEDORES ===================== -->
+    <section id="view-vendedores" class="view" hidden aria-labelledby="titulo-vendedores">
+      <div class="view-cabecalho">
+        <h2 id="titulo-vendedores">Cadastro de Colaboradores</h2>
+        <span class="view-subtitulo" id="subtitulo-vendedores">Colaboradores da filial — cada um recebe um usuário próprio para acessar suas métricas</span>
+      </div>
+
+      <p id="aviso-todas-filiais-vendedores" class="login-erro" style="margin-bottom: var(--esp-4);" hidden>
+        Você está vendo todas as filiais ao mesmo tempo. Para cadastrar um novo colaborador, selecione uma filial específica no cabeçalho.
+      </p>
+
+      <form id="form-vendedor" novalidate>
+        <div class="tabela-wrapper">
+          <table class="tabela tabela-planilha">
+            <thead>
+              <tr>
+                <th>Código</th><th>Nome completo</th><th>CPF</th><th>Função</th><th>E-mail</th>
+                <th>Usuário de acesso</th><th>Senha de acesso</th><th aria-label="Ações"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="celula-input"><input type="text" id="vendedor-codigo" placeholder="Código" required></td>
+                <td class="celula-input"><input type="text" id="vendedor-nome" placeholder="Nome completo" required></td>
+                <td class="celula-input"><input type="text" id="vendedor-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required></td>
+                <td class="celula-input">
+                  <select id="vendedor-cargo">
+                    <option value="Assistente de Estoque">Assistente de Estoque</option>
+                    <option value="Auxiliar de Estoque">Auxiliar de Estoque</option>
+                    <option value="Consultor de Vendas Externo">Consultor de Vendas Externo</option>
+                    <option value="Consultor de Vendas Interno">Consultor de Vendas Interno</option>
+                    <option value="Coordenador">Coordenador</option>
+                    <option value="Encarregado de Estoque">Encarregado de Estoque</option>
+                    <option value="Gerente">Gerente</option>
+                    <option value="Lubrificador">Lubrificador</option>
+                    <option value="Outros">Outros</option>
+                    <option value="Supervisor">Supervisor</option>
+                  </select>
+                </td>
+                <td class="celula-input"><input type="email" id="vendedor-email" placeholder="email@exemplo.com"></td>
+                <td class="celula-input"><input type="text" id="vendedor-usuario-acesso" placeholder="usuario.acesso" required></td>
+                <td class="celula-input"><input type="text" id="vendedor-senha-acesso" placeholder="senha" required></td>
+                <td class="celula-acoes-form">
+                  <button type="submit" class="botao botao-primario" id="botao-salvar-vendedor">Cadastrar</button>
+                  <button type="button" class="botao botao-secundario" id="botao-cancelar-edicao-vendedor" hidden>Cancelar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="checklist-telas">
+          <span class="checklist-telas-titulo">Este colaborador aparece nas telas:</span>
+          <label><input type="checkbox" id="vendedor-tela-premiacoes"> Premiações</label>
+          <label><input type="checkbox" id="vendedor-tela-comissao"> Comissão</label>
+          <label><input type="checkbox" id="vendedor-tela-plano-saude"> Plano de Saúde</label>
+          <label><input type="checkbox" id="vendedor-tela-estoque"> Estoque</label>
+          <label><input type="checkbox" id="vendedor-tela-descontos"> Descontos e Bonificações</label>
+        </div>
+
+        <p class="dica-campo" style="margin-top: var(--esp-3);">O colaborador cadastrado é vinculado automaticamente à sua filial atual e usa o usuário/senha acima para ver apenas as próprias métricas.</p>
+      </form>
+
+      <div class="tabela-wrapper">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Código</th><th>Nome</th><th class="coluna-filial" id="cabecalho-filial-vendedores" hidden>Filial</th><th>CPF</th><th>Função</th><th>E-mail</th><th>Usuário de acesso</th><th>Telas</th><th aria-label="Ações" id="cabecalho-acoes-vendedores"></th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-vendedores">
+            <tr class="linha-vazia"><td colspan="8">Nenhum colaborador cadastrado ainda. Utilize o formulário acima.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== PREMIAÇÃO (PLANILHA EDITÁVEL) ===================== -->
+    <section id="view-premiacao" class="view" hidden aria-labelledby="titulo-premiacao">
+      <div class="view-cabecalho">
+        <h2 id="titulo-premiacao">Planilha de Premiação</h2>
+        <span class="view-subtitulo">PEV, Premiação Iconic, Premiação Filtros e demais fornecedores, Campanhas de fornecedores e Premiação Inadimplência</span>
+      </div>
+
+      <form id="form-mes-planilha" class="formulario grade-formulario" novalidate>
+        <div class="campo">
+          <label for="planilha-mes-referencia">Mês de referência da planilha</label>
+          <input type="month" id="planilha-mes-referencia">
+        </div>
+        <p class="dica-campo campo-largo">Preencha o valor já apurado de cada categoria para cada vendedor da filial. O total de cada linha é somado automaticamente.</p>
+      </form>
+
+      <div class="acoes-tabela" style="justify-content: flex-start;">
+        <button id="botao-bloquear-premiacao" class="botao botao-secundario" type="button" hidden>🔒 Bloquear lançamentos deste mês</button>
+        <button id="botao-exportar-csv" class="botao botao-secundario" type="button">⭳ Exportar CSV da filial</button>
+      </div>
+
+      <div class="tabela-wrapper">
+        <table class="tabela tabela-planilha">
+          <thead>
+            <tr>
+              <th>Código</th><th>Colaborador</th><th>CPF</th><th>PEV</th><th>Premiação Iconic</th><th>Filtros e demais fornecedores</th>
+              <th>Campanhas de fornecedores</th><th>Premiação Inadimplência</th><th>Total</th><th>Planilha Deivson</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-planilha-premiacao">
+            <tr class="linha-vazia"><td colspan="10">Carregando planilha...</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">Total geral da planilha</td>
+              <td class="celula-numerica celula-total" id="rodape-total-pev">R$ 0,00</td>
+              <td class="celula-numerica celula-total" id="rodape-total-iconic">R$ 0,00</td>
+              <td class="celula-numerica celula-total" id="rodape-total-filtros">R$ 0,00</td>
+              <td class="celula-numerica celula-total" id="rodape-total-campanhas-fornecedores">R$ 0,00</td>
+              <td class="celula-numerica celula-total" id="rodape-total-inadimplencia">R$ 0,00</td>
+              <td class="celula-numerica celula-total" id="rodape-total-planilha">R$ 0,00</td>
+              <td class="celula-numerica celula-total" id="rodape-total-deivson">R$ 0,00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="acoes-tabela">
+        <button id="botao-salvar-planilha" class="botao botao-dourado" type="button">💾 Salvar planilha do mês</button>
+      </div>
+    </section>
+
+    <!-- ===================== CONSULTA POR MÊS/ANO ===================== -->
+    <section id="view-consulta" class="view" hidden aria-labelledby="titulo-consulta">
+      <div class="view-cabecalho">
+        <h2 id="titulo-consulta">Consulta de Premiações por Período</h2>
+        <span class="view-subtitulo" id="subtitulo-consulta">Consulte os lançamentos de meses anteriores, separados por mês</span>
+      </div>
+
+      <form id="form-consulta" class="formulario grade-formulario" novalidate>
+        <div class="campo">
+          <label for="consulta-filtro-de">De</label>
+          <input type="month" id="consulta-filtro-de">
+        </div>
+        <div class="campo">
+          <label for="consulta-filtro-ate">Até</label>
+          <input type="month" id="consulta-filtro-ate">
+        </div>
+        <div class="formulario-rodape">
+          <button type="button" id="botao-limpar-filtro-consulta" class="botao botao-secundario">Ver todos os meses</button>
+        </div>
+      </form>
+
+      <div class="acoes-tabela" style="justify-content: flex-start;">
+        <button id="botao-exportar-csv-consulta" class="botao botao-secundario" type="button" hidden>⭳ Exportar CSV</button>
+      </div>
+
+      <div id="lista-consulta-meses"></div>
+    </section>
+
+    <!-- ===================== CONSOLIDADO PEV ===================== -->
+    <section id="view-consolidado-pev" class="view" hidden aria-labelledby="titulo-consolidado-pev">
+      <div class="view-cabecalho">
+        <h2 id="titulo-consolidado-pev">Consolidado PEV</h2>
+        <span class="view-subtitulo">PEV mês a mês (Dezembro a Novembro), com base de cálculo e adiantamento de férias</span>
+      </div>
+
+      <form id="form-filtro-pev" class="formulario grade-formulario" novalidate>
+        <div class="campo">
+          <label for="pev-ano-ciclo">Ciclo (ano de referência de Novembro)</label>
+          <input type="number" id="pev-ano-ciclo" min="2000" max="2100">
+        </div>
+        <div class="campo">
+          <label for="pev-filtro-de">De</label>
+          <input type="month" id="pev-filtro-de">
+        </div>
+        <div class="campo">
+          <label for="pev-filtro-ate">Até</label>
+          <input type="month" id="pev-filtro-ate">
+        </div>
+      </form>
+
+      <div class="acoes-tabela" style="justify-content: flex-start;">
+        <button id="botao-exportar-csv-consolidado-pev" class="botao botao-secundario" type="button">⭳ Exportar CSV</button>
+      </div>
+
+      <div class="tabela-wrapper">
+        <table class="tabela tabela-planilha">
+          <thead>
+            <tr id="cabecalho-consolidado-pev"></tr>
+          </thead>
+          <tbody id="corpo-consolidado-pev">
+            <tr class="linha-vazia"><td colspan="17">Carregando...</td></tr>
+          </tbody>
+          <tfoot id="rodape-consolidado-pev"></tfoot>
+        </table>
+      </div>
+
+      <div class="acoes-tabela" id="acoes-consolidado-pev" hidden>
+        <button id="botao-salvar-adiantamentos" class="botao botao-dourado" type="button">💾 Salvar adiantamentos de férias</button>
+      </div>
+    </section>
+
+    <!-- ===================== DESCONTO PLANO DE SAÚDE ===================== -->
+    <section id="view-plano-saude" class="view" hidden aria-labelledby="titulo-plano-saude">
+      <div class="view-cabecalho">
+        <h2 id="titulo-plano-saude">Desconto Plano de Saúde</h2>
+        <span class="view-subtitulo">Titulares vindos do cadastro de Vendedores — adicione os dependentes de cada um</span>
+      </div>
+
+      <div id="plano-saude-subabas" class="acoes-tabela" style="justify-content: flex-start; margin-bottom: var(--esp-4);">
+        <button id="botao-subaba-plano-saude-cadastro" class="botao botao-dourado" type="button">Titulares e Dependentes</button>
+        <button id="botao-subaba-plano-saude-lancamento" class="botao botao-secundario" type="button">Lançamento</button>
+      </div>
+
+      <div id="plano-saude-cadastro-bloco">
+        <h3 style="margin-bottom: var(--esp-3);">Titulares e dependentes</h3>
+        <p class="dica-campo" style="margin-bottom: var(--esp-4);">Os titulares são os vendedores já cadastrados na filial. Use o botão "+ Dependente" para adicionar os dependentes de cada colaborador. Marque, para cada titular, se a família tem Plano de Saúde, Plano Odontológico ou os dois — isso decide quem aparece em cada aba do Lançamento.</p>
+
+        <div class="tabela-wrapper">
+          <table class="tabela">
+            <thead>
+              <tr><th>Nome</th><th>CPF</th><th>Tipo</th><th>Plano de Saúde</th><th>Plano Odontológico</th><th aria-label="Ações"></th></tr>
+            </thead>
+            <tbody id="corpo-plano-saude-cadastro">
+              <tr class="linha-vazia"><td colspan="6">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="plano-saude-lancamento-bloco" style="margin-top: var(--esp-6);">
+        <h3 style="margin-bottom: var(--esp-3);">Lançamento mensal do desconto</h3>
+
+        <div class="acoes-tabela" style="justify-content: flex-start; margin-bottom: var(--esp-2);">
+          <button id="botao-tipo-plano-saude" class="botao botao-dourado" type="button" data-tipo-plano="saude">Plano de Saúde</button>
+          <button id="botao-tipo-plano-odonto" class="botao botao-secundario" type="button" data-tipo-plano="odontologico">Plano Odontológico</button>
+        </div>
+
+        <form id="form-mes-plano-saude" class="formulario grade-formulario" novalidate>
+          <div class="campo">
+            <label for="plano-saude-mes-referencia">Mês de referência</label>
+            <input type="month" id="plano-saude-mes-referencia">
+          </div>
+        </form>
+
+        <div class="tabela-wrapper">
+          <table class="tabela tabela-planilha">
+            <thead id="cabecalho-plano-saude-lancamento"></thead>
+            <tbody id="corpo-plano-saude-lancamento">
+              <tr class="linha-vazia"><td colspan="8">Nenhum titular cadastrado ainda.</td></tr>
+            </tbody>
+            <tfoot id="rodape-plano-saude-lancamento"></tfoot>
+          </table>
+        </div>
+
+        <div class="acoes-tabela" style="justify-content: flex-start;">
+          <button id="botao-bloquear-plano-saude" class="botao botao-secundario" type="button" hidden>🔒 Bloquear lançamentos deste mês</button>
+          <button id="botao-exportar-excel-plano-saude" class="botao botao-secundario" type="button">⭳ Exportar Excel da filial</button>
+        </div>
+        <div class="acoes-tabela">
+          <button id="botao-salvar-plano-saude" class="botao botao-dourado" type="button">💾 Salvar lançamento do mês</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DEMAIS DESCONTOS E BONIFICAÇÕES ===================== -->
+    <section id="view-descontos" class="view" hidden aria-labelledby="titulo-descontos">
+      <div class="view-cabecalho">
+        <h2 id="titulo-descontos">Demais Descontos e Bonificações</h2>
+        <span class="view-subtitulo">Lançamento mensal por colaborador — é possível registrar mais de um desconto/bonificação no mesmo mês</span>
+      </div>
+
+      <form id="form-mes-descontos" class="formulario grade-formulario" novalidate>
+        <div class="campo">
+          <label for="descontos-mes-referencia">Mês de referência</label>
+          <input type="month" id="descontos-mes-referencia">
+        </div>
+      </form>
+
+      <div class="acoes-tabela" style="justify-content: flex-start;">
+        <button id="botao-bloquear-descontos" class="botao botao-secundario" type="button" hidden>🔒 Bloquear lançamentos deste mês</button>
+        <button id="botao-exportar-excel-descontos" class="botao botao-secundario" type="button">⭳ Exportar Excel da filial</button>
+      </div>
+
+      <div class="tabela-wrapper">
+        <table class="tabela tabela-planilha">
+          <thead>
+            <tr><th>Cód</th><th>Nome</th><th>Tipo</th><th>Valor</th><th>Observações</th><th>Total</th><th aria-label="Ações"></th></tr>
+          </thead>
+          <tbody id="corpo-descontos">
+            <tr class="linha-vazia"><td colspan="7">Carregando...</td></tr>
+          </tbody>
+          <tfoot id="rodape-descontos"></tfoot>
+        </table>
+      </div>
+
+      <div class="acoes-tabela">
+        <button id="botao-salvar-descontos" class="botao botao-dourado" type="button">💾 Salvar lançamento do mês</button>
+      </div>
+    </section>
+
+    <!-- ===================== COMISSÃO ===================== -->
+    <section id="view-comissao" class="view" hidden aria-labelledby="titulo-comissao">
+      <div class="view-cabecalho">
+        <h2 id="titulo-comissao">Comissão</h2>
+        <span class="view-subtitulo" id="subtitulo-comissao">Lançamento mensal de comissão por colaborador</span>
+      </div>
+
+      <form id="form-mes-comissao" class="formulario grade-formulario" novalidate>
+        <div class="campo">
+          <label for="comissao-mes-referencia">Mês de referência</label>
+          <input type="month" id="comissao-mes-referencia">
+        </div>
+      </form>
+
+      <div class="acoes-tabela" style="justify-content: flex-start;">
+        <button id="botao-bloquear-comissao" class="botao botao-secundario" type="button" hidden>🔒 Bloquear lançamentos deste mês</button>
+        <button id="botao-exportar-excel-comissao" class="botao botao-secundario" type="button">⭳ Exportar Excel da filial</button>
+      </div>
+
+      <div class="tabela-wrapper">
+        <table class="tabela tabela-planilha">
+          <thead id="cabecalho-comissao"></thead>
+          <tbody id="corpo-comissao">
+            <tr class="linha-vazia"><td colspan="6">Carregando...</td></tr>
+          </tbody>
+          <tfoot id="rodape-comissao"></tfoot>
+        </table>
+      </div>
+
+      <div class="acoes-tabela">
+        <button id="botao-salvar-comissao" class="botao botao-dourado" type="button">💾 Salvar comissões do mês</button>
+      </div>
+    </section>
+
+    <!-- ===================== PREMIAÇÕES ESTOQUE ===================== -->
+    <section id="view-premiacao-estoque" class="view" hidden aria-labelledby="titulo-premiacao-estoque">
+      <div class="view-cabecalho">
+        <h2 id="titulo-premiacao-estoque">Premiações Estoque</h2>
+        <span class="view-subtitulo">Metas coletivas por função + bônus individual, com prorateio por dias de férias</span>
+      </div>
+
+      <p id="estoque-conteudo-oculto" class="dica-campo" hidden>Esta tela está temporariamente oculta.</p>
+
+      <div id="estoque-conteudo-bloco">
+      <!-- Política (metas e valores de referência) — só o Admin edita -->
+      <div id="estoque-politica-bloco">
+        <h3 style="margin-bottom: var(--esp-3);">Política de premiação (metas e valores de referência)</h3>
+        <form id="form-politica-estoque" class="formulario grade-formulario" novalidate>
+          <div class="campo">
+            <label for="politica-meta-romaneios">Meta % Romaneios bipados</label>
+            <input type="number" min="0" max="100" step="0.1" id="politica-meta-romaneios">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-romaneios">Valor Romaneios (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-romaneios">
+          </div>
+          <div class="campo">
+            <label for="politica-meta-contagens">Meta Contagens Semanais (und)</label>
+            <input type="number" min="0" step="1" id="politica-meta-contagens">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-contagens">Valor Contagens (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-contagens">
+          </div>
+          <div class="campo">
+            <label for="politica-meta-avaria">Meta % Estoque Avaria</label>
+            <input type="number" min="0" max="100" step="0.001" id="politica-meta-avaria">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-avaria">Valor Avaria (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-avaria">
+          </div>
+          <div class="campo">
+            <label for="politica-meta-segregado">Meta Estoque Segregado (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-meta-segregado">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-segregado">Valor Segregado (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-segregado">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-faltas">Valor individual — sem faltas (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-faltas">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-organizacao">Valor individual — organização em dia (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-organizacao">
+          </div>
+          <div class="campo">
+            <label for="politica-valor-volume">Valor individual — volume separado (só Auxiliar) (R$)</label>
+            <input type="number" min="0" step="0.01" id="politica-valor-volume">
+          </div>
+          <div class="campo">
+            <label for="politica-meta-volume-total">Meta % Volume Separado (total, dividido entre Auxiliares)</label>
+            <input type="number" min="0" max="100" step="0.1" id="politica-meta-volume-total">
+          </div>
+          <div class="formulario-rodape">
+            <button type="submit" class="botao botao-primario">💾 Salvar política</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Lançamento coletivo do mês -->
+      <div id="estoque-coletivo-bloco" style="margin-top: var(--esp-6);">
+        <h3 style="margin-bottom: var(--esp-3);">Lançamento coletivo do mês</h3>
+        <form id="form-mes-estoque" class="formulario grade-formulario" novalidate>
+          <div class="campo">
+            <label for="estoque-mes-referencia">Mês de referência</label>
+            <input type="month" id="estoque-mes-referencia">
+          </div>
+        </form>
+
+        <div class="acoes-tabela" style="justify-content: flex-start;">
+          <button id="botao-bloquear-estoque" class="botao botao-secundario" type="button" hidden>🔒 Bloquear lançamentos deste mês</button>
+        </div>
+
+        <div class="tabela-wrapper">
+          <table class="tabela tabela-planilha">
+            <thead>
+              <tr><th>KPI Coletivo</th><th>Meta</th><th>Realizado</th><th>% Atingido</th><th>Valor Referência</th><th>Valor a Pagar</th></tr>
+            </thead>
+            <tbody id="corpo-estoque-coletivo"></tbody>
+          </table>
+        </div>
+
+        <div class="acoes-tabela">
+          <button id="botao-salvar-estoque-coletivo" class="botao botao-dourado" type="button">💾 Salvar lançamento coletivo</button>
+        </div>
+      </div>
+
+      <!-- Lançamento individual do mês -->
+      <div id="estoque-individual-bloco" style="margin-top: var(--esp-6);">
+        <h3 style="margin-bottom: var(--esp-3);">Avaliação individual do mês</h3>
+        <div class="tabela-wrapper">
+          <table class="tabela tabela-planilha">
+            <thead>
+              <tr>
+                <th>Código</th><th>Nome</th><th>Função</th><th>Ocorrência de Faltas</th>
+                <th>Organização/Limpeza</th><th>% Volume Separado</th><th>Dias de Férias</th>
+                <th>Total Individual</th><th>Total Coletivo</th><th>Total a Receber</th>
+              </tr>
+            </thead>
+            <tbody id="corpo-estoque-individual">
+              <tr class="linha-vazia"><td colspan="10">Nenhum colaborador de estoque habilitado ainda (marque o checklist "Estoque" no Cadastro de Colaboradores, com função Encarregado/Assistente/Auxiliar de Estoque).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="acoes-tabela" style="justify-content: flex-start;">
+          <button id="botao-exportar-excel-estoque" class="botao botao-secundario" type="button">⭳ Exportar Excel da filial</button>
+        </div>
+
+        <div class="acoes-tabela">
+          <button id="botao-salvar-estoque-individual" class="botao botao-dourado" type="button">💾 Salvar avaliação individual</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="rodape">
+    <p><strong>Comercial Mariano</strong> — Sua confiança é o que nos move! · Sistema de Premiações</p>
+  </footer>
+</div>
+
+<script>
+/* ==========================================================================
+   ESTADO GLOBAL DA APLICAÇÃO
+   (Em memória — dados de exemplo, sem persistência entre recarregamentos)
+   ========================================================================== */
+const estado = {
+  sessao: null,     // { usuario, role, filial, vendedorId } — definido no login
+  // Filiais cadastradas (códigos numéricos transcritos das planilhas da empresa).
+  filiais: [
+    '100', '101', '201', '202', '300', '302', '303', '401', '403',
+    '600', '601', '602', '603', '604', '700', '701', '800', '900', '901'
+  ],
+  // Colaboradores de exemplo (pré-cadastrados, para o sistema não começar vazio).
+  // Usuário/senha de acesso permitem testar o login como Colaborador imediatamente.
+  vendedores: [
+    { id: 'seed-v1', codigo: 'V001', nome: 'Carlos Eduardo Silva', cpf: '123.456.789-01', filial: '100', cargo: 'Consultor de Vendas Interno', email: 'carlos.silva@comercialmariano.com.br', usuarioAcesso: 'carlos.silva', senhaAcesso: 'venda123', telas: { premiacoes: true, comissao: true, planoSaude: true, estoque: true, descontos: true } },
+    { id: 'seed-v2', codigo: 'V002', nome: 'Fernanda Souza Lima', cpf: '234.567.890-12', filial: '100', cargo: 'Consultor de Vendas Externo', email: 'fernanda.lima@comercialmariano.com.br', usuarioAcesso: 'fernanda.lima', senhaAcesso: 'venda123', telas: { premiacoes: true, comissao: true, planoSaude: true, estoque: true, descontos: true } },
+    { id: 'seed-v3', codigo: 'V003', nome: 'Roberto Almeida Santos', cpf: '345.678.901-23', filial: '100', cargo: 'Gerente', email: 'roberto.santos@comercialmariano.com.br', usuarioAcesso: 'roberto.santos', senhaAcesso: 'venda123', telas: { premiacoes: true, comissao: true, planoSaude: true, estoque: true, descontos: true } },
+    { id: 'seed-v4', codigo: 'V004', nome: 'Juliana Pereira Costa', cpf: '456.789.012-34', filial: '201', cargo: 'Consultor de Vendas Interno', email: 'juliana.costa@comercialmariano.com.br', usuarioAcesso: 'juliana.costa', senhaAcesso: 'venda123', telas: { premiacoes: true, comissao: true, planoSaude: true, estoque: true, descontos: true } },
+    { id: 'seed-v5', codigo: 'V005', nome: 'Marcos Vinícius Rocha', cpf: '567.890.123-45', filial: '300', cargo: 'Consultor de Vendas Externo', email: 'marcos.rocha@comercialmariano.com.br', usuarioAcesso: 'marcos.rocha', senhaAcesso: 'venda123', telas: { premiacoes: true, comissao: true, planoSaude: true, estoque: true, descontos: true } },
+    { id: 'seed-v6', codigo: 'V006', nome: 'Patrícia Gomes Ferreira', cpf: '678.901.234-56', filial: '600', cargo: 'Supervisor', email: 'patricia.ferreira@comercialmariano.com.br', usuarioAcesso: 'patricia.ferreira', senhaAcesso: 'venda123', telas: { premiacoes: true, comissao: true, planoSaude: true, estoque: true, descontos: true } }
+  ],
+  // Lançamentos de premiação de exemplo, cobrindo dois meses e filiais diferentes.
+  premiacoes: [
+    { id: 'seed-p1', vendedorId: 'seed-v1', vendedorNome: 'Carlos Eduardo Silva', filial: '100', mesReferencia: '2026-06', pev: 780.00, iconic: 380.00, filtros: 290.00, campanhasFornecedores: 150.00, inadimplencia: 50.00, total: 1650.00 },
+    { id: 'seed-p2', vendedorId: 'seed-v1', vendedorNome: 'Carlos Eduardo Silva', filial: '100', mesReferencia: '2026-07', pev: 850.00, iconic: 420.00, filtros: 310.50, campanhasFornecedores: 200.00, inadimplencia: 0, total: 1780.50 },
+    { id: 'seed-p3', vendedorId: 'seed-v2', vendedorNome: 'Fernanda Souza Lima', filial: '100', mesReferencia: '2026-06', pev: 860.00, iconic: 470.00, filtros: 300.00, campanhasFornecedores: 160.00, inadimplencia: 0, total: 1790.00 },
+    { id: 'seed-p4', vendedorId: 'seed-v2', vendedorNome: 'Fernanda Souza Lima', filial: '100', mesReferencia: '2026-07', pev: 920.00, iconic: 510.00, filtros: 340.00, campanhasFornecedores: 180.00, inadimplencia: 0, total: 1950.00 },
+    { id: 'seed-p5', vendedorId: 'seed-v3', vendedorNome: 'Roberto Almeida Santos', filial: '100', mesReferencia: '2026-07', pev: 650.00, iconic: 300.00, filtros: 200.00, campanhasFornecedores: 400.00, inadimplencia: 100.00, total: 1650.00 },
+    { id: 'seed-p6', vendedorId: 'seed-v4', vendedorNome: 'Juliana Pereira Costa', filial: '201', mesReferencia: '2026-07', pev: 700.00, iconic: 350.00, filtros: 220.00, campanhasFornecedores: 120.00, inadimplencia: 0, total: 1390.00 },
+    { id: 'seed-p7', vendedorId: 'seed-v5', vendedorNome: 'Marcos Vinícius Rocha', filial: '300', mesReferencia: '2026-07', pev: 590.00, iconic: 280.00, filtros: 180.00, campanhasFornecedores: 90.00, inadimplencia: 30.00, total: 1170.00 },
+    { id: 'seed-p8', vendedorId: 'seed-v6', vendedorNome: 'Patrícia Gomes Ferreira', filial: '600', mesReferencia: '2026-07', pev: 1020.00, iconic: 600.00, filtros: 410.00, campanhasFornecedores: 250.00, inadimplencia: 0, total: 2280.00 }
+  ],
+
+  // Adiantamento de férias — um valor por vendedor, por ciclo (ano de Novembro), lançado pelo Admin.
+  adiantamentosFerias: [], // { id, vendedorId, anoCiclo, valor }
+
+  // Dependentes do plano de saúde, vinculados ao vendedor (titular) do cadastro.
+  planoSaudeDependentes: [], // { id, vendedorId, nome, cpf }
+
+  // Lançamentos mensais do desconto de plano de saúde, por pessoa (titular ou dependente).
+  planoSaudeLancamentos: [], // { id, titularId, mesReferencia, tipoPlano: 'saude'|'odontologico', descricao, valorTitular, valorDependente, valorAdicional?, valorCoparticipacao? }
+
+  // Demais descontos e bonificações, lançados mês a mês por vendedor.
+  descontosBonificacoes: [], // { id, vendedorId, tipo, valor, observacoes, mesReferencia }
+
+  // Comissões lançadas mês a mês por vendedor.
+  comissoes: [], // { id, vendedorId, vendedorNome, filial, mesReferencia, pev, valor, garantido }
+
+  // Filial + mês bloqueados pelo Admin para lançamento de comissão pelo Gerente.
+  // Bloqueios de lançamento definidos pelo Admin, no formato "tela::filial::mesReferencia".
+  // Usado nas telas de Premiação, Plano de Saúde, Descontos e Comissão.
+  bloqueios: [],
+
+  // Política de premiação do Estoque (metas e valores de referência), editável só pelo Admin.
+  // Segue a metodologia da planilha "Metodologia Estoque": KPIs coletivos por grupo de função
+  // (Encarregado/Assistente vs Auxiliar) + bônus individuais (faltas, organização, volume separado).
+  politicaEstoque: {
+    metas: { romaneios: 0.90, contagens: 3, avaria: 0.0015, segregado: 0 },
+    valoresReferencia: { romaneios: 150, contagens: 100, avaria: 75, segregado: 25, faltas: 75, organizacao: 75, volumeSeparado: 150 },
+    metaVolumeSeparadoTotal: 0.80
+  },
+
+  // Lançamento coletivo mensal dos KPIs de estoque, por filial.
+  estoqueColetivoMensal: [], // { id, filial, mesReferencia, realizados: { romaneios, contagens, avaria, segregado } }
+
+  // Avaliação individual mensal de cada colaborador de estoque.
+  estoqueIndividualMensal: [] // { id, vendedorId, mesReferencia, semFaltas, organizacaoOk, volumeSeparadoRealizado, diasFerias }
+};
+
+// Valor sentinela usado quando o Administrador escolhe ver todas as filiais
+// de uma vez, em vez de restringir a visão a uma única filial.
+const FILIAL_TODAS = 'TODAS';
+
+// Verdadeiro apenas quando o Admin está com a visão "Todas as filiais" ativa
+function estaVendoTodasFiliais() {
+  return estado.sessao.role === 'admin' && estado.sessao.filial === FILIAL_TODAS;
+}
+
+// Credenciais de demonstração para os perfis de gestão (Administrador, Gerente e Coordenador)
+const CREDENCIAIS_GESTAO = {
+  admin: { usuario: 'admin', senha: 'admin123', filial: null },              // Pode acessar qualquer filial
+  gerente: { usuario: 'gerente', senha: 'gerente123', filial: '100' },       // Vinculado à filial 100 (exemplo)
+  coordenador: { usuario: 'coordenador', senha: 'coord123', filial: '100' }  // Vinculado à filial 100 (exemplo)
+};
+
+// Rótulos amigáveis para cada perfil de acesso
+const ROTULOS_PAPEL = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  coordenador: 'Coordenador',
+  vendedor: 'Colaborador'
+};
+
+// Categorias fixas da planilha de premiação
+const CATEGORIAS_PREMIACAO = [
+  { chave: 'pev',                   idCampo: 'pev' },
+  { chave: 'iconic',                idCampo: 'iconic' },
+  { chave: 'filtros',               idCampo: 'filtros' },
+  { chave: 'campanhasFornecedores', idCampo: 'campanhas-fornecedores' },
+  { chave: 'inadimplencia',         idCampo: 'inadimplencia' }
+];
+
+// Itens de navegação disponíveis por perfil de acesso
+// Observação: "premiacao-estoque" fica visível apenas para o Administrador.
+// O código completo do módulo (telas, cálculos, bloqueio) foi mantido — apenas
+// o acesso via menu/navegação foi restrito, a pedido do negócio.
+const NAV_POR_PAPEL = {
+  admin: ['inicio', 'vendedores', 'consulta', 'consolidado-pev', 'premiacao', 'comissao', 'premiacao-estoque', 'descontos', 'plano-saude'],
+  gerente: ['inicio', 'vendedores', 'premiacao', 'comissao'],
+  coordenador: ['inicio', 'vendedores', 'descontos', 'plano-saude'],
+  vendedor: ['inicio', 'consulta']
+};
+
+// Definição de cada item de navegação
+const ITENS_NAVEGACAO = {
+  inicio: {
+    rotulo: 'Início',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4h4v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>'
+  },
+  vendedores: {
+    rotulo: 'Colaboradores',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><path d="M17 8.2c1.2.3 2 1.4 2 2.6s-.8 2.3-2 2.6"/><path d="M15.5 13.7c1.8.4 3.5 1.8 3.5 4.3"/></svg>'
+  },
+  premiacao: {
+    rotulo: 'Premiação',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5.2"/><path d="M9 13.8 7.3 21l4.7-2.6 4.7 2.6-1.7-7.2"/></svg>'
+  },
+  consulta: {
+    rotulo: 'Consulta',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/></svg>'
+  },
+  'consolidado-pev': {
+    rotulo: 'Consolidado PEV',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M11 19V5M18 19v-7"/></svg>'
+  },
+  'plano-saude': {
+    rotulo: 'Plano de Saúde',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.6-9.5-9.1C.7 8.4 2.3 5 5.7 5c1.9 0 3.3 1 4.3 2.4C11 6 12.4 5 14.3 5c3.4 0 5 3.4 3.2 6.9C19 16.4 12 21 12 21Z"/><path d="M9.5 11h5M12 8.5v5"/></svg>'
+  },
+  'descontos': {
+    rotulo: 'Descontos/Bonificações',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18 6 6 18"/></svg>'
+  },
+  'premiacao-estoque': {
+    rotulo: 'Premiações Estoque',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="1.5"/><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/></svg>'
+  },
+  'comissao': {
+    rotulo: 'Comissão',
+    icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5h.01M14.5 14.5h.01M9 15l6-6"/></svg>'
+  }
+};
+
+const NOMES_MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+/* ==========================================================================
+   UTILITÁRIOS
+   ========================================================================== */
+const gerarId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+
+const formatarMoeda = (valor) =>
+  valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function mostrarToast(mensagem, tipo = 'sucesso') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${tipo}`;
+  toast.setAttribute('role', 'status');
+  toast.textContent = mensagem;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2800);
+}
+
+function aplicarMascaraCPF(evento) {
+  let valor = evento.target.value.replace(/\D/g, '').slice(0, 11);
+  valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+  valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+  valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  evento.target.value = valor;
+}
+
+function obterMesAtualISO() {
+  const agora = new Date();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  return `${agora.getFullYear()}-${mes}`;
+}
+
+function formatarMesAno(chaveIso) {
+  if (!chaveIso) return 'Sem mês definido';
+  const [ano, mes] = chaveIso.split('-');
+  const nomeMes = NOMES_MESES[parseInt(mes, 10) - 1] || mes;
+  return `${nomeMes} de ${ano}`;
+}
+
+function somarCategorias(valores) {
+  return CATEGORIAS_PREMIACAO.reduce((soma, { chave }) => soma + (valores[chave] || 0), 0);
+}
+
+/* ==========================================================================
+   AUTENTICAÇÃO — AUTODETECÇÃO DE TIPO DE USUÁRIO
+   ========================================================================== */
+function tratarSubmitLogin(evento) {
+  evento.preventDefault();
+
+  const usuario = document.getElementById('login-usuario').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const mensagemErro = document.getElementById('login-erro');
+
+  // 1. Verifica se é administrador
+  if (usuario === CREDENCIAIS_GESTAO.admin.usuario && senha === CREDENCIAIS_GESTAO.admin.senha) {
+    // Admin enxerga todas as filiais por padrão; pode restringir a uma específica
+    // pelo seletor no cabeçalho, se preferir.
+    estado.sessao = {
+      usuario,
+      role: 'admin',
+      filial: FILIAL_TODAS,
+      vendedorId: null,
+      nomeExibicao: 'Administrador'
+    };
+    mensagemErro.hidden = true;
+    entrarNaAplicacao();
+    return;
+  }
+
+  // 2. Verifica se é Gerente
+  if (usuario === CREDENCIAIS_GESTAO.gerente.usuario && senha === CREDENCIAIS_GESTAO.gerente.senha) {
+    estado.sessao = {
+      usuario,
+      role: 'gerente',
+      filial: CREDENCIAIS_GESTAO.gerente.filial,
+      vendedorId: null,
+      nomeExibicao: 'Gerente'
+    };
+    mensagemErro.hidden = true;
+    entrarNaAplicacao();
+    return;
+  }
+
+  // 3. Verifica se é Coordenador
+  if (usuario === CREDENCIAIS_GESTAO.coordenador.usuario && senha === CREDENCIAIS_GESTAO.coordenador.senha) {
+    estado.sessao = {
+      usuario,
+      role: 'coordenador',
+      filial: CREDENCIAIS_GESTAO.coordenador.filial,
+      vendedorId: null,
+      nomeExibicao: 'Coordenador'
+    };
+    mensagemErro.hidden = true;
+    entrarNaAplicacao();
+    return;
+  }
+
+  // 4. Verifica se é vendedor cadastrado (procura na base de vendedores)
+  const vendedor = estado.vendedores.find((v) => v.usuarioAcesso === usuario && v.senhaAcesso === senha);
+  if (vendedor) {
+    estado.sessao = {
+      usuario,
+      role: 'vendedor',
+      filial: vendedor.filial,
+      vendedorId: vendedor.id,
+      nomeExibicao: vendedor.nome
+    };
+    mensagemErro.hidden = true;
+    entrarNaAplicacao();
+    return;
+  }
+
+  // Nenhuma combinação de usuário/senha válida foi encontrada
+  mensagemErro.textContent = 'Usuário ou senha inválidos.';
+  mensagemErro.hidden = false;
+}
+
+function entrarNaAplicacao() {
+  document.getElementById('tela-login').hidden = true;
+  document.getElementById('app').hidden = false;
+
+  document.getElementById('usuario-logado').textContent = `Olá, ${estado.sessao.nomeExibicao}`;
+  document.getElementById('badge-perfil').textContent = ROTULOS_PAPEL[estado.sessao.role];
+
+  // Se for Admin, mostra seletor de filial; caso contrário, mostra badge
+  if (estado.sessao.role === 'admin') {
+    const seletor = document.getElementById('seletor-filial-admin');
+    const badge = document.getElementById('badge-filial');
+    seletor.innerHTML = `<option value="${FILIAL_TODAS}">Todas as filiais</option>` +
+      estado.filiais.map((f) => `<option value="${f}">Filial ${f}</option>`).join('');
+    seletor.value = estado.sessao.filial;
+    seletor.hidden = false;
+    seletor.style.display = 'block';
+    badge.hidden = true;
+    badge.style.display = 'none';
+  } else {
+    const seletor = document.getElementById('seletor-filial-admin');
+    const badge = document.getElementById('badge-filial');
+    seletor.hidden = true;
+    seletor.style.display = 'none';
+    badge.textContent = `Filial ${estado.sessao.filial}`;
+    badge.hidden = false;
+    badge.style.display = 'inline-flex';
+  }
+
+  renderizarNavegacao();
+  mostrarView('inicio');
+}
+
+function tratarSair() {
+  estado.sessao = null;
+  document.getElementById('form-login').reset();
+  document.getElementById('app').hidden = true;
+  document.getElementById('tela-login').hidden = false;
+}
+
+/* ==========================================================================
+   NAVEGAÇÃO ENTRE VIEWS (conforme o perfil logado)
+   ========================================================================== */
+function renderizarNavegacao() {
+  const nav = document.getElementById('navegacao-principal');
+  // "Início" agora tem seu próprio botão fixo no cabeçalho, então não repetimos
+  // o item aqui embaixo — mas ele continua em NAV_POR_PAPEL como view padrão válida.
+  const itens = NAV_POR_PAPEL[estado.sessao.role].filter((chave) => chave !== 'inicio');
+
+  nav.innerHTML = itens.map((chave) => {
+    const item = ITENS_NAVEGACAO[chave];
+    const rotulo = (chave === 'consulta' && estado.sessao.role === 'vendedor') ? 'Minhas Premiações' : item.rotulo;
+    return `<button class="nav-item" data-view="${chave}">${item.icone}${rotulo}</button>`;
+  }).join('');
+
+  nav.querySelectorAll('.nav-item').forEach((item) => {
+    item.addEventListener('click', () => mostrarView(item.dataset.view));
+  });
+
+  ajustarEspacoCabecalhoFixo();
+}
+
+// O cabeçalho agora é position:fixed (sempre visível ao rolar a página); esta
+// função mede a altura real dele e aplica esse espaço como padding-top no
+// conteúdo, para nada ficar escondido atrás do cabeçalho.
+function ajustarEspacoCabecalhoFixo() {
+  const fixo = document.querySelector('.cabecalho-fixo');
+  const conteudo = document.querySelector('.conteudo');
+  if (!fixo || !conteudo) return;
+  conteudo.style.paddingTop = `${fixo.offsetHeight}px`;
+}
+
+function mostrarView(nomeView) {
+  if (!NAV_POR_PAPEL[estado.sessao.role].includes(nomeView)) {
+    nomeView = 'inicio';
+  }
+
+  document.querySelectorAll('.view').forEach((secao) => {
+    secao.hidden = secao.id !== `view-${nomeView}`;
+  });
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const ativo = item.dataset.view === nomeView;
+    item.classList.toggle('ativo', ativo);
+    if (ativo) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+
+  if (nomeView === 'inicio') atualizarPainel();
+  if (nomeView === 'vendedores') renderizarTabelaVendedores();
+  if (nomeView === 'premiacao') renderizarPlanilhaPremiacao();
+  if (nomeView === 'consulta') renderizarConsulta();
+  if (nomeView === 'consolidado-pev') renderizarConsolidadoPEV();
+  if (nomeView === 'plano-saude') renderizarPlanoSaude();
+  if (nomeView === 'descontos') renderizarDescontos();
+  if (nomeView === 'comissao') renderizarComissao();
+  if (nomeView === 'premiacao-estoque') renderizarPremiacaoEstoque();
+}
+
+function configurarAtalhosRapidos() {
+  document.querySelectorAll('[data-ir-para]').forEach((botao) => {
+    botao.addEventListener('click', () => mostrarView(botao.dataset.irPara));
+  });
+}
+
+/* ==========================================================================
+   VENDEDORES (escopo: apenas a filial da sessão atual)
+   ========================================================================== */
+function vendedoresDaFilial() {
+  if (estaVendoTodasFiliais()) return estado.vendedores.slice();
+  return estado.vendedores.filter((v) => v.filial === estado.sessao.filial);
+}
+
+// Filtra ainda mais: só os colaboradores marcados (pelo Admin) para aparecer em determinada tela.
+const TELAS_COLABORADOR = ['premiacoes', 'comissao', 'planoSaude', 'estoque', 'descontos'];
+const ROTULOS_TELAS_COLABORADOR = {
+  premiacoes: 'Premiações',
+  comissao: 'Comissão',
+  planoSaude: 'Plano de Saúde',
+  estoque: 'Estoque',
+  descontos: 'Descontos'
+};
+
+function vendedoresParaTela(chaveTela) {
+  return vendedoresDaFilial().filter((v) => v.telas && v.telas[chaveTela]);
+}
+
+/* ==========================================================================
+   PREMIAÇÕES ESTOQUE — constantes da metodologia
+   ========================================================================== */
+// Os cargos de estoque se dividem em 2 grupos para fins de KPI coletivo e bônus individual:
+// "encarregado_assistente" (Encarregado/Assistente de Estoque) e "auxiliar" (Auxiliar de Estoque).
+function grupoFuncaoEstoque(cargo) {
+  if (cargo === 'Encarregado de Estoque' || cargo === 'Assistente de Estoque') return 'encarregado_assistente';
+  if (cargo === 'Auxiliar de Estoque') return 'auxiliar';
+  return null;
+}
+
+// KPIs coletivos: cada um vale para um ou mais grupos de função, com meta/valor de referência
+// definidos na Política de Estoque (estado.politicaEstoque).
+const KPIS_COLETIVOS_ESTOQUE = [
+  { chave: 'romaneios', nome: '% Romaneios de vendas bipados pelo coletor', unidade: '%', grupos: ['encarregado_assistente'] },
+  { chave: 'contagens', nome: 'Contagens Semanais', unidade: 'und', grupos: ['encarregado_assistente', 'auxiliar'] },
+  { chave: 'avaria', nome: '% Estoque Avaria (99)', unidade: '%', grupos: ['encarregado_assistente', 'auxiliar'] },
+  { chave: 'segregado', nome: 'Valor em R$ no Estoque Segregado (88)', unidade: 'R$', grupos: ['encarregado_assistente', 'auxiliar'] }
+];
+
+// Calcula o "% Atingido" de um KPI coletivo. Para "avaria" e "segregado", menor é melhor;
+// para os demais, maior é melhor — replicando as regras da planilha de metodologia.
+function calcularAtingidoColetivoEstoque(chave, meta, realizado) {
+  if (chave === 'avaria') {
+    if (realizado <= 0) return 1;
+    return meta / realizado;
+  }
+  if (chave === 'segregado') {
+    return realizado <= meta ? 1 : 0;
+  }
+  if (meta === 0) return realizado > 0 ? 1 : 0;
+  return realizado / meta;
+}
+
+function calcularValorPagoColetivoEstoque(chave, meta, realizado, valorReferencia) {
+  const atingido = calcularAtingidoColetivoEstoque(chave, meta, realizado);
+  return atingido >= 1 ? valorReferencia : 0;
+}
+
+// Idem, mas para os lançamentos de premiação
+function premiacoesDaFilial() {
+  if (estaVendoTodasFiliais()) return estado.premiacoes.slice();
+  return estado.premiacoes.filter((p) => p.filial === estado.sessao.filial);
+}
+
+// Idem, mas para os lançamentos de comissão
+function comissoesDaFilial() {
+  if (estaVendoTodasFiliais()) return estado.comissoes.slice();
+  return estado.comissoes.filter((c) => c.filial === estado.sessao.filial);
+}
+
+// Descontos/bonificações não guardam a filial diretamente no registro, então
+// resolvemos pela filial do colaborador vinculado.
+function descontosDaFilial() {
+  if (estaVendoTodasFiliais()) return estado.descontosBonificacoes.slice();
+  const idsDaFilial = new Set(
+    estado.vendedores.filter((v) => v.filial === estado.sessao.filial).map((v) => v.id)
+  );
+  return estado.descontosBonificacoes.filter((d) => idsDaFilial.has(d.vendedorId));
+}
+
+// Guarda o id do colaborador em edição no formulário de cadastro (null = modo "novo cadastro").
+let vendedorEmEdicaoId = null;
+
+function tratarSubmitVendedor(evento) {
+  evento.preventDefault();
+
+  if (estado.sessao.role !== 'admin') {
+    mostrarToast('Apenas o Administrador pode cadastrar colaboradores.', 'erro');
+    return;
+  }
+
+  if (estaVendoTodasFiliais()) {
+    mostrarToast('Selecione uma filial específica no cabeçalho para cadastrar um colaborador.', 'erro');
+    return;
+  }
+
+  const dadosFormulario = {
+    codigo: document.getElementById('vendedor-codigo').value.trim(),
+    nome: document.getElementById('vendedor-nome').value.trim(),
+    cpf: document.getElementById('vendedor-cpf').value.trim(),
+    cargo: document.getElementById('vendedor-cargo').value,
+    email: document.getElementById('vendedor-email').value.trim(),
+    usuarioAcesso: document.getElementById('vendedor-usuario-acesso').value.trim(),
+    senhaAcesso: document.getElementById('vendedor-senha-acesso').value.trim(),
+    telas: {
+      premiacoes: document.getElementById('vendedor-tela-premiacoes').checked,
+      comissao: document.getElementById('vendedor-tela-comissao').checked,
+      planoSaude: document.getElementById('vendedor-tela-plano-saude').checked,
+      estoque: document.getElementById('vendedor-tela-estoque').checked,
+      descontos: document.getElementById('vendedor-tela-descontos').checked
+    }
+  };
+
+  if (!dadosFormulario.codigo || !dadosFormulario.nome || !dadosFormulario.cpf) {
+    mostrarToast('Preencha ao menos código, nome e CPF do colaborador.', 'erro');
+    return;
+  }
+  if (!dadosFormulario.usuarioAcesso || !dadosFormulario.senhaAcesso) {
+    mostrarToast('Defina um usuário e uma senha de acesso para o colaborador.', 'erro');
+    return;
+  }
+
+  const usuarioDuplicado = estado.vendedores.some((v) =>
+    v.usuarioAcesso === dadosFormulario.usuarioAcesso && v.id !== vendedorEmEdicaoId
+  );
+  if (usuarioDuplicado) {
+    mostrarToast('Já existe um colaborador com esse usuário de acesso.', 'erro');
+    return;
+  }
+
+  if (vendedorEmEdicaoId) {
+    const vendedor = estado.vendedores.find((v) => v.id === vendedorEmEdicaoId);
+    if (!vendedor) {
+      mostrarToast('Não foi possível localizar o colaborador para salvar as alterações.', 'erro');
+      cancelarEdicaoVendedor();
+      return;
+    }
+    Object.assign(vendedor, dadosFormulario);
+    // Atualiza o nome já lançado em premiações existentes, para manter a exibição consistente.
+    estado.premiacoes.forEach((p) => { if (p.vendedorId === vendedor.id) p.vendedorNome = vendedor.nome; });
+    cancelarEdicaoVendedor();
+    renderizarTabelaVendedores();
+    atualizarPainel();
+    mostrarToast('Colaborador atualizado com sucesso.');
+    return;
+  }
+
+  estado.vendedores.push(Object.assign({ id: gerarId(), filial: estado.sessao.filial }, dadosFormulario));
+  document.getElementById('form-vendedor').reset();
+  renderizarTabelaVendedores();
+  atualizarPainel();
+  mostrarToast('Colaborador cadastrado com sucesso.');
+}
+
+function iniciarEdicaoVendedor(id) {
+  if (estado.sessao.role !== 'admin') return;
+
+  if (estaVendoTodasFiliais()) {
+    mostrarToast('Selecione a filial deste colaborador no cabeçalho para editá-lo.', 'erro');
+    return;
+  }
+
+  const vendedor = estado.vendedores.find((v) => v.id === id);
+  if (!vendedor) return;
+
+  vendedorEmEdicaoId = id;
+
+  document.getElementById('vendedor-codigo').value = vendedor.codigo || '';
+  document.getElementById('vendedor-nome').value = vendedor.nome || '';
+  document.getElementById('vendedor-cpf').value = vendedor.cpf || '';
+  document.getElementById('vendedor-cargo').value = vendedor.cargo || '';
+  document.getElementById('vendedor-email').value = vendedor.email || '';
+  document.getElementById('vendedor-usuario-acesso').value = vendedor.usuarioAcesso || '';
+  document.getElementById('vendedor-senha-acesso').value = vendedor.senhaAcesso || '';
+  document.getElementById('vendedor-tela-premiacoes').checked = !!(vendedor.telas && vendedor.telas.premiacoes);
+  document.getElementById('vendedor-tela-comissao').checked = !!(vendedor.telas && vendedor.telas.comissao);
+  document.getElementById('vendedor-tela-plano-saude').checked = !!(vendedor.telas && vendedor.telas.planoSaude);
+  document.getElementById('vendedor-tela-estoque').checked = !!(vendedor.telas && vendedor.telas.estoque);
+  document.getElementById('vendedor-tela-descontos').checked = !!(vendedor.telas && vendedor.telas.descontos);
+
+  document.getElementById('botao-salvar-vendedor').textContent = 'Salvar alterações';
+  document.getElementById('botao-cancelar-edicao-vendedor').hidden = false;
+  document.getElementById('vendedor-codigo').focus();
+  document.getElementById('form-vendedor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelarEdicaoVendedor() {
+  vendedorEmEdicaoId = null;
+  document.getElementById('form-vendedor').reset();
+  document.getElementById('botao-salvar-vendedor').textContent = 'Cadastrar';
+  document.getElementById('botao-cancelar-edicao-vendedor').hidden = true;
+}
+
+function removerVendedor(id) {
+  if (estado.sessao.role !== 'admin') return;
+  if (vendedorEmEdicaoId === id) cancelarEdicaoVendedor();
+  estado.vendedores = estado.vendedores.filter((v) => v.id !== id);
+  estado.premiacoes = estado.premiacoes.filter((p) => p.vendedorId !== id);
+  renderizarTabelaVendedores();
+  atualizarPainel();
+}
+
+function renderizarTabelaVendedores() {
+  const corpo = document.getElementById('corpo-tabela-vendedores');
+  const cabecalhoFilial = document.getElementById('cabecalho-filial-vendedores');
+  const cabecalhoAcoes = document.getElementById('cabecalho-acoes-vendedores');
+  const aviso = document.getElementById('aviso-todas-filiais-vendedores');
+  const formulario = document.getElementById('form-vendedor');
+  const subtitulo = document.getElementById('subtitulo-vendedores');
+  const lista = vendedoresDaFilial();
+  const mostrarFilial = estaVendoTodasFiliais();
+  const ehAdmin = estado.sessao.role === 'admin';
+  const colunasBase = 7; // Código, Nome, CPF, Função, E-mail, Usuário, Telas
+  const colspanVazio = colunasBase + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
+
+  cabecalhoFilial.hidden = !mostrarFilial;
+  cabecalhoAcoes.hidden = !ehAdmin;
+  aviso.hidden = !(ehAdmin && mostrarFilial);
+  formulario.hidden = !ehAdmin || mostrarFilial;
+  subtitulo.textContent = mostrarFilial
+    ? 'Colaboradores de todas as filiais'
+    : ehAdmin
+      ? 'Colaboradores da filial — cada um recebe um usuário próprio para acessar suas métricas'
+      : `Consulta dos colaboradores da Filial ${estado.sessao.filial}`;
+
+  if (lista.length === 0) {
+    const mensagem = mostrarFilial
+      ? 'Nenhum colaborador cadastrado ainda em nenhuma filial.'
+      : ehAdmin
+        ? 'Nenhum colaborador cadastrado ainda nesta filial. Utilize o formulário acima.'
+        : 'Nenhum colaborador cadastrado ainda nesta filial.';
+    corpo.innerHTML = `<tr class="linha-vazia"><td colspan="${colspanVazio}">${mensagem}</td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = lista.map((v) => {
+    const telasAtivas = TELAS_COLABORADOR.filter((chave) => v.telas && v.telas[chave]);
+    const badgesTelas = telasAtivas.length
+      ? telasAtivas.map((chave) => `<span class="badge-tela">${ROTULOS_TELAS_COLABORADOR[chave]}</span>`).join('')
+      : '—';
+
+    return `
+    <tr>
+      <td>${v.codigo || '—'}</td>
+      <td>${v.nome}</td>
+      ${mostrarFilial ? `<td>Filial ${v.filial}</td>` : ''}
+      <td>${v.cpf}</td>
+      <td>${v.cargo}</td>
+      <td>${v.email || '—'}</td>
+      <td>${v.usuarioAcesso}</td>
+      <td>${badgesTelas}</td>
+      ${ehAdmin ? `<td class="celula-acoes-form"><button class="botao botao-secundario" data-editar-vendedor="${v.id}" type="button">Editar</button><button class="botao botao-perigo" data-remover-vendedor="${v.id}" type="button">Remover</button></td>` : ''}
+    </tr>
+  `;
+  }).join('');
+
+  corpo.querySelectorAll('[data-remover-vendedor]').forEach((botao) => {
+    botao.addEventListener('click', () => removerVendedor(botao.dataset.removerVendedor));
+  });
+  corpo.querySelectorAll('[data-editar-vendedor]').forEach((botao) => {
+    botao.addEventListener('click', () => iniciarEdicaoVendedor(botao.dataset.editarVendedor));
+  });
+}
+
+/* ==========================================================================
+   PREMIAÇÃO — PLANILHA EDITÁVEL
+   ========================================================================== */
+function idCelulaPlanilha(vendedorId, chaveCategoria) {
+  const idCampo = CATEGORIAS_PREMIACAO.find((c) => c.chave === chaveCategoria).idCampo;
+  return `planilha-${vendedorId}-${idCampo}`;
+}
+
+function lerValoresLinha(vendedorId) {
+  const valores = {};
+  CATEGORIAS_PREMIACAO.forEach(({ chave }) => {
+    const input = document.getElementById(idCelulaPlanilha(vendedorId, chave));
+    valores[chave] = parseFloat(input.value) || 0;
+  });
+  return valores;
+}
+
+function atualizarTotalLinha(vendedorId) {
+  const valores = lerValoresLinha(vendedorId);
+  const total = somarCategorias(valores);
+  document.getElementById(`planilha-total-${vendedorId}`).textContent = formatarMoeda(total);
+  document.getElementById(`planilha-deivson-${vendedorId}`).textContent = formatarMoeda(total - (valores.pev || 0));
+  atualizarTotalGeralPlanilha();
+}
+
+function atualizarTotalGeralPlanilha() {
+  const mes = document.getElementById('planilha-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('premiacoes');
+  let totalGeral = 0;
+  let totalGeralDeivson = 0;
+  const totaisPorCategoria = {};
+  CATEGORIAS_PREMIACAO.forEach(({ chave }) => { totaisPorCategoria[chave] = 0; });
+
+  lista.forEach((v) => {
+    const valores = lerValoresLinha(v.id);
+    const total = somarCategorias(valores);
+    totalGeral += total;
+    totalGeralDeivson += total - (valores.pev || 0);
+    CATEGORIAS_PREMIACAO.forEach(({ chave }) => { totaisPorCategoria[chave] += valores[chave] || 0; });
+  });
+
+  CATEGORIAS_PREMIACAO.forEach(({ chave, idCampo }) => {
+    const celula = document.getElementById(`rodape-total-${idCampo}`);
+    if (celula) celula.textContent = formatarMoeda(totaisPorCategoria[chave]);
+  });
+  document.getElementById('rodape-total-planilha').textContent = formatarMoeda(totalGeral);
+  document.getElementById('rodape-total-deivson').textContent = formatarMoeda(totalGeralDeivson);
+}
+
+function renderizarPlanilhaPremiacao() {
+  const corpo = document.getElementById('corpo-planilha-premiacao');
+  const mes = document.getElementById('planilha-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('premiacoes');
+
+  atualizarBotaoBloqueio('botao-bloquear-premiacao', 'premiacao', mes);
+  const bloqueadoParaEdicao = usuarioEstaBloqueadoNaTela('premiacao', mes);
+
+  if (lista.length === 0) {
+    corpo.innerHTML = '<tr class="linha-vazia"><td colspan="10">Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores).</td></tr>';
+    CATEGORIAS_PREMIACAO.forEach(({ idCampo }) => {
+      const celula = document.getElementById(`rodape-total-${idCampo}`);
+      if (celula) celula.textContent = formatarMoeda(0);
+    });
+    document.getElementById('rodape-total-planilha').textContent = formatarMoeda(0);
+    document.getElementById('rodape-total-deivson').textContent = formatarMoeda(0);
+    return;
+  }
+
+  corpo.innerHTML = lista.map((v) => {
+    const existente = estado.premiacoes.find((p) => p.vendedorId === v.id && p.mesReferencia === mes);
+    const valores = existente || { pev: 0, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 };
+    const total = existente ? existente.total : 0;
+
+    const celulas = CATEGORIAS_PREMIACAO.map(({ chave }) => `
+        <td class="celula-input">
+          <input type="number" min="0" step="0.01" id="${idCelulaPlanilha(v.id, chave)}" value="${valores[chave] || ''}" ${bloqueadoParaEdicao ? 'disabled' : ''}>
+        </td>
+      `).join('');
+
+    return `
+      <tr>
+        <td>${v.codigo || '—'}</td>
+        <td>${v.nome}</td>
+        <td>${v.cpf}</td>
+        ${celulas}
+        <td class="celula-numerica celula-total" id="planilha-total-${v.id}">${formatarMoeda(total)}</td>
+        <td class="celula-numerica celula-total" id="planilha-deivson-${v.id}">${formatarMoeda(total - (valores.pev || 0))}</td>
+      </tr>
+    `;
+  }).join('');
+
+  lista.forEach((v) => {
+    CATEGORIAS_PREMIACAO.forEach(({ chave }) => {
+      document.getElementById(idCelulaPlanilha(v.id, chave))
+        .addEventListener('input', () => atualizarTotalLinha(v.id));
+    });
+  });
+
+  atualizarTotalGeralPlanilha();
+
+  if (bloqueadoParaEdicao) {
+    mostrarToast('Os lançamentos de premiação deste mês estão bloqueados pelo Administrador.', 'erro');
+  }
+}
+
+function tratarSalvarPlanilha() {
+  const mes = document.getElementById('planilha-mes-referencia').value || obterMesAtualISO();
+
+  if (usuarioEstaBloqueadoNaTela('premiacao', mes)) {
+    mostrarToast('Não é possível salvar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+
+  const lista = vendedoresParaTela('premiacoes');
+
+  if (lista.length === 0) {
+    mostrarToast('Cadastre ao menos um vendedor nesta filial antes de salvar a planilha.', 'erro');
+    return;
+  }
+
+  lista.forEach((v) => {
+    const valores = lerValoresLinha(v.id);
+    const total = somarCategorias(valores);
+    const indiceExistente = estado.premiacoes.findIndex((p) => p.vendedorId === v.id && p.mesReferencia === mes);
+
+    const registro = {
+      id: indiceExistente >= 0 ? estado.premiacoes[indiceExistente].id : gerarId(),
+      vendedorId: v.id,
+      vendedorNome: v.nome,
+      filial: v.filial,
+      mesReferencia: mes,
+      ...valores,
+      total
+    };
+
+    if (indiceExistente >= 0) estado.premiacoes[indiceExistente] = registro;
+    else estado.premiacoes.push(registro);
+  });
+
+  mostrarToast(`Planilha de ${formatarMesAno(mes)} salva com sucesso.`);
+  atualizarPainel();
+}
+
+/* ==========================================================================
+   EXPORTAÇÃO CSV
+   ========================================================================== */
+function baixarCSV(cabecalho, linhas, nomeBase) {
+  const conteudoCSV = [cabecalho, ...linhas]
+    .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(';'))
+    .join('\n');
+
+  const blob = new Blob(['\uFEFF' + conteudoCSV], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const sufixoArquivo = estaVendoTodasFiliais() ? 'todas-filiais' : `filial-${estado.sessao.filial}`;
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${nomeBase}_${sufixoArquivo}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+
+  mostrarToast('Arquivo CSV exportado com sucesso.');
+}
+
+/* ==========================================================================
+   EXPORTAÇÃO EXCEL (.xlsx) — usada por todas as telas, exceto Premiação e
+   Consolidado PEV, que continuam exportando em CSV.
+   ========================================================================== */
+function baixarExcel(cabecalho, linhas, nomeBase) {
+  if (typeof XLSX === 'undefined') {
+    mostrarToast('Não foi possível gerar o Excel: biblioteca não carregada. Verifique sua conexão com a internet.', 'erro');
+    return;
+  }
+
+  const planilha = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+  const livro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(livro, planilha, 'Dados');
+
+  const sufixoArquivo = estaVendoTodasFiliais() ? 'todas-filiais' : `filial-${estado.sessao.filial}`;
+  XLSX.writeFile(livro, `${nomeBase}_${sufixoArquivo}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+  mostrarToast('Arquivo Excel exportado com sucesso.');
+}
+
+function exportarPremiacoesCSV() {
+  const dadosFilial = premiacoesDaFilial();
+
+  if (dadosFilial.length === 0) {
+    mostrarToast('Não há premiações salvas para exportar.', 'erro');
+    return;
+  }
+
+  const cabecalho = ['CPF', 'Nome', 'Valor Total', 'Observações'];
+
+  const linhas = dadosFilial.map((p) => {
+    const vendedor = estado.vendedores.find((v) => v.id === p.vendedorId);
+    return [
+      vendedor ? vendedor.cpf : '',
+      p.vendedorNome,
+      p.total.toFixed(2),
+      ''
+    ];
+  });
+
+  baixarCSV(cabecalho, linhas, 'premiacoes');
+}
+
+function exportarComissoesExcel() {
+  const dadosFilial = comissoesDaFilial();
+
+  if (dadosFilial.length === 0) {
+    mostrarToast('Não há comissões salvas para exportar.', 'erro');
+    return;
+  }
+
+  const cabecalho = ['Código', 'Nome', 'PEV', 'Comissão', 'Garantido'];
+
+  const linhas = dadosFilial.map((c) => {
+    const vendedor = estado.vendedores.find((v) => v.id === c.vendedorId);
+    return [
+      vendedor ? (vendedor.codigo || '') : '',
+      c.vendedorNome,
+      (c.pev || 0).toFixed(2),
+      (c.valor || 0).toFixed(2),
+      (c.garantido || 0).toFixed(2)
+    ];
+  });
+
+  baixarExcel(cabecalho, linhas, 'comissoes');
+}
+
+function exportarDescontosExcel() {
+  const dadosFilial = descontosDaFilial();
+
+  if (dadosFilial.length === 0) {
+    mostrarToast('Não há descontos ou bonificações salvos para exportar.', 'erro');
+    return;
+  }
+
+  const cabecalho = ['CPF', 'Nome', 'Mês Referência', 'Tipo', 'Valor', 'Observações'];
+
+  const linhas = dadosFilial.map((d) => {
+    const vendedor = estado.vendedores.find((v) => v.id === d.vendedorId);
+    return [
+      vendedor ? vendedor.cpf : '',
+      vendedor ? vendedor.nome : '',
+      formatarMesAno(d.mesReferencia),
+      d.tipo,
+      d.valor.toFixed(2),
+      d.observacoes || ''
+    ];
+  });
+
+  baixarExcel(cabecalho, linhas, 'descontos-bonificacoes');
+}
+
+
+/* ==========================================================================
+   CONSULTA POR MÊS/ANO
+   ========================================================================== */
+function agruparPremiacoesPorMes(lista) {
+  const grupos = new Map();
+
+  lista.forEach((p) => {
+    const chave = p.mesReferencia || 'sem-mes';
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(p);
+  });
+
+  return new Map([...grupos.entries()].sort((a, b) => b[0].localeCompare(a[0])));
+}
+
+function montarCartaoMes(chaveMes, lancamentos, mostrarFilial) {
+  const total = lancamentos.reduce((soma, p) => soma + p.total, 0);
+  const totalPev = lancamentos.reduce((soma, p) => soma + (p.pev || 0), 0);
+  const totalIconic = lancamentos.reduce((soma, p) => soma + (p.iconic || 0), 0);
+  const totalFiltros = lancamentos.reduce((soma, p) => soma + (p.filtros || 0), 0);
+  const totalCampanhas = lancamentos.reduce((soma, p) => soma + (p.campanhasFornecedores || 0), 0);
+  const totalInadimplencia = lancamentos.reduce((soma, p) => soma + (p.inadimplencia || 0), 0);
+
+  const linhas = lancamentos.map((p) => `
+      <tr>
+        <td>${p.vendedorNome}</td>
+        ${mostrarFilial ? `<td>Filial ${p.filial}</td>` : ''}
+        <td class="celula-numerica">${formatarMoeda(p.pev)}</td>
+        <td class="celula-numerica">${formatarMoeda(p.iconic)}</td>
+        <td class="celula-numerica">${formatarMoeda(p.filtros)}</td>
+        <td class="celula-numerica">${formatarMoeda(p.campanhasFornecedores)}</td>
+        <td class="celula-numerica">${formatarMoeda(p.inadimplencia)}</td>
+        <td class="celula-numerica"><strong>${formatarMoeda(p.total)}</strong></td>
+      </tr>
+  `).join('');
+
+  return `
+    <article class="cartao-mes">
+      <div class="cartao-mes-cabecalho">
+        <h3>${formatarMesAno(chaveMes === 'sem-mes' ? null : chaveMes)}</h3>
+        <div class="cartao-mes-resumo">
+          <span>${lancamentos.length} lançamento(s)</span>
+          <span>Subtotal: <strong>${formatarMoeda(total)}</strong></span>
+        </div>
+      </div>
+      <div class="tabela-wrapper">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Colaborador</th>${mostrarFilial ? '<th>Filial</th>' : ''}<th>PEV</th><th>Iconic</th>
+              <th>Filtros/Demais</th><th>Camp. Fornecedores</th><th>Inadimplência</th><th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+          <tfoot>
+            <tr>
+              <td${mostrarFilial ? ' colspan="2"' : ''}>Total do mês</td>
+              <td class="celula-numerica celula-total">${formatarMoeda(totalPev)}</td>
+              <td class="celula-numerica celula-total">${formatarMoeda(totalIconic)}</td>
+              <td class="celula-numerica celula-total">${formatarMoeda(totalFiltros)}</td>
+              <td class="celula-numerica celula-total">${formatarMoeda(totalCampanhas)}</td>
+              <td class="celula-numerica celula-total">${formatarMoeda(totalInadimplencia)}</td>
+              <td class="celula-numerica celula-total">${formatarMoeda(total)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </article>
+  `;
+}
+
+function renderizarConsulta() {
+  const container = document.getElementById('lista-consulta-meses');
+  const de = document.getElementById('consulta-filtro-de').value;
+  const ate = document.getElementById('consulta-filtro-ate').value;
+  const mostrarFilial = estaVendoTodasFiliais();
+
+  // O botão de exportar aqui serve para Admin (que não acessa a tela de Premiação)
+  // e para Gerente/Coordenador; o Colaborador não precisa exportar os próprios dados.
+  document.getElementById('botao-exportar-csv-consulta').hidden = estado.sessao.role === 'vendedor';
+
+  const baseEscopo = estado.sessao.role === 'vendedor'
+    ? estado.premiacoes.filter((p) => p.vendedorId === estado.sessao.vendedorId)
+    : premiacoesDaFilial();
+
+  const subtitulo = document.getElementById('subtitulo-consulta');
+  const titulo = document.getElementById('titulo-consulta');
+  if (estado.sessao.role === 'vendedor') {
+    titulo.textContent = 'Minhas Premiações por Período';
+    subtitulo.textContent = 'Veja o histórico dos seus lançamentos, mês a mês';
+  } else if (mostrarFilial) {
+    titulo.textContent = 'Consulta de Premiações por Período';
+    subtitulo.textContent = 'Lançamentos de todas as filiais, separados por mês';
+  } else {
+    titulo.textContent = 'Consulta de Premiações por Período';
+    subtitulo.textContent = `Lançamentos da Filial ${estado.sessao.filial}, separados por mês`;
+  }
+
+  if (baseEscopo.length === 0) {
+    container.innerHTML = '<p class="mensagem-vazia-consulta">Nenhuma premiação lançada ainda para consultar.</p>';
+    return;
+  }
+
+  const listaFiltrada = baseEscopo.filter((p) =>
+    (!de || p.mesReferencia >= de) && (!ate || p.mesReferencia <= ate)
+  );
+
+  if (listaFiltrada.length === 0) {
+    const descricaoPeriodo = de && ate
+      ? `${formatarMesAno(de)} até ${formatarMesAno(ate)}`
+      : de
+        ? `a partir de ${formatarMesAno(de)}`
+        : ate
+          ? `até ${formatarMesAno(ate)}`
+          : 'o período selecionado';
+    container.innerHTML = `<p class="mensagem-vazia-consulta">Nenhuma premiação encontrada para ${descricaoPeriodo}.</p>`;
+    return;
+  }
+
+  const grupos = agruparPremiacoesPorMes(listaFiltrada);
+  container.innerHTML = [...grupos.entries()]
+    .map(([chaveMes, lancamentos]) => montarCartaoMes(chaveMes, lancamentos, mostrarFilial))
+    .join('');
+}
+
+/* ==========================================================================
+   PAINEL / RESUMOS
+   ========================================================================== */
+function atualizarPainel() {
+  const ehVendedor = estado.sessao.role === 'vendedor';
+  const mostrarFilial = estaVendoTodasFiliais();
+
+  document.getElementById('inicio-gestor').hidden = ehVendedor;
+  document.getElementById('inicio-vendedor').hidden = !ehVendedor;
+  document.getElementById('subtitulo-inicio').textContent = ehVendedor
+    ? 'Suas métricas pessoais de premiação'
+    : mostrarFilial
+      ? 'Visão resumida de todas as filiais'
+      : `Visão resumida da Filial ${estado.sessao.filial}`;
+
+  if (ehVendedor) {
+    const vendedor = estado.vendedores.find((v) => v.id === estado.sessao.vendedorId);
+    const minhasPremiacoes = estado.premiacoes.filter((p) => p.vendedorId === estado.sessao.vendedorId);
+    const total = minhasPremiacoes.reduce((soma, p) => soma + p.total, 0);
+
+    document.getElementById('cartao-vendedor-filial').textContent = `Filial ${estado.sessao.filial}`;
+    document.getElementById('cartao-vendedor-cargo').textContent = vendedor ? vendedor.cargo : '-';
+    document.getElementById('cartao-vendedor-total-premiacoes').textContent = minhasPremiacoes.length;
+    document.getElementById('cartao-vendedor-total-pagar').textContent = formatarMoeda(total);
+  } else {
+    const listaFilial = vendedoresDaFilial();
+    const premiacoesFilial = premiacoesDaFilial();
+    const total = premiacoesFilial.reduce((soma, p) => soma + p.total, 0);
+
+    document.getElementById('cartao-filial').textContent = mostrarFilial ? 'Todas as filiais' : `Filial ${estado.sessao.filial}`;
+    document.getElementById('cartao-total-vendedores').textContent = listaFilial.length;
+    document.getElementById('cartao-total-premiacoes').textContent = premiacoesFilial.length;
+    document.getElementById('cartao-total-pagar').textContent = formatarMoeda(total);
+
+    document.getElementById('botao-atalho-planilha').hidden = !NAV_POR_PAPEL[estado.sessao.role].includes('premiacao');
+  }
+}
+
+/* ==========================================================================
+   VISIBILIDADE DA SENHA (tela de login)
+   ========================================================================== */
+const ICONE_OLHO_ABERTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICONE_OLHO_FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3 3.9M6.6 6.6C3.4 8.6 1.5 12 1.5 12S5 19 12 19a10.6 10.6 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+
+function alternarVisibilidadeSenha() {
+  const campoSenha = document.getElementById('login-senha');
+  const botao = document.getElementById('botao-alternar-senha');
+  const senhaOculta = campoSenha.type === 'password';
+
+  campoSenha.type = senhaOculta ? 'text' : 'password';
+  botao.setAttribute('aria-label', senhaOculta ? 'Ocultar senha' : 'Mostrar senha');
+  botao.setAttribute('aria-pressed', String(senhaOculta));
+  botao.innerHTML = senhaOculta ? ICONE_OLHO_FECHADO : ICONE_OLHO_ABERTO;
+}
+
+/* ==========================================================================
+   MUDANÇA DE FILIAL (apenas Admin)
+   ========================================================================== */
+function aoTrocarFilialAdmin() {
+  const novaFilial = document.getElementById('seletor-filial-admin').value;
+  if (!novaFilial) return;
+
+  estado.sessao.filial = novaFilial;
+  if (typeof cancelarEdicaoVendedor === 'function' && vendedorEmEdicaoId) cancelarEdicaoVendedor();
+  
+  // Re-renderiza todos os dados da view atual
+  const viewAtual = document.querySelector('.view:not([hidden])');
+  if (viewAtual) {
+    const nomeView = viewAtual.id.replace('view-', '');
+    atualizarPainel();
+    if (nomeView === 'vendedores') renderizarTabelaVendedores();
+    if (nomeView === 'premiacao') renderizarPlanilhaPremiacao();
+    if (nomeView === 'consulta') renderizarConsulta();
+    if (nomeView === 'consolidado-pev') renderizarConsolidadoPEV();
+    if (nomeView === 'plano-saude') renderizarPlanoSaude();
+    if (nomeView === 'descontos') renderizarDescontos();
+    if (nomeView === 'comissao') renderizarComissao();
+    if (nomeView === 'premiacao-estoque') renderizarPremiacaoEstoque();
+  }
+
+  mostrarToast(novaFilial === FILIAL_TODAS ? 'Exibindo todas as filiais.' : `Filial alterada para ${novaFilial}.`);
+}
+
+/* ==========================================================================
+   CONSOLIDADO PEV
+   ========================================================================== */
+function obterAnoCicloAtual() {
+  const agora = new Date();
+  return agora.getMonth() === 11 ? agora.getFullYear() + 1 : agora.getFullYear();
+}
+
+const ORDEM_MESES_CICLO_PEV = [11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Dez do ano anterior, depois Jan..Nov
+
+function obterMesesCicloPEV(anoCiclo) {
+  return ORDEM_MESES_CICLO_PEV.map((mesIndex, i) => {
+    const ano = i === 0 ? anoCiclo - 1 : anoCiclo;
+    const mesStr = String(mesIndex + 1).padStart(2, '0');
+    return { chave: `${ano}-${mesStr}`, nomeCurto: NOMES_MESES[mesIndex].slice(0, 3) };
+  });
+}
+
+// Gera a lista de meses entre "de" e "ate" (inclusive), na ordem cronológica —
+// usada para que a tabela do Consolidado PEV siga literalmente o que foi
+// escolhido no filtro De/Até, e não fique presa ao ciclo Dez-Nov.
+function gerarIntervaloMeses(deChave, ateChave) {
+  const [anoDe, mesDe] = deChave.split('-').map(Number);
+  const [anoAte, mesAte] = ateChave.split('-').map(Number);
+  const meses = [];
+  let ano = anoDe;
+  let mes = mesDe;
+  let seguranca = 0; // evita loop infinito caso as datas estejam invertidas
+
+  while ((ano < anoAte || (ano === anoAte && mes <= mesAte)) && seguranca < 240) {
+    meses.push({ chave: `${ano}-${String(mes).padStart(2, '0')}`, nomeCurto: NOMES_MESES[mes - 1].slice(0, 3) });
+    mes += 1;
+    if (mes > 12) { mes = 1; ano += 1; }
+    seguranca += 1;
+  }
+  return meses;
+}
+
+function obterPEVDoVendedorNoMes(vendedorId, chaveMes) {
+  const registro = estado.premiacoes.find((p) => p.vendedorId === vendedorId && p.mesReferencia === chaveMes);
+  return registro ? (registro.pev || 0) : 0;
+}
+
+function obterAdiantamento(vendedorId, anoCiclo) {
+  const registro = estado.adiantamentosFerias.find((a) => a.vendedorId === vendedorId && a.anoCiclo === anoCiclo);
+  return registro ? registro.valor : 0;
+}
+
+function renderizarConsolidadoPEV() {
+  const campoAno = document.getElementById('pev-ano-ciclo');
+  const campoDe = document.getElementById('pev-filtro-de');
+  const campoAte = document.getElementById('pev-filtro-ate');
+
+  const anoCiclo = parseInt(campoAno.value, 10) || obterAnoCicloAtual();
+  campoAno.value = anoCiclo;
+
+  // Só usa o ciclo Dez-Nov como sugestão inicial; depois disso, o próprio
+  // filtro De/Até é que manda em quais meses aparecem na tabela.
+  const cicloSugerido = obterMesesCicloPEV(anoCiclo);
+  if (!campoDe.value) campoDe.value = cicloSugerido[0].chave;
+  if (!campoAte.value) campoAte.value = cicloSugerido[cicloSugerido.length - 1].chave;
+
+  const de = campoDe.value;
+  const ate = campoAte.value;
+
+  const corpo = document.getElementById('corpo-consolidado-pev');
+  const acoes = document.getElementById('acoes-consolidado-pev');
+  const podeEditarAdiantamento = estado.sessao.role === 'admin';
+  acoes.hidden = !podeEditarAdiantamento;
+
+  const rodape = document.getElementById('rodape-consolidado-pev');
+
+  if (de > ate) {
+    document.getElementById('cabecalho-consolidado-pev').innerHTML = '<th>CPF</th><th>Nome</th>';
+    corpo.innerHTML = '<tr class="linha-vazia"><td colspan="2">O mês "De" não pode ser posterior ao mês "Até".</td></tr>';
+    rodape.innerHTML = '';
+    return;
+  }
+
+  const mesesExibidos = gerarIntervaloMeses(de, ate);
+
+  document.getElementById('cabecalho-consolidado-pev').innerHTML = `
+    <th>CPF</th><th>Nome</th>
+    ${mesesExibidos.map((m) => `<th>${m.nomeCurto}</th>`).join('')}
+    <th>Total Acumulado</th><th>Base de Cálculo (28%)</th>
+    <th>Adiantamento de Férias</th><th>Premiação Adicional a Receber</th>
+  `;
+
+  const lista = vendedoresParaTela('premiacoes');
+
+  if (lista.length === 0) {
+    corpo.innerHTML = `<tr class="linha-vazia"><td colspan="${5 + mesesExibidos.length}">Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores).</td></tr>`;
+    rodape.innerHTML = '';
+    return;
+  }
+
+  const totaisPorMes = mesesExibidos.map(() => 0);
+  let totalAcumuladoGeral = 0;
+  let totalBaseGeral = 0;
+  let totalAdiantamentoGeral = 0;
+  let totalAdicionalGeral = 0;
+
+  corpo.innerHTML = lista.map((v) => {
+    const valoresPorMes = mesesExibidos.map((m) => ({ chave: m.chave, valor: obterPEVDoVendedorNoMes(v.id, m.chave) }));
+    const totalAcumulado = valoresPorMes.reduce((soma, m) => soma + m.valor, 0);
+    const base = totalAcumulado * 0.28;
+    const adiantamento = obterAdiantamento(v.id, anoCiclo);
+    const adicional = base - adiantamento;
+
+    valoresPorMes.forEach((m, i) => { totaisPorMes[i] += m.valor; });
+    totalAcumuladoGeral += totalAcumulado;
+    totalBaseGeral += base;
+    totalAdiantamentoGeral += adiantamento;
+    totalAdicionalGeral += adicional;
+
+    const celulasMeses = valoresPorMes.map((m) => `<td class="celula-numerica">${formatarMoeda(m.valor)}</td>`).join('');
+
+    const celulaAdiantamento = podeEditarAdiantamento
+      ? `<td class="celula-input"><input type="number" min="0" step="0.01" id="pev-adiantamento-${v.id}" value="${adiantamento || ''}"></td>`
+      : `<td class="celula-numerica">${formatarMoeda(adiantamento)}</td>`;
+
+    return `
+      <tr>
+        <td>${v.cpf}</td>
+        <td>${v.nome}</td>
+        ${celulasMeses}
+        <td class="celula-numerica celula-total">${formatarMoeda(totalAcumulado)}</td>
+        <td class="celula-numerica">${formatarMoeda(base)}</td>
+        ${celulaAdiantamento}
+        <td class="celula-numerica celula-total">${formatarMoeda(adicional)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  rodape.innerHTML = `
+    <tr>
+      <td colspan="2">Total geral</td>
+      ${totaisPorMes.map((t) => `<td class="celula-numerica celula-total">${formatarMoeda(t)}</td>`).join('')}
+      <td class="celula-numerica celula-total">${formatarMoeda(totalAcumuladoGeral)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalBaseGeral)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalAdiantamentoGeral)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalAdicionalGeral)}</td>
+    </tr>
+  `;
+
+  if (podeEditarAdiantamento) {
+    document.querySelectorAll('[id^="pev-adiantamento-"]').forEach((input) => {
+      input.addEventListener('input', () => atualizarRodapeConsolidadoPev(lista, mesesExibidos, anoCiclo));
+    });
+  }
+}
+
+// Recalcula só o rodapé (sem re-renderizar as linhas, para não perder o foco
+// do campo enquanto o Admin digita o adiantamento de férias).
+function atualizarRodapeConsolidadoPev(lista, mesesExibidos, anoCiclo) {
+  const rodape = document.getElementById('rodape-consolidado-pev');
+  const totaisPorMes = mesesExibidos.map(() => 0);
+  let totalAcumuladoGeral = 0;
+  let totalBaseGeral = 0;
+  let totalAdiantamentoGeral = 0;
+  let totalAdicionalGeral = 0;
+
+  lista.forEach((v) => {
+    const valoresPorMes = mesesExibidos.map((m) => obterPEVDoVendedorNoMes(v.id, m.chave));
+    const totalAcumulado = valoresPorMes.reduce((soma, valor) => soma + valor, 0);
+    const base = totalAcumulado * 0.28;
+    const inputAdiantamento = document.getElementById(`pev-adiantamento-${v.id}`);
+    const adiantamento = inputAdiantamento ? (parseFloat(inputAdiantamento.value) || 0) : obterAdiantamento(v.id, anoCiclo);
+    const adicional = base - adiantamento;
+
+    valoresPorMes.forEach((valor, i) => { totaisPorMes[i] += valor; });
+    totalAcumuladoGeral += totalAcumulado;
+    totalBaseGeral += base;
+    totalAdiantamentoGeral += adiantamento;
+    totalAdicionalGeral += adicional;
+  });
+
+  rodape.innerHTML = `
+    <tr>
+      <td colspan="2">Total geral</td>
+      ${totaisPorMes.map((t) => `<td class="celula-numerica celula-total">${formatarMoeda(t)}</td>`).join('')}
+      <td class="celula-numerica celula-total">${formatarMoeda(totalAcumuladoGeral)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalBaseGeral)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalAdiantamentoGeral)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalAdicionalGeral)}</td>
+    </tr>
+  `;
+}
+
+function exportarConsolidadoPevCSV() {
+  const campoAno = document.getElementById('pev-ano-ciclo');
+  const anoCiclo = parseInt(campoAno.value, 10) || obterAnoCicloAtual();
+  const de = document.getElementById('pev-filtro-de').value;
+  const ate = document.getElementById('pev-filtro-ate').value;
+  const lista = vendedoresParaTela('premiacoes');
+
+  if (!de || !ate || de > ate || lista.length === 0) {
+    mostrarToast('Não há dados do Consolidado PEV para exportar.', 'erro');
+    return;
+  }
+
+  const mesesExibidos = gerarIntervaloMeses(de, ate);
+  const cabecalho = ['CPF', 'Nome', 'Premiação Adicional a Receber'];
+
+  const linhas = lista.map((v) => {
+    const totalAcumulado = mesesExibidos.reduce((soma, m) => soma + obterPEVDoVendedorNoMes(v.id, m.chave), 0);
+    const base = totalAcumulado * 0.28;
+    const adiantamento = obterAdiantamento(v.id, anoCiclo);
+    const adicional = base - adiantamento;
+
+    return [v.cpf, v.nome, adicional.toFixed(2)];
+  });
+
+  baixarCSV(cabecalho, linhas, 'consolidado-pev');
+}
+
+function tratarSalvarAdiantamentos() {
+  const anoCiclo = parseInt(document.getElementById('pev-ano-ciclo').value, 10) || obterAnoCicloAtual();
+  const lista = vendedoresParaTela('premiacoes');
+
+  lista.forEach((v) => {
+    const input = document.getElementById(`pev-adiantamento-${v.id}`);
+    if (!input) return;
+    const valor = parseFloat(input.value) || 0;
+    const indiceExistente = estado.adiantamentosFerias.findIndex((a) => a.vendedorId === v.id && a.anoCiclo === anoCiclo);
+    const registro = { id: indiceExistente >= 0 ? estado.adiantamentosFerias[indiceExistente].id : gerarId(), vendedorId: v.id, anoCiclo, valor };
+    if (indiceExistente >= 0) estado.adiantamentosFerias[indiceExistente] = registro;
+    else estado.adiantamentosFerias.push(registro);
+  });
+
+  mostrarToast('Adiantamentos de férias salvos com sucesso.');
+  renderizarConsolidadoPEV();
+}
+
+/* ==========================================================================
+   DESCONTO PLANO DE SAÚDE
+   ========================================================================== */
+// Sub-aba atualmente selecionada na tela de Plano de Saúde: 'cadastro' (Titulares
+// e Dependentes) ou 'lancamento'. Não é persistida — é só controle de exibição.
+let subAbaPlanoSaudeAtiva = 'cadastro';
+
+function selecionarSubAbaPlanoSaude(subaba) {
+  subAbaPlanoSaudeAtiva = subaba;
+  document.getElementById('botao-subaba-plano-saude-cadastro').className = `botao ${subaba === 'cadastro' ? 'botao-dourado' : 'botao-secundario'}`;
+  document.getElementById('botao-subaba-plano-saude-lancamento').className = `botao ${subaba === 'lancamento' ? 'botao-dourado' : 'botao-secundario'}`;
+  renderizarPlanoSaude();
+}
+
+function renderizarPlanoSaude() {
+  const podeAcessar = estado.sessao.role === 'admin' || estado.sessao.role === 'coordenador';
+  document.getElementById('plano-saude-subabas').hidden = !podeAcessar;
+
+  if (!podeAcessar) {
+    document.getElementById('plano-saude-cadastro-bloco').hidden = true;
+    document.getElementById('plano-saude-lancamento-bloco').hidden = true;
+    return;
+  }
+
+  document.getElementById('plano-saude-cadastro-bloco').hidden = subAbaPlanoSaudeAtiva !== 'cadastro';
+  document.getElementById('plano-saude-lancamento-bloco').hidden = subAbaPlanoSaudeAtiva !== 'lancamento';
+
+  renderizarCadastroPlanoSaude();
+  renderizarLancamentoPlanoSaude();
+}
+
+function renderizarCadastroPlanoSaude() {
+  const corpo = document.getElementById('corpo-plano-saude-cadastro');
+  const titulares = vendedoresParaTela('planoSaude');
+  const podeGerenciarDependentes = estado.sessao.role === 'admin';
+
+  if (titulares.length === 0) {
+    corpo.innerHTML = '<tr class="linha-vazia"><td colspan="6">Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores).</td></tr>';
+    return;
+  }
+
+  const linhas = [];
+  titulares.forEach((titular) => {
+    const dependentes = estado.planoSaudeDependentes.filter((d) => d.vendedorId === titular.id);
+    const temSaude = titular.adesaoSaude !== false; // por padrão, todo titular já entra com os dois planos
+    const temOdonto = titular.adesaoOdontologico !== false;
+
+    linhas.push(`
+      <tr>
+        <td>${titular.nome}</td><td>${titular.cpf}</td><td>Titular</td>
+        <td class="celula-checkbox"><input type="checkbox" id="adesao-saude-${titular.id}" ${temSaude ? 'checked' : ''} ${podeGerenciarDependentes ? '' : 'disabled'}></td>
+        <td class="celula-checkbox"><input type="checkbox" id="adesao-odonto-${titular.id}" ${temOdonto ? 'checked' : ''} ${podeGerenciarDependentes ? '' : 'disabled'}></td>
+        <td>
+          ${podeGerenciarDependentes ? `<button class="botao botao-secundario" type="button" data-add-dependente="${titular.id}">+ Dependente</button>` : ''}
+        </td>
+      </tr>
+    `);
+    dependentes.forEach((dep) => {
+      linhas.push(`
+        <tr>
+          <td style="padding-left: var(--esp-6);">${dep.nome}</td><td>${dep.cpf}</td><td>Dependente</td>
+          <td class="celula-checkbox">${temSaude ? '✓' : '—'}</td>
+          <td class="celula-checkbox">${temOdonto ? '✓' : '—'}</td>
+          <td>${podeGerenciarDependentes ? `<button class="botao botao-perigo" type="button" data-remover-dependente="${dep.id}">Remover</button>` : ''}</td>
+        </tr>
+      `);
+    });
+  });
+  corpo.innerHTML = linhas.join('');
+
+  if (!podeGerenciarDependentes) return;
+
+  titulares.forEach((titular) => {
+    const checkboxSaude = document.getElementById(`adesao-saude-${titular.id}`);
+    const checkboxOdonto = document.getElementById(`adesao-odonto-${titular.id}`);
+    checkboxSaude.addEventListener('change', () => {
+      titular.adesaoSaude = checkboxSaude.checked;
+      renderizarCadastroPlanoSaude();
+      renderizarLancamentoPlanoSaude();
+    });
+    checkboxOdonto.addEventListener('change', () => {
+      titular.adesaoOdontologico = checkboxOdonto.checked;
+      renderizarCadastroPlanoSaude();
+      renderizarLancamentoPlanoSaude();
+    });
+  });
+
+  corpo.querySelectorAll('[data-add-dependente]').forEach((botao) => {
+    botao.addEventListener('click', () => abrirFormularioDependente(botao.dataset.addDependente));
+  });
+  corpo.querySelectorAll('[data-remover-dependente]').forEach((botao) => {
+    botao.addEventListener('click', () => {
+      estado.planoSaudeDependentes = estado.planoSaudeDependentes.filter((d) => d.id !== botao.dataset.removerDependente);
+      renderizarCadastroPlanoSaude();
+      renderizarLancamentoPlanoSaude();
+    });
+  });
+}
+
+function abrirFormularioDependente(vendedorId) {
+  if (estado.sessao.role !== 'admin') {
+    mostrarToast('Apenas o Administrador pode adicionar dependentes.', 'erro');
+    return;
+  }
+  const nome = prompt('Nome do dependente:');
+  if (!nome) return;
+  const cpf = prompt('CPF do dependente:') || '';
+  estado.planoSaudeDependentes.push({ id: gerarId(), vendedorId, nome: nome.trim(), cpf: cpf.trim() });
+  renderizarCadastroPlanoSaude();
+  renderizarLancamentoPlanoSaude();
+}
+
+// Valor padrão (fixo) do Plano de Saúde por filial: as filiais 401 e 403 têm
+// um valor diferenciado; as demais usam o valor padrão. O Plano Odontológico
+// usa um valor único e fixo para todas as filiais.
+const FILIAIS_VALOR_DIFERENCIADO_SAUDE = ['401', '403'];
+const VALOR_PADRAO_SAUDE_DIFERENCIADO = 255.54;
+const VALOR_PADRAO_SAUDE_PADRAO = 185.27;
+const VALOR_PADRAO_ODONTOLOGICO = 13.56;
+
+function obterValorPadraoSaude(filial) {
+  return FILIAIS_VALOR_DIFERENCIADO_SAUDE.includes(filial) ? VALOR_PADRAO_SAUDE_DIFERENCIADO : VALOR_PADRAO_SAUDE_PADRAO;
+}
+
+// Configuração de cada tipo de plano lançado. O valor de Titular/Dependente é
+// sempre fixo e automático (não é digitado); só os "camposExtras" (quando
+// existirem) são realmente editáveis pelo usuário.
+const COLUNAS_PLANO_SAUDE = {
+  saude: {
+    titulo: 'Plano de Saúde',
+    rotuloTotal: 'R$ Total',
+    rotuloTitular: 'R$ Titular',
+    rotuloDependente: 'R$ Dep.',
+    valorPadrao: (pessoa) => obterValorPadraoSaude(pessoa.filial),
+    camposExtras: [
+      { chave: 'valorAdicional', rotulo: 'R$ Adicional' },
+      { chave: 'valorCoparticipacao', rotulo: 'R$ Coopart.' }
+    ]
+  },
+  odontologico: {
+    titulo: 'Plano Odontológico',
+    rotuloTotal: 'Total',
+    rotuloTitular: 'Titular',
+    rotuloDependente: 'Dependente',
+    valorPadrao: () => VALOR_PADRAO_ODONTOLOGICO,
+    camposExtras: []
+  }
+};
+
+// Tipo de plano atualmente selecionado na tela (não é persistido — apenas
+// controla qual conjunto de colunas está sendo exibido/editado no momento).
+let tipoPlanoSaudeAtivo = 'saude';
+
+function selecionarTipoPlanoSaude(tipo) {
+  tipoPlanoSaudeAtivo = tipo;
+  document.getElementById('botao-tipo-plano-saude').className = `botao ${tipo === 'saude' ? 'botao-dourado' : 'botao-secundario'}`;
+  document.getElementById('botao-tipo-plano-odonto').className = `botao ${tipo === 'odontologico' ? 'botao-dourado' : 'botao-secundario'}`;
+  renderizarLancamentoPlanoSaude();
+}
+
+// Monta a lista de pessoas exibidas — uma linha por pessoa (o titular e,
+// logo abaixo, cada um de seus dependentes), na ordem do cadastro.
+// Se "tipoPlano" for informado ('saude' ou 'odontologico'), só entram as
+// famílias cujo titular tem adesão àquele plano — permite que um titular
+// tenha só Saúde, só Odontológico, ou os dois.
+function listarPessoasPlanoSaude(tipoPlano) {
+  const pessoas = [];
+  vendedoresParaTela('planoSaude').forEach((titular) => {
+    if (tipoPlano === 'saude' && titular.adesaoSaude === false) return;
+    if (tipoPlano === 'odontologico' && titular.adesaoOdontologico === false) return;
+
+    pessoas.push({ id: titular.id, codigo: titular.codigo, nome: titular.nome, tipo: 'titular', titularId: titular.id, filial: titular.filial });
+    estado.planoSaudeDependentes
+      .filter((dep) => dep.vendedorId === titular.id)
+      .forEach((dep) => {
+        pessoas.push({ id: dep.id, codigo: titular.codigo, nome: dep.nome, tipo: 'dependente', titularId: titular.id, filial: titular.filial });
+      });
+  });
+  return pessoas;
+}
+
+function obterLancamentoPlanoSaude(pessoaId, mes, tipo) {
+  return estado.planoSaudeLancamentos.find((l) => l.pessoaId === pessoaId && l.mesReferencia === mes && l.tipoPlano === tipo);
+}
+
+function calcularTotalLancamentoPlanoSaude(pessoa, lancamento, config) {
+  const valorFixo = config.valorPadrao(pessoa);
+  const extras = config.camposExtras.reduce((soma, c) => soma + (lancamento ? (lancamento[c.chave] || 0) : 0), 0);
+  return valorFixo + extras;
+}
+
+function renderizarLancamentoPlanoSaude() {
+  const cabecalho = document.getElementById('cabecalho-plano-saude-lancamento');
+  const corpo = document.getElementById('corpo-plano-saude-lancamento');
+  const mes = document.getElementById('plano-saude-mes-referencia').value || obterMesAtualISO();
+  const pessoas = listarPessoasPlanoSaude(tipoPlanoSaudeAtivo);
+  const config = COLUNAS_PLANO_SAUDE[tipoPlanoSaudeAtivo];
+  const temCamposEditaveis = config.camposExtras.length > 0;
+  const totalColunas = 3 + 2 + config.camposExtras.length + 1; // Cód+Nome+Descrição + Titular+Dependente + extras + Total
+
+  atualizarBotaoBloqueio('botao-bloquear-plano-saude', 'planoSaude', mes);
+  const bloqueadoParaEdicao = usuarioEstaBloqueadoNaTela('planoSaude', mes);
+
+  // O Plano Odontológico é 100% fixo/automático — não há nada para digitar,
+  // salvar ou bloquear nele.
+  document.getElementById('botao-salvar-plano-saude').hidden = !temCamposEditaveis;
+  if (!temCamposEditaveis) document.getElementById('botao-bloquear-plano-saude').hidden = true;
+
+  cabecalho.innerHTML = `
+    <tr>
+      <th>Cód.</th><th>Nome Titular</th><th>Descrição</th>
+      <th>${config.rotuloTitular}</th><th>${config.rotuloDependente}</th>
+      ${config.camposExtras.map((c) => `<th>${c.rotulo}</th>`).join('')}
+      <th>${config.rotuloTotal}</th>
+    </tr>
+  `;
+
+  if (pessoas.length === 0) {
+    corpo.innerHTML = `<tr class="linha-vazia"><td colspan="${totalColunas}">Nenhum titular com adesão a ${config.titulo} no momento (marque a adesão na aba "Titulares e Dependentes").</td></tr>`;
+    document.getElementById('rodape-plano-saude-lancamento').innerHTML = '';
+    return;
+  }
+
+  corpo.innerHTML = pessoas.map((pessoa) => {
+    const lancamento = obterLancamentoPlanoSaude(pessoa.id, mes, tipoPlanoSaudeAtivo);
+    const valorFixo = config.valorPadrao(pessoa);
+    const total = calcularTotalLancamentoPlanoSaude(pessoa, lancamento, config);
+
+    // Só a coluna do tipo da própria pessoa (titular OU dependente) mostra o
+    // valor; a outra fica bloqueada, pois não se aplica a essa linha.
+    const celulaTitular = pessoa.tipo === 'titular'
+      ? `<td class="celula-numerica">${formatarMoeda(valorFixo)}</td>`
+      : '<td class="celula-bloqueada">***</td>';
+    const celulaDependente = pessoa.tipo === 'dependente'
+      ? `<td class="celula-numerica">${formatarMoeda(valorFixo)}</td>`
+      : '<td class="celula-bloqueada">***</td>';
+
+    const celulasExtras = config.camposExtras.map((c) => {
+      const valor = lancamento ? (lancamento[c.chave] || 0) : 0;
+      return `<td class="celula-input"><input type="number" min="0" step="0.01" id="plano-saude-${c.chave}-${pessoa.id}" value="${valor || ''}" ${bloqueadoParaEdicao ? 'disabled' : ''}></td>`;
+    }).join('');
+
+    return `
+      <tr>
+        <td>${pessoa.codigo || '—'}</td>
+        <td>${pessoa.tipo === 'dependente' ? '&nbsp;&nbsp;&nbsp;' : ''}${pessoa.nome}</td>
+        <td>${pessoa.tipo === 'titular' ? 'TITULAR' : 'DEPENDENTE'}</td>
+        ${celulaTitular}
+        ${celulaDependente}
+        ${celulasExtras}
+        <td class="celula-numerica celula-total" id="plano-saude-total-${pessoa.id}">${formatarMoeda(total)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  pessoas.forEach((pessoa) => {
+    config.camposExtras.forEach((c) => {
+      const input = document.getElementById(`plano-saude-${c.chave}-${pessoa.id}`);
+      if (input) input.addEventListener('input', () => atualizarTotalLinhaPlanoSaude(pessoa));
+    });
+  });
+
+  if (bloqueadoParaEdicao && temCamposEditaveis) {
+    mostrarToast('Os lançamentos de plano de saúde deste mês estão bloqueados pelo Administrador.', 'erro');
+  }
+
+  atualizarRodapePlanoSaudeLancamento(pessoas, config, mes);
+}
+
+// Soma, por coluna, os valores de todas as pessoas exibidas no lançamento
+// (Titular, Dependente, campos extras quando existirem, e o Total).
+function atualizarRodapePlanoSaudeLancamento(pessoas, config, mes) {
+  const rodape = document.getElementById('rodape-plano-saude-lancamento');
+
+  if (pessoas.length === 0) {
+    rodape.innerHTML = '';
+    return;
+  }
+
+  let totalTitular = 0;
+  let totalDependente = 0;
+  let totalGeral = 0;
+  const totaisExtras = {};
+  config.camposExtras.forEach((c) => { totaisExtras[c.chave] = 0; });
+
+  pessoas.forEach((pessoa) => {
+    const valorFixo = config.valorPadrao(pessoa);
+    if (pessoa.tipo === 'titular') totalTitular += valorFixo; else totalDependente += valorFixo;
+
+    let somaExtras = 0;
+    config.camposExtras.forEach((c) => {
+      const input = document.getElementById(`plano-saude-${c.chave}-${pessoa.id}`);
+      const valor = input ? (parseFloat(input.value) || 0) : 0;
+      totaisExtras[c.chave] += valor;
+      somaExtras += valor;
+    });
+
+    totalGeral += valorFixo + somaExtras;
+  });
+
+  rodape.innerHTML = `
+    <tr>
+      <td colspan="3">Total geral</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalTitular)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalDependente)}</td>
+      ${config.camposExtras.map((c) => `<td class="celula-numerica celula-total">${formatarMoeda(totaisExtras[c.chave])}</td>`).join('')}
+      <td class="celula-numerica celula-total">${formatarMoeda(totalGeral)}</td>
+    </tr>
+  `;
+}
+
+function atualizarTotalLinhaPlanoSaude(pessoa) {
+  const config = COLUNAS_PLANO_SAUDE[tipoPlanoSaudeAtivo];
+  const valorFixo = config.valorPadrao(pessoa);
+  const extras = config.camposExtras.reduce((soma, c) => {
+    const input = document.getElementById(`plano-saude-${c.chave}-${pessoa.id}`);
+    return soma + (input ? (parseFloat(input.value) || 0) : 0);
+  }, 0);
+  const celulaTotal = document.getElementById(`plano-saude-total-${pessoa.id}`);
+  if (celulaTotal) celulaTotal.textContent = formatarMoeda(valorFixo + extras);
+
+  const mes = document.getElementById('plano-saude-mes-referencia').value || obterMesAtualISO();
+  atualizarRodapePlanoSaudeLancamento(listarPessoasPlanoSaude(tipoPlanoSaudeAtivo), config, mes);
+}
+
+function tratarSalvarPlanoSaude() {
+  const mes = document.getElementById('plano-saude-mes-referencia').value || obterMesAtualISO();
+  const config = COLUNAS_PLANO_SAUDE[tipoPlanoSaudeAtivo];
+
+  if (config.camposExtras.length === 0) {
+    mostrarToast('Não há valores para salvar neste plano — os valores são fixos e automáticos.', 'erro');
+    return;
+  }
+
+  if (usuarioEstaBloqueadoNaTela('planoSaude', mes)) {
+    mostrarToast('Não é possível salvar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+
+  const pessoas = listarPessoasPlanoSaude(tipoPlanoSaudeAtivo);
+
+  pessoas.forEach((pessoa) => {
+    const valores = {};
+    config.camposExtras.forEach((c) => {
+      const input = document.getElementById(`plano-saude-${c.chave}-${pessoa.id}`);
+      valores[c.chave] = input ? (parseFloat(input.value) || 0) : 0;
+    });
+
+    const indiceExistente = estado.planoSaudeLancamentos.findIndex((l) => l.pessoaId === pessoa.id && l.mesReferencia === mes && l.tipoPlano === tipoPlanoSaudeAtivo);
+    const registro = {
+      id: indiceExistente >= 0 ? estado.planoSaudeLancamentos[indiceExistente].id : gerarId(),
+      pessoaId: pessoa.id,
+      titularId: pessoa.titularId,
+      mesReferencia: mes,
+      tipoPlano: tipoPlanoSaudeAtivo,
+      ...valores
+    };
+    if (indiceExistente >= 0) estado.planoSaudeLancamentos[indiceExistente] = registro;
+    else estado.planoSaudeLancamentos.push(registro);
+  });
+
+  mostrarToast(`${config.titulo} de ${formatarMesAno(mes)} salvo com sucesso.`);
+  renderizarLancamentoPlanoSaude();
+}
+
+function exportarPlanoSaudeExcel() {
+  const mes = document.getElementById('plano-saude-mes-referencia').value || obterMesAtualISO();
+  const pessoas = listarPessoasPlanoSaude(tipoPlanoSaudeAtivo);
+  const config = COLUNAS_PLANO_SAUDE[tipoPlanoSaudeAtivo];
+
+  if (pessoas.length === 0) {
+    mostrarToast('Não há titulares/dependentes com adesão a este plano para exportar.', 'erro');
+    return;
+  }
+
+  const cabecalho = ['Código', 'Nome', 'Descrição', config.rotuloTitular, config.rotuloDependente, ...config.camposExtras.map((c) => c.rotulo), config.rotuloTotal];
+
+  const linhas = pessoas.map((pessoa) => {
+    const lancamento = obterLancamentoPlanoSaude(pessoa.id, mes, tipoPlanoSaudeAtivo);
+    const valorFixo = config.valorPadrao(pessoa);
+    const total = calcularTotalLancamentoPlanoSaude(pessoa, lancamento, config);
+
+    return [
+      pessoa.codigo || '',
+      pessoa.nome,
+      pessoa.tipo === 'titular' ? 'TITULAR' : 'DEPENDENTE',
+      pessoa.tipo === 'titular' ? valorFixo.toFixed(2) : '',
+      pessoa.tipo === 'dependente' ? valorFixo.toFixed(2) : '',
+      ...config.camposExtras.map((c) => (lancamento ? (lancamento[c.chave] || 0) : 0).toFixed(2)),
+      total.toFixed(2)
+    ];
+  });
+
+  baixarExcel(cabecalho, linhas, `plano-saude-${tipoPlanoSaudeAtivo}`);
+}
+
+/* ==========================================================================
+   DEMAIS DESCONTOS E BONIFICAÇÕES
+   ========================================================================== */
+const TIPOS_DESCONTO_BONIFICACAO = [
+  'Ajuda de Custo/Gratificação',
+  'Bonificação',
+  'Compra de mercadorias',
+  'Convênio Gás',
+  'Desconto autorizado (descrever em observações)',
+  'Diária',
+  'Farmácia',
+  'Franquia',
+  'Manutenção veículos',
+  'Multa'
+];
+
+function renderizarDescontos() {
+  const corpo = document.getElementById('corpo-descontos');
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('descontos');
+
+  atualizarBotaoBloqueio('botao-bloquear-descontos', 'descontos', mes);
+  const bloqueadoParaEdicao = usuarioEstaBloqueadoNaTela('descontos', mes);
+
+  if (lista.length === 0) {
+    corpo.innerHTML = '<tr class="linha-vazia"><td colspan="7">Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores).</td></tr>';
+    document.getElementById('rodape-descontos').innerHTML = '';
+    return;
+  }
+
+  const desabilitado = bloqueadoParaEdicao ? 'disabled' : '';
+  const linhas = [];
+
+  lista.forEach((v) => {
+    const registros = estado.descontosBonificacoes.filter((d) => d.vendedorId === v.id && d.mesReferencia === mes);
+    const totalColaborador = registros.reduce((soma, r) => soma + (r.valor || 0), 0);
+    const botaoAdicionar = !bloqueadoParaEdicao
+      ? `<button class="botao botao-secundario" data-add-desconto="${v.id}" type="button">+ Adicionar</button>`
+      : '';
+
+    if (registros.length === 0) {
+      linhas.push(`
+        <tr>
+          <td>${v.codigo || '—'}</td>
+          <td>${v.nome}</td>
+          <td colspan="3" class="dica-campo">Nenhum lançamento neste mês</td>
+          <td class="celula-numerica celula-total">${formatarMoeda(0)}</td>
+          <td>${botaoAdicionar}</td>
+        </tr>
+      `);
+      return;
+    }
+
+    registros.forEach((registro, indice) => {
+      const botaoRemover = !bloqueadoParaEdicao
+        ? `<button class="botao botao-perigo" data-remover-desconto="${registro.id}" type="button">Remover</button>`
+        : '';
+      linhas.push(`
+        <tr>
+          <td>${indice === 0 ? (v.codigo || '—') : ''}</td>
+          <td>${indice === 0 ? v.nome : ''}</td>
+          <td class="celula-input">
+            <select id="descontos-tipo-${registro.id}" ${desabilitado}>
+              <option value="" ${!registro.tipo ? 'selected' : ''} disabled>Selecione...</option>
+              ${TIPOS_DESCONTO_BONIFICACAO.map((t) => `<option value="${t}" ${t === registro.tipo ? 'selected' : ''}>${t}</option>`).join('')}
+            </select>
+          </td>
+          <td class="celula-input"><input type="number" min="0" step="0.01" id="descontos-valor-${registro.id}" value="${registro.valor || ''}" ${desabilitado}></td>
+          <td class="celula-input"><input type="text" id="descontos-obs-${registro.id}" value="${registro.observacoes ? registro.observacoes.replace(/"/g, '&quot;') : ''}" placeholder="Observações" ${desabilitado}></td>
+          <td class="celula-numerica celula-total">${indice === 0 ? formatarMoeda(totalColaborador) : ''}</td>
+          <td class="celula-acoes-form">${indice === registros.length - 1 ? botaoAdicionar : ''}${botaoRemover}</td>
+        </tr>
+      `);
+    });
+  });
+
+  corpo.innerHTML = linhas.join('');
+
+  corpo.querySelectorAll('[data-add-desconto]').forEach((botao) => {
+    botao.addEventListener('click', () => adicionarLancamentoDesconto(botao.dataset.addDesconto));
+  });
+  corpo.querySelectorAll('[data-remover-desconto]').forEach((botao) => {
+    botao.addEventListener('click', () => removerLancamentoDesconto(botao.dataset.removerDesconto));
+  });
+  corpo.querySelectorAll('[id^="descontos-valor-"]').forEach((input) => {
+    input.addEventListener('input', atualizarRodapeDescontos);
+  });
+
+  if (bloqueadoParaEdicao) {
+    mostrarToast('Os lançamentos de descontos e bonificações deste mês estão bloqueados pelo Administrador.', 'erro');
+  }
+
+  atualizarRodapeDescontos();
+}
+
+// Soma o valor de todos os lançamentos de todos os colaboradores exibidos.
+function atualizarRodapeDescontos() {
+  const rodape = document.getElementById('rodape-descontos');
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('descontos');
+
+  if (lista.length === 0) {
+    rodape.innerHTML = '';
+    return;
+  }
+
+  let totalGeral = 0;
+  document.querySelectorAll('[id^="descontos-valor-"]').forEach((input) => {
+    totalGeral += parseFloat(input.value) || 0;
+  });
+
+  rodape.innerHTML = `
+    <tr>
+      <td colspan="3">Total geral</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalGeral)}</td>
+      <td></td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalGeral)}</td>
+      <td></td>
+    </tr>
+  `;
+}
+
+// Lê os campos de Tipo, Valor e Observações atualmente exibidos na tela e grava
+// esses valores no estado, ANTES de qualquer ação (adicionar/remover linha) que
+// force um novo `renderizarDescontos()`. Sem isso, o innerHTML era recriado do
+// zero a partir do estado antigo e qualquer valor já digitado (mas ainda não
+// salvo pelo botão "Salvar") era perdido.
+function sincronizarDescontosComTela() {
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('descontos');
+
+  lista.forEach((v) => {
+    const registros = estado.descontosBonificacoes.filter((d) => d.vendedorId === v.id && d.mesReferencia === mes);
+    registros.forEach((registro) => {
+      const inputValor = document.getElementById(`descontos-valor-${registro.id}`);
+      const selectTipo = document.getElementById(`descontos-tipo-${registro.id}`);
+      const inputObs = document.getElementById(`descontos-obs-${registro.id}`);
+      if (inputValor) registro.valor = parseFloat(inputValor.value) || 0;
+      if (selectTipo) registro.tipo = selectTipo.value;
+      if (inputObs) registro.observacoes = inputObs.value;
+    });
+  });
+}
+
+function adicionarLancamentoDesconto(vendedorId) {
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+  if (usuarioEstaBloqueadoNaTela('descontos', mes)) {
+    mostrarToast('Não é possível adicionar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+  sincronizarDescontosComTela();
+  estado.descontosBonificacoes.push({
+    id: gerarId(),
+    vendedorId,
+    tipo: '',
+    valor: 0,
+    observacoes: '',
+    mesReferencia: mes
+  });
+  renderizarDescontos();
+}
+
+function removerLancamentoDesconto(id) {
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+  if (usuarioEstaBloqueadoNaTela('descontos', mes)) {
+    mostrarToast('Não é possível remover: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+  sincronizarDescontosComTela();
+  estado.descontosBonificacoes = estado.descontosBonificacoes.filter((d) => d.id !== id);
+  renderizarDescontos();
+}
+
+function tratarSalvarDescontos() {
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+
+  if (usuarioEstaBloqueadoNaTela('descontos', mes)) {
+    mostrarToast('Não é possível salvar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+
+  sincronizarDescontosComTela();
+
+  mostrarToast(`Descontos e bonificações de ${formatarMesAno(mes)} salvos com sucesso.`);
+  renderizarDescontos();
+}
+
+/* ==========================================================================
+   BLOQUEIO DE LANÇAMENTOS (Admin pode bloquear qualquer tela de lançamento)
+   ========================================================================== */
+// Qual papel efetivamente lança/edita valores em cada tela (o Admin sempre
+// pode editar e bloquear, independente do que estiver aqui).
+const PAPEL_EDITOR_POR_TELA = {
+  premiacao: 'gerente',
+  planoSaude: 'coordenador',
+  descontos: 'coordenador',
+  comissao: 'gerente',
+  estoque: 'coordenador'
+};
+
+const ROTULOS_TELA_BLOQUEIO = {
+  premiacao: 'Premiação',
+  planoSaude: 'Plano de Saúde',
+  descontos: 'Descontos e Bonificações',
+  comissao: 'Comissão',
+  estoque: 'Premiações Estoque'
+};
+
+function chaveBloqueio(tela, filial, mes) {
+  return `${tela}::${filial}::${mes}`;
+}
+
+function telaEstaBloqueada(tela, filial, mes) {
+  return estado.bloqueios.includes(chaveBloqueio(tela, filial, mes));
+}
+
+// Verdadeiro quando o usuário logado é justamente quem lança aquela tela E o Admin bloqueou o mês/filial.
+// O Admin nunca fica bloqueado por esta função (ele sempre pode editar e desbloquear).
+function usuarioEstaBloqueadoNaTela(tela, mes) {
+  if (estado.sessao.role === 'admin') return false;
+  if (estado.sessao.role !== PAPEL_EDITOR_POR_TELA[tela]) return false;
+  return telaEstaBloqueada(tela, estado.sessao.filial, mes);
+}
+
+// Atualiza o texto/estado de um botão de bloqueio genérico para a tela informada.
+function atualizarBotaoBloqueio(idBotao, tela, mes) {
+  const botao = document.getElementById(idBotao);
+  if (!botao) return;
+  const ehAdmin = estado.sessao.role === 'admin';
+  botao.hidden = !ehAdmin || estaVendoTodasFiliais();
+  if (ehAdmin && !estaVendoTodasFiliais()) {
+    const bloqueado = telaEstaBloqueada(tela, estado.sessao.filial, mes);
+    botao.textContent = bloqueado ? '🔓 Desbloquear lançamentos deste mês' : '🔒 Bloquear lançamentos deste mês';
+  }
+}
+
+function alternarBloqueioTela(tela, mes) {
+  const filial = estado.sessao.filial;
+  const chave = chaveBloqueio(tela, filial, mes);
+  const rotulo = ROTULOS_TELA_BLOQUEIO[tela];
+
+  if (estado.bloqueios.includes(chave)) {
+    estado.bloqueios = estado.bloqueios.filter((c) => c !== chave);
+    mostrarToast(`Lançamentos de ${rotulo} de ${formatarMesAno(mes)} desbloqueados.`);
+  } else {
+    estado.bloqueios.push(chave);
+    mostrarToast(`Lançamentos de ${rotulo} de ${formatarMesAno(mes)} bloqueados.`);
+  }
+}
+
+function tratarAlternarBloqueioPremiacao() {
+  const mes = document.getElementById('planilha-mes-referencia').value || obterMesAtualISO();
+  alternarBloqueioTela('premiacao', mes);
+  renderizarPlanilhaPremiacao();
+}
+
+function tratarAlternarBloqueioPlanoSaude() {
+  const mes = document.getElementById('plano-saude-mes-referencia').value || obterMesAtualISO();
+  alternarBloqueioTela('planoSaude', mes);
+  renderizarLancamentoPlanoSaude();
+}
+
+function tratarAlternarBloqueioDescontos() {
+  const mes = document.getElementById('descontos-mes-referencia').value || obterMesAtualISO();
+  alternarBloqueioTela('descontos', mes);
+  renderizarDescontos();
+}
+
+function tratarAlternarBloqueioComissao() {
+  const mes = document.getElementById('comissao-mes-referencia').value || obterMesAtualISO();
+  alternarBloqueioTela('comissao', mes);
+  renderizarComissao();
+}
+
+function tratarAlternarBloqueioEstoque() {
+  const mes = document.getElementById('estoque-mes-referencia').value || obterMesAtualISO();
+  alternarBloqueioTela('estoque', mes);
+  renderizarPremiacaoEstoque();
+}
+
+/* ==========================================================================
+   PREMIAÇÕES ESTOQUE
+   ========================================================================== */
+function renderizarPremiacaoEstoque() {
+  // Conteúdo desta tela ocultado a pedido do negócio: a aba "Premiações
+  // Estoque" continua aparecendo na navegação (só para o Administrador — ver
+  // NAV_POR_PAPEL), mas ninguém, nem o Admin, vê o conteúdo interno por
+  // enquanto. O restante da função foi mantido como estava (não removido),
+  // apenas a exibição foi desativada por este retorno antecipado.
+  document.getElementById('estoque-conteudo-bloco').hidden = true;
+  document.getElementById('estoque-conteudo-oculto').hidden = false;
+  return;
+
+  const podeEditarPolitica = estado.sessao.role === 'admin';
+  document.getElementById('estoque-politica-bloco').hidden = false;
+  const formPolitica = document.getElementById('form-politica-estoque');
+  formPolitica.querySelectorAll('input').forEach((input) => { input.disabled = !podeEditarPolitica; });
+  formPolitica.querySelector('button[type="submit"]').hidden = !podeEditarPolitica;
+
+  const pol = estado.politicaEstoque;
+  document.getElementById('politica-meta-romaneios').value = (pol.metas.romaneios * 100).toFixed(1);
+  document.getElementById('politica-valor-romaneios').value = pol.valoresReferencia.romaneios;
+  document.getElementById('politica-meta-contagens').value = pol.metas.contagens;
+  document.getElementById('politica-valor-contagens').value = pol.valoresReferencia.contagens;
+  document.getElementById('politica-meta-avaria').value = (pol.metas.avaria * 100).toFixed(3);
+  document.getElementById('politica-valor-avaria').value = pol.valoresReferencia.avaria;
+  document.getElementById('politica-meta-segregado').value = pol.metas.segregado;
+  document.getElementById('politica-valor-segregado').value = pol.valoresReferencia.segregado;
+  document.getElementById('politica-valor-faltas').value = pol.valoresReferencia.faltas;
+  document.getElementById('politica-valor-organizacao').value = pol.valoresReferencia.organizacao;
+  document.getElementById('politica-valor-volume').value = pol.valoresReferencia.volumeSeparado;
+  document.getElementById('politica-meta-volume-total').value = (pol.metaVolumeSeparadoTotal * 100).toFixed(1);
+
+  renderizarColetivoEstoque();
+  renderizarIndividualEstoque();
+}
+
+function tratarSubmitPoliticaEstoque(evento) {
+  evento.preventDefault();
+  if (estado.sessao.role !== 'admin') return;
+
+  estado.politicaEstoque = {
+    metas: {
+      romaneios: (parseFloat(document.getElementById('politica-meta-romaneios').value) || 0) / 100,
+      contagens: parseFloat(document.getElementById('politica-meta-contagens').value) || 0,
+      avaria: (parseFloat(document.getElementById('politica-meta-avaria').value) || 0) / 100,
+      segregado: parseFloat(document.getElementById('politica-meta-segregado').value) || 0
+    },
+    valoresReferencia: {
+      romaneios: parseFloat(document.getElementById('politica-valor-romaneios').value) || 0,
+      contagens: parseFloat(document.getElementById('politica-valor-contagens').value) || 0,
+      avaria: parseFloat(document.getElementById('politica-valor-avaria').value) || 0,
+      segregado: parseFloat(document.getElementById('politica-valor-segregado').value) || 0,
+      faltas: parseFloat(document.getElementById('politica-valor-faltas').value) || 0,
+      organizacao: parseFloat(document.getElementById('politica-valor-organizacao').value) || 0,
+      volumeSeparado: parseFloat(document.getElementById('politica-valor-volume').value) || 0
+    },
+    metaVolumeSeparadoTotal: (parseFloat(document.getElementById('politica-meta-volume-total').value) || 0) / 100
+  };
+
+  mostrarToast('Política de premiação do Estoque salva com sucesso.');
+  renderizarPremiacaoEstoque();
+}
+
+function obterColetivoEstoque(filial, mes) {
+  return estado.estoqueColetivoMensal.find((c) => c.filial === filial && c.mesReferencia === mes);
+}
+
+function renderizarColetivoEstoque() {
+  const corpo = document.getElementById('corpo-estoque-coletivo');
+  const mes = document.getElementById('estoque-mes-referencia').value || obterMesAtualISO();
+  const pol = estado.politicaEstoque;
+
+  atualizarBotaoBloqueio('botao-bloquear-estoque', 'estoque', mes);
+  const bloqueadoParaEdicao = usuarioEstaBloqueadoNaTela('estoque', mes);
+
+  const existente = obterColetivoEstoque(estado.sessao.filial, mes);
+  const realizados = existente ? existente.realizados : { romaneios: 0, contagens: 0, avaria: 0, segregado: 0 };
+
+  corpo.innerHTML = KPIS_COLETIVOS_ESTOQUE.map(({ chave, nome, unidade }) => {
+    const meta = pol.metas[chave];
+    const valorReferencia = pol.valoresReferencia[chave];
+    const realizado = realizados[chave] || 0;
+    const atingido = calcularAtingidoColetivoEstoque(chave, meta, realizado);
+    const valorPago = calcularValorPagoColetivoEstoque(chave, meta, realizado, valorReferencia);
+    const metaExibida = unidade === '%' ? `${(meta * 100).toFixed(chave === 'avaria' ? 3 : 1)}%` : (unidade === 'R$' ? formatarMoeda(meta) : meta);
+    // Campos do tipo "%" são exibidos e editados em pontos percentuais (ex.: 88 = 88%),
+    // mas armazenados internamente como fração (0.88), igual à meta.
+    const realizadoExibido = unidade === '%' ? (realizado * 100) : realizado;
+    const passoInput = unidade === '%' && chave === 'avaria' ? '0.0001' : (unidade === '%' ? '0.1' : '0.01');
+
+    return `
+      <tr>
+        <td>${nome}</td>
+        <td>${metaExibida}</td>
+        <td class="celula-input"><input type="number" min="0" step="${passoInput}" id="estoque-coletivo-${chave}" value="${realizadoExibido || ''}" ${bloqueadoParaEdicao ? 'disabled' : ''}></td>
+        <td class="celula-numerica">${(atingido * 100).toFixed(0)}%</td>
+        <td class="celula-numerica">${formatarMoeda(valorReferencia)}</td>
+        <td class="celula-numerica celula-total">${formatarMoeda(valorPago)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (bloqueadoParaEdicao) {
+    mostrarToast('Os lançamentos de Premiações Estoque deste mês estão bloqueados pelo Administrador.', 'erro');
+  }
+}
+
+function tratarSalvarColetivoEstoque() {
+  const mes = document.getElementById('estoque-mes-referencia').value || obterMesAtualISO();
+
+  if (usuarioEstaBloqueadoNaTela('estoque', mes)) {
+    mostrarToast('Não é possível salvar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+
+  const filial = estado.sessao.filial;
+  const realizados = {};
+  KPIS_COLETIVOS_ESTOQUE.forEach(({ chave, unidade }) => {
+    const input = document.getElementById(`estoque-coletivo-${chave}`);
+    const valorDigitado = parseFloat(input.value) || 0;
+    realizados[chave] = unidade === '%' ? valorDigitado / 100 : valorDigitado;
+  });
+
+  const indiceExistente = estado.estoqueColetivoMensal.findIndex((c) => c.filial === filial && c.mesReferencia === mes);
+  const registro = { id: indiceExistente >= 0 ? estado.estoqueColetivoMensal[indiceExistente].id : gerarId(), filial, mesReferencia: mes, realizados };
+  if (indiceExistente >= 0) estado.estoqueColetivoMensal[indiceExistente] = registro;
+  else estado.estoqueColetivoMensal.push(registro);
+
+  mostrarToast(`Lançamento coletivo de Estoque de ${formatarMesAno(mes)} salvo com sucesso.`);
+  renderizarColetivoEstoque();
+  renderizarIndividualEstoque();
+}
+
+// Colaboradores de estoque elegíveis: checklist "estoque" marcado E cargo dentre os 3 de estoque.
+function colaboradoresEstoque() {
+  return vendedoresParaTela('estoque').filter((v) => grupoFuncaoEstoque(v.cargo) !== null);
+}
+
+function calcularTotalColetivoParaGrupo(grupo, filial, mes) {
+  const pol = estado.politicaEstoque;
+  const existente = obterColetivoEstoque(filial, mes);
+  const realizados = existente ? existente.realizados : { romaneios: 0, contagens: 0, avaria: 0, segregado: 0 };
+
+  return KPIS_COLETIVOS_ESTOQUE
+    .filter((kpi) => kpi.grupos.includes(grupo))
+    .reduce((soma, kpi) => {
+      const valorPago = calcularValorPagoColetivoEstoque(kpi.chave, pol.metas[kpi.chave], realizados[kpi.chave] || 0, pol.valoresReferencia[kpi.chave]);
+      return soma + valorPago;
+    }, 0);
+}
+
+function calcularTotalIndividualColaborador(colaborador, lancamento) {
+  const grupo = grupoFuncaoEstoque(colaborador.cargo);
+  const pol = estado.politicaEstoque;
+  let total = 0;
+
+  if (lancamento.semFaltas) total += pol.valoresReferencia.faltas;
+  if (lancamento.organizacaoOk) total += pol.valoresReferencia.organizacao;
+
+  if (grupo === 'auxiliar') {
+    const qtdAuxiliares = colaboradoresEstoque().filter((v) => grupoFuncaoEstoque(v.cargo) === 'auxiliar').length || 1;
+    const metaIndividualVolume = pol.metaVolumeSeparadoTotal / qtdAuxiliares;
+    if ((lancamento.volumeSeparadoRealizado || 0) >= metaIndividualVolume) total += pol.valoresReferencia.volumeSeparado;
+  }
+
+  return total;
+}
+
+function calcularTotalReceberEstoque(totalIndividual, totalColetivo, diasFerias) {
+  const total = totalIndividual + totalColetivo;
+  if (diasFerias > 0) return (total / 30) * (30 - diasFerias);
+  return total;
+}
+
+function renderizarIndividualEstoque() {
+  const corpo = document.getElementById('corpo-estoque-individual');
+  const mes = document.getElementById('estoque-mes-referencia').value || obterMesAtualISO();
+  const lista = colaboradoresEstoque();
+  const bloqueadoParaEdicao = usuarioEstaBloqueadoNaTela('estoque', mes);
+
+  if (lista.length === 0) {
+    corpo.innerHTML = '<tr class="linha-vazia"><td colspan="10">Nenhum colaborador de estoque habilitado ainda (marque o checklist "Estoque" no Cadastro de Colaboradores, com função Encarregado/Assistente/Auxiliar de Estoque).</td></tr>';
+    return;
+  }
+
+  const filial = estado.sessao.filial;
+
+  corpo.innerHTML = lista.map((v) => {
+    const grupo = grupoFuncaoEstoque(v.cargo);
+    const registro = estado.estoqueIndividualMensal.find((l) => l.vendedorId === v.id && l.mesReferencia === mes);
+    const lancamento = registro || { semFaltas: true, organizacaoOk: true, volumeSeparadoRealizado: 0, diasFerias: 0 };
+
+    const totalColetivo = calcularTotalColetivoParaGrupo(grupo, filial, mes);
+    const totalIndividual = calcularTotalIndividualColaborador(v, lancamento);
+    const totalReceber = calcularTotalReceberEstoque(totalIndividual, totalColetivo, lancamento.diasFerias || 0);
+
+    const desabilitado = bloqueadoParaEdicao ? 'disabled' : '';
+    const campoVolume = grupo === 'auxiliar'
+      ? `<input type="number" min="0" max="100" step="0.1" id="estoque-volume-${v.id}" value="${lancamento.volumeSeparadoRealizado ? (lancamento.volumeSeparadoRealizado * 100).toFixed(1) : ''}" ${desabilitado}>`
+      : '—';
+
+    return `
+      <tr>
+        <td>${v.codigo || '—'}</td>
+        <td>${v.nome}</td>
+        <td>${v.cargo}</td>
+        <td class="celula-input">
+          <select id="estoque-faltas-${v.id}" ${desabilitado}>
+            <option value="sim" ${lancamento.semFaltas ? 'selected' : ''}>Sem faltas</option>
+            <option value="nao" ${!lancamento.semFaltas ? 'selected' : ''}>Teve falta</option>
+          </select>
+        </td>
+        <td class="celula-input">
+          <select id="estoque-organizacao-${v.id}" ${desabilitado}>
+            <option value="sim" ${lancamento.organizacaoOk ? 'selected' : ''}>Em dia</option>
+            <option value="nao" ${!lancamento.organizacaoOk ? 'selected' : ''}>Pendente</option>
+          </select>
+        </td>
+        <td class="celula-input">${campoVolume}</td>
+        <td class="celula-input"><input type="number" min="0" max="30" step="1" id="estoque-ferias-${v.id}" value="${lancamento.diasFerias || ''}" ${desabilitado}></td>
+        <td class="celula-numerica">${formatarMoeda(totalIndividual)}</td>
+        <td class="celula-numerica">${formatarMoeda(totalColetivo)}</td>
+        <td class="celula-numerica celula-total">${formatarMoeda(totalReceber)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (bloqueadoParaEdicao) {
+    mostrarToast('A avaliação individual de Estoque deste mês está bloqueada pelo Administrador.', 'erro');
+  }
+}
+
+function tratarSalvarIndividualEstoque() {
+  const mes = document.getElementById('estoque-mes-referencia').value || obterMesAtualISO();
+
+  if (usuarioEstaBloqueadoNaTela('estoque', mes)) {
+    mostrarToast('Não é possível salvar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+
+  const lista = colaboradoresEstoque();
+
+  lista.forEach((v) => {
+    const grupo = grupoFuncaoEstoque(v.cargo);
+    const selectFaltas = document.getElementById(`estoque-faltas-${v.id}`);
+    const selectOrganizacao = document.getElementById(`estoque-organizacao-${v.id}`);
+    const inputFerias = document.getElementById(`estoque-ferias-${v.id}`);
+    if (!selectFaltas || !selectOrganizacao || !inputFerias) return;
+
+    const inputVolume = grupo === 'auxiliar' ? document.getElementById(`estoque-volume-${v.id}`) : null;
+
+    const lancamento = {
+      semFaltas: selectFaltas.value === 'sim',
+      organizacaoOk: selectOrganizacao.value === 'sim',
+      volumeSeparadoRealizado: inputVolume ? (parseFloat(inputVolume.value) || 0) / 100 : 0,
+      diasFerias: parseInt(inputFerias.value, 10) || 0
+    };
+
+    const indiceExistente = estado.estoqueIndividualMensal.findIndex((l) => l.vendedorId === v.id && l.mesReferencia === mes);
+    const registro = { id: indiceExistente >= 0 ? estado.estoqueIndividualMensal[indiceExistente].id : gerarId(), vendedorId: v.id, mesReferencia: mes, ...lancamento };
+    if (indiceExistente >= 0) estado.estoqueIndividualMensal[indiceExistente] = registro;
+    else estado.estoqueIndividualMensal.push(registro);
+  });
+
+  mostrarToast(`Avaliação individual de Estoque de ${formatarMesAno(mes)} salva com sucesso.`);
+  renderizarIndividualEstoque();
+}
+
+function exportarEstoqueExcel() {
+  const mes = document.getElementById('estoque-mes-referencia').value || obterMesAtualISO();
+  const lista = colaboradoresEstoque();
+  const filial = estado.sessao.filial;
+
+  if (lista.length === 0) {
+    mostrarToast('Não há colaboradores de estoque para exportar.', 'erro');
+    return;
+  }
+
+  const cabecalho = ['CPF', 'Nome', 'Valor Total', 'Observações'];
+
+  const linhas = lista.map((v) => {
+    const grupo = grupoFuncaoEstoque(v.cargo);
+    const registro = estado.estoqueIndividualMensal.find((l) => l.vendedorId === v.id && l.mesReferencia === mes);
+    const lancamento = registro || { semFaltas: true, organizacaoOk: true, volumeSeparadoRealizado: 0, diasFerias: 0 };
+    const totalColetivo = calcularTotalColetivoParaGrupo(grupo, filial, mes);
+    const totalIndividual = calcularTotalIndividualColaborador(v, lancamento);
+    const totalReceber = calcularTotalReceberEstoque(totalIndividual, totalColetivo, lancamento.diasFerias || 0);
+
+    return [v.cpf, v.nome, totalReceber.toFixed(2), ''];
+  });
+
+  baixarExcel(cabecalho, linhas, 'premiacoes-estoque');
+}
+
+
+/* ==========================================================================
+   COMISSÃO
+   ========================================================================== */
+// Busca o valor de PEV já lançado na Planilha de Premiação para o colaborador
+// e mês informados — a Comissão não lança PEV, apenas exibe (só para o Admin)
+// o valor que já existe na tela de Premiação.
+function obterPevDaPremiacao(vendedorId, mes) {
+  const registro = estado.premiacoes.find((p) => p.vendedorId === vendedorId && p.mesReferencia === mes);
+  return registro ? (registro.pev || 0) : 0;
+}
+
+function renderizarComissao() {
+  const cabecalho = document.getElementById('cabecalho-comissao');
+  const corpo = document.getElementById('corpo-comissao');
+  const mes = document.getElementById('comissao-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('comissao');
+
+  // PEV só é visível (e nunca editável) para o Administrador — Gerente e
+  // Coordenador não veem essa coluna na aba de Comissão.
+  const mostrarPev = estado.sessao.role === 'admin';
+  const totalColunas = mostrarPev ? 7 : 6;
+
+  atualizarBotaoBloqueio('botao-bloquear-comissao', 'comissao', mes);
+  const bloqueadoParaEdicao = usuarioEstaBloqueadoNaTela('comissao', mes);
+
+  cabecalho.innerHTML = `
+    <tr>
+      <th>Código</th><th>Colaborador</th><th>CPF</th><th>Função</th>
+      ${mostrarPev ? '<th>PEV</th>' : ''}
+      <th>Comissão</th><th>Garantido</th>
+    </tr>
+  `;
+
+  if (lista.length === 0) {
+    corpo.innerHTML = `<tr class="linha-vazia"><td colspan="${totalColunas}">Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores).</td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = lista.map((v) => {
+    const registro = estado.comissoes.find((c) => c.vendedorId === v.id && c.mesReferencia === mes);
+    const valor = registro ? (registro.valor || 0) : 0;
+    const garantido = registro ? (registro.garantido || 0) : 0;
+
+    const celula = (valorCampo, idCampo) => bloqueadoParaEdicao
+      ? `<td class="celula-numerica">${formatarMoeda(valorCampo)}</td>`
+      : `<td class="celula-input"><input type="number" min="0" step="0.01" id="${idCampo}-${v.id}" value="${valorCampo || ''}"></td>`;
+
+    // PEV é sempre somente leitura, puxado direto da Planilha de Premiação.
+    const celulaPev = mostrarPev
+      ? `<td class="celula-numerica">${formatarMoeda(obterPevDaPremiacao(v.id, mes))}</td>`
+      : '';
+
+    return `
+      <tr>
+        <td>${v.codigo || '—'}</td>
+        <td>${v.nome}</td><td>${v.cpf}</td><td>${v.cargo}</td>
+        ${celulaPev}
+        ${celula(valor, 'comissao-valor')}
+        ${celula(garantido, 'comissao-garantido')}
+      </tr>
+    `;
+  }).join('');
+
+  if (bloqueadoParaEdicao) {
+    mostrarToast('Os lançamentos de comissão deste mês estão bloqueados pelo Administrador.', 'erro');
+  } else {
+    lista.forEach((v) => {
+      const inputValor = document.getElementById(`comissao-valor-${v.id}`);
+      const inputGarantido = document.getElementById(`comissao-garantido-${v.id}`);
+      if (inputValor) inputValor.addEventListener('input', atualizarRodapeComissao);
+      if (inputGarantido) inputGarantido.addEventListener('input', atualizarRodapeComissao);
+    });
+  }
+
+  atualizarRodapeComissao();
+}
+
+// Soma, por coluna, os valores de todos os colaboradores exibidos na Comissão
+// (PEV — só quando visível ao Admin —, Comissão e Garantido).
+function atualizarRodapeComissao() {
+  const rodape = document.getElementById('rodape-comissao');
+  const mes = document.getElementById('comissao-mes-referencia').value || obterMesAtualISO();
+  const lista = vendedoresParaTela('comissao');
+  const mostrarPev = estado.sessao.role === 'admin';
+
+  if (lista.length === 0) {
+    rodape.innerHTML = '';
+    return;
+  }
+
+  let totalPev = 0;
+  let totalValor = 0;
+  let totalGarantido = 0;
+
+  lista.forEach((v) => {
+    const registro = estado.comissoes.find((c) => c.vendedorId === v.id && c.mesReferencia === mes);
+    const inputValor = document.getElementById(`comissao-valor-${v.id}`);
+    const inputGarantido = document.getElementById(`comissao-garantido-${v.id}`);
+    const valor = inputValor ? (parseFloat(inputValor.value) || 0) : (registro ? (registro.valor || 0) : 0);
+    const garantido = inputGarantido ? (parseFloat(inputGarantido.value) || 0) : (registro ? (registro.garantido || 0) : 0);
+
+    totalValor += valor;
+    totalGarantido += garantido;
+    if (mostrarPev) totalPev += obterPevDaPremiacao(v.id, mes);
+  });
+
+  rodape.innerHTML = `
+    <tr>
+      <td colspan="4">Total geral</td>
+      ${mostrarPev ? `<td class="celula-numerica celula-total">${formatarMoeda(totalPev)}</td>` : ''}
+      <td class="celula-numerica celula-total">${formatarMoeda(totalValor)}</td>
+      <td class="celula-numerica celula-total">${formatarMoeda(totalGarantido)}</td>
+    </tr>
+  `;
+}
+
+
+
+function tratarSalvarComissao() {
+  const mes = document.getElementById('comissao-mes-referencia').value || obterMesAtualISO();
+
+  if (usuarioEstaBloqueadoNaTela('comissao', mes)) {
+    mostrarToast('Não é possível salvar: lançamentos bloqueados pelo Administrador.', 'erro');
+    return;
+  }
+
+  const lista = vendedoresParaTela('comissao');
+  lista.forEach((v) => {
+    const inputValor = document.getElementById(`comissao-valor-${v.id}`);
+    const inputGarantido = document.getElementById(`comissao-garantido-${v.id}`);
+    if (!inputValor || !inputGarantido) return;
+
+    const valor = parseFloat(inputValor.value) || 0;
+    const garantido = parseFloat(inputGarantido.value) || 0;
+    // PEV nunca é digitado aqui — é sempre lido da Planilha de Premiação no
+    // momento de salvar, para manter a Comissão sempre sincronizada com ela.
+    const pev = obterPevDaPremiacao(v.id, mes);
+
+    const indiceExistente = estado.comissoes.findIndex((c) => c.vendedorId === v.id && c.mesReferencia === mes);
+    const registro = {
+      id: indiceExistente >= 0 ? estado.comissoes[indiceExistente].id : gerarId(),
+      vendedorId: v.id,
+      vendedorNome: v.nome,
+      filial: v.filial,
+      mesReferencia: mes,
+      pev,
+      valor,
+      garantido
+    };
+    if (indiceExistente >= 0) estado.comissoes[indiceExistente] = registro;
+    else estado.comissoes.push(registro);
+  });
+
+  mostrarToast(`Comissões de ${formatarMesAno(mes)} salvas com sucesso.`);
+  renderizarComissao();
+}
+
+/* ==========================================================================
+   INICIALIZAÇÃO — EVENTOS
+   ========================================================================== */
+function configurarEventos() {
+  document.getElementById('form-login').addEventListener('submit', tratarSubmitLogin);
+  document.getElementById('botao-alternar-senha').addEventListener('click', alternarVisibilidadeSenha);
+  document.getElementById('botao-sair').addEventListener('click', tratarSair);
+
+  // Listener para mudança de filial (apenas Admin)
+  document.getElementById('seletor-filial-admin').addEventListener('change', aoTrocarFilialAdmin);
+
+  document.getElementById('form-vendedor').addEventListener('submit', tratarSubmitVendedor);
+  document.getElementById('vendedor-cpf').addEventListener('input', aplicarMascaraCPF);
+  document.getElementById('botao-cancelar-edicao-vendedor').addEventListener('click', cancelarEdicaoVendedor);
+
+  document.getElementById('planilha-mes-referencia').addEventListener('change', renderizarPlanilhaPremiacao);
+  document.getElementById('botao-salvar-planilha').addEventListener('click', tratarSalvarPlanilha);
+  document.getElementById('botao-bloquear-premiacao').addEventListener('click', tratarAlternarBloqueioPremiacao);
+  document.getElementById('botao-exportar-csv').addEventListener('click', exportarPremiacoesCSV);
+  document.getElementById('botao-exportar-csv-consulta').addEventListener('click', exportarPremiacoesCSV);
+
+  document.getElementById('consulta-filtro-de').addEventListener('change', renderizarConsulta);
+  document.getElementById('consulta-filtro-ate').addEventListener('change', renderizarConsulta);
+  document.getElementById('botao-limpar-filtro-consulta').addEventListener('click', () => {
+    document.getElementById('consulta-filtro-de').value = '';
+    document.getElementById('consulta-filtro-ate').value = '';
+    renderizarConsulta();
+  });
+
+  document.getElementById('pev-ano-ciclo').addEventListener('change', renderizarConsolidadoPEV);
+  document.getElementById('pev-filtro-de').addEventListener('change', renderizarConsolidadoPEV);
+  document.getElementById('pev-filtro-ate').addEventListener('change', renderizarConsolidadoPEV);
+  document.getElementById('botao-salvar-adiantamentos').addEventListener('click', tratarSalvarAdiantamentos);
+  document.getElementById('botao-exportar-csv-consolidado-pev').addEventListener('click', exportarConsolidadoPevCSV);
+
+  document.getElementById('plano-saude-mes-referencia').addEventListener('change', renderizarLancamentoPlanoSaude);
+  document.getElementById('botao-salvar-plano-saude').addEventListener('click', tratarSalvarPlanoSaude);
+  document.getElementById('botao-bloquear-plano-saude').addEventListener('click', tratarAlternarBloqueioPlanoSaude);
+  document.getElementById('botao-tipo-plano-saude').addEventListener('click', () => selecionarTipoPlanoSaude('saude'));
+  document.getElementById('botao-tipo-plano-odonto').addEventListener('click', () => selecionarTipoPlanoSaude('odontologico'));
+  document.getElementById('botao-subaba-plano-saude-cadastro').addEventListener('click', () => selecionarSubAbaPlanoSaude('cadastro'));
+  document.getElementById('botao-subaba-plano-saude-lancamento').addEventListener('click', () => selecionarSubAbaPlanoSaude('lancamento'));
+  document.getElementById('botao-exportar-excel-plano-saude').addEventListener('click', exportarPlanoSaudeExcel);
+
+  document.getElementById('descontos-mes-referencia').addEventListener('change', renderizarDescontos);
+  document.getElementById('botao-salvar-descontos').addEventListener('click', tratarSalvarDescontos);
+  document.getElementById('botao-bloquear-descontos').addEventListener('click', tratarAlternarBloqueioDescontos);
+  document.getElementById('botao-exportar-excel-descontos').addEventListener('click', exportarDescontosExcel);
+
+  document.getElementById('comissao-mes-referencia').addEventListener('change', renderizarComissao);
+  document.getElementById('botao-salvar-comissao').addEventListener('click', tratarSalvarComissao);
+  document.getElementById('botao-bloquear-comissao').addEventListener('click', tratarAlternarBloqueioComissao);
+  document.getElementById('botao-exportar-excel-comissao').addEventListener('click', exportarComissoesExcel);
+
+  document.getElementById('form-politica-estoque').addEventListener('submit', tratarSubmitPoliticaEstoque);
+  document.getElementById('estoque-mes-referencia').addEventListener('change', () => { renderizarColetivoEstoque(); renderizarIndividualEstoque(); });
+  document.getElementById('botao-bloquear-estoque').addEventListener('click', tratarAlternarBloqueioEstoque);
+  document.getElementById('botao-salvar-estoque-coletivo').addEventListener('click', tratarSalvarColetivoEstoque);
+  document.getElementById('botao-salvar-estoque-individual').addEventListener('click', tratarSalvarIndividualEstoque);
+  document.getElementById('botao-exportar-excel-estoque').addEventListener('click', exportarEstoqueExcel);
+
+  configurarAtalhosRapidos();
+}
+
+function iniciar() {
+  document.getElementById('planilha-mes-referencia').value = obterMesAtualISO();
+  document.getElementById('plano-saude-mes-referencia').value = obterMesAtualISO();
+  document.getElementById('descontos-mes-referencia').value = obterMesAtualISO();
+  document.getElementById('comissao-mes-referencia').value = obterMesAtualISO();
+  document.getElementById('estoque-mes-referencia').value = obterMesAtualISO();
+  document.getElementById('pev-ano-ciclo').value = obterAnoCicloAtual();
+  configurarEventos();
+  window.addEventListener('resize', ajustarEspacoCabecalhoFixo);
+}
+
+iniciar();
+
+</script>
+</body>
+</html>
