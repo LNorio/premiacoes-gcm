@@ -1,12 +1,13 @@
 import { somarCategoriasPremiacao, type LancamentoPremiacao, type PremiacaoService } from "../../services/premiacaoService";
-import { resultadoSucesso, type Colaborador, type Premiacao } from "../../types";
+import { FILIAL_TODAS, resultadoSucesso, type Colaborador, type Premiacao } from "../../types";
 import { lerColecao, upsertPorId } from "./db";
 import { garantirSeed } from "./seed";
 
 const CHAVE = "premiacoes";
 
 function buscar(filial: string, mesReferencia: string): Premiacao[] {
-  return lerColecao<Premiacao>(CHAVE).filter((p) => p.filial === filial && p.mesReferencia === mesReferencia);
+  const todas = lerColecao<Premiacao>(CHAVE).filter((p) => p.mesReferencia === mesReferencia);
+  return filial === FILIAL_TODAS ? todas : todas.filter((p) => p.filial === filial);
 }
 
 export const premiacaoServiceMock: PremiacaoService = {
@@ -27,7 +28,8 @@ export const premiacaoServiceMock: PremiacaoService = {
         id: existente?.id ?? "",
         vendedorId: linha.vendedorId,
         vendedorNome: vendedor?.nome ?? existente?.vendedorNome ?? "",
-        filial,
+        // Em "Todas as filiais" (Admin), cada lançamento vai para a filial real do colaborador.
+        filial: vendedor?.filial ?? existente?.filial ?? filial,
         mesReferencia,
         pev: linha.pev,
         iconic: linha.iconic,

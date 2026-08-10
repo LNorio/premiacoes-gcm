@@ -37,3 +37,8 @@
 
 - **Erro/incompatibilidade encontrada:** o protótipo usa `vendedoresParaTela('premiacoes')` para listar quem aparece no Consolidado PEV — ou seja, só colaboradores com `telas.premiacoes = true`, o mesmo filtro da Planilha de Premiação (faz sentido: o PEV vem de lá). O `consolidadoPevServiceMock` de F1 listava todos os colaboradores da filial, sem checar `telas.premiacoes`.
 - **O que foi alterado para corrigir:** `listarConsolidadoPev` (`src/adapters/mock/consolidadoPevService.mock.ts`) passou a filtrar também por `c.telas.premiacoes`.
+
+### 2026-08-10 — `premiacaoServiceMock` (adapter mock, F1)
+
+- **Erro/incompatibilidade encontrada:** ao construir a tela de Planilha de Premiação (F3.PREM), o protótipo mostrou que, com o Admin em "Todas as filiais", a planilha lista **todos** os colaboradores de todas as filiais e cada lançamento salvo grava a filial real do colaborador (`v.filial`), não uma filial única passada por parâmetro. O `premiacaoServiceMock` de F1 só filtrava/gravava por igualdade exata de filial, sem tratar `FILIAL_TODAS` — não sustentava esse caso.
+- **O que foi alterado para corrigir:** `listarPremiacoes`/`salvarPremiacoes` (`src/adapters/mock/premiacaoService.mock.ts`) passaram a tratar `FILIAL_TODAS` como "sem filtro de filial" na leitura, e a gravar cada registro com a filial do próprio colaborador (`vendedor.filial`) em vez da filial recebida por parâmetro — mesmo padrão que `colaboradoresServiceMock` já usava desde F1.
