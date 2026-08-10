@@ -37,12 +37,12 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 ## F1 — Camada de dados (contrato + mock)
 
-- **F1-01** Definir os tipos/shapes de todas as entidades (base na Seção 5 do doc técnico).
-- **F1-02** Definir a interface do serviço por domínio (todos os métodos da tabela de cobertura do roadmap).
-- **F1-03** Implementar o **adapter mock** com dados seed, persistindo em `localStorage`/JSON para sobreviver ao reload.
-- **F1-04** Criar o wrapper HTTP genérico (base URL, cabeçalhos, interceptors) — preparado, ainda não usado.
-- **F1-05** Padronizar formato de retorno (dados / erro / carregando) consumido de forma uniforme pela UI.
-- **F1-06** Criar utilitários compartilhados: formatação de moeda/mês, máscara de CPF, `mostrarToast`, helpers de filial/mês.
+- [x] **F1-01** Definir os tipos/shapes de todas as entidades (base na Seção 5 do doc técnico). → `src/types/`.
+- [x] **F1-02** Definir a interface do serviço por domínio (todos os métodos da tabela de cobertura do roadmap). → `src/services/`.
+- [x] **F1-03** Implementar o **adapter mock** com dados seed, persistindo em `localStorage`/JSON para sobreviver ao reload. → `src/adapters/mock/` (6 colaboradores seed do documento técnico).
+- [x] **F1-04** Criar o wrapper HTTP genérico (base URL, cabeçalhos, interceptors) — preparado, ainda não usado. → `src/adapters/http/httpClient.ts`.
+- [x] **F1-05** Padronizar formato de retorno (dados / erro / carregando) consumido de forma uniforme pela UI. → `src/types/resultado.ts` (`Resultado<T>`).
+- [x] **F1-06** Criar utilitários compartilhados: formatação de moeda/mês, máscara de CPF, `mostrarToast`, helpers de filial/mês. → `src/utils/` (testes em `Claude/testes/f1-camada-de-dados.md`).
 
 ## F2 — Shell, autenticação e cadastros
 

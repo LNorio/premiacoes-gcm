@@ -1,0 +1,10 @@
+export { authServiceMock } from "./authService.mock";
+export { colaboradoresServiceMock } from "./colaboradoresService.mock";
+export { premiacaoServiceMock } from "./premiacaoService.mock";
+export { consolidadoPevServiceMock } from "./consolidadoPevService.mock";
+export { consultaServiceMock } from "./consultaService.mock";
+export { comissaoServiceMock } from "./comissaoService.mock";
+export { descontosServiceMock } from "./descontosService.mock";
+export { planoSaudeServiceMock } from "./planoSaudeService.mock";
+export { estoqueServiceMock } from "./estoqueService.mock";
+export { bloqueioServiceMock } from "./bloqueioService.mock";
