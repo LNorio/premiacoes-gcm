@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { colaboradoresService } from "../../adapters";
-import { Carregando, MensagemErro, MensagemVazia } from "../../components/ui";
+import { Button, Carregando, MensagemErro, MensagemVazia, Modal } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type Resultado, type TelasHabilitadas } from "../../types";
 import { CARGOS_COLABORADOR, FILIAIS, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
@@ -49,10 +49,10 @@ export function CadastroColaboradores() {
   const filialPadrao = sessao && sessao.filialAtiva !== FILIAL_TODAS ? sessao.filialAtiva : FILIAIS[0];
   const [formulario, setFormulario] = useState<FormularioColaborador>(() => formularioVazio(filialPadrao));
   const [idEmEdicao, setIdEmEdicao] = useState<string | null>(null);
+  const [modalAberto, setModalAberto] = useState(false);
 
   const ehAdmin = sessao?.role === "admin";
   const mostrarFilial = ehAdmin && sessao?.filialAtiva === FILIAL_TODAS;
-  const mostrarFormulario = ehAdmin;
 
   async function carregar() {
     if (!sessao) return;
@@ -65,12 +65,13 @@ export function CadastroColaboradores() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao?.filialAtiva]);
 
-  function cancelarEdicao() {
+  function abrirParaAdicionar() {
     setIdEmEdicao(null);
     setFormulario(formularioVazio(filialPadrao));
+    setModalAberto(true);
   }
 
-  function iniciarEdicao(colaborador: Colaborador) {
+  function abrirParaEditar(colaborador: Colaborador) {
     if (!ehAdmin) return;
     setIdEmEdicao(colaborador.id);
     setFormulario({
@@ -84,11 +85,17 @@ export function CadastroColaboradores() {
       senhaAcesso: colaborador.senhaAcesso,
       telas: colaborador.telas,
     });
+    setModalAberto(true);
+  }
+
+  function fecharModal() {
+    setModalAberto(false);
+    setIdEmEdicao(null);
+    setFormulario(formularioVazio(filialPadrao));
   }
 
   async function remover(id: string) {
     if (!ehAdmin) return;
-    if (idEmEdicao === id) cancelarEdicao();
     await colaboradoresService.removerColaborador(id);
     void carregar();
   }
@@ -132,7 +139,7 @@ export function CadastroColaboradores() {
     }
 
     mostrarToast(idEmEdicao ? "Colaborador atualizado com sucesso." : "Colaborador cadastrado com sucesso.", "sucesso");
-    cancelarEdicao();
+    fecharModal();
     void carregar();
   }
 
@@ -140,15 +147,15 @@ export function CadastroColaboradores() {
   const colspanVazio = 7 + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
 
   const subtitulo = mostrarFilial
-    ? "Colaboradores de todas as filiais — escolha a filial de cada novo colaborador no formulário"
+    ? "Colaboradores de todas as filiais"
     : ehAdmin
       ? "Colaboradores da filial — cada um recebe um usuário próprio para acessar suas métricas"
       : `Consulta dos colaboradores da Filial ${sessao?.filialAtiva}`;
 
   const mensagemVazia = ehAdmin
     ? mostrarFilial
-      ? "Nenhum colaborador cadastrado ainda em nenhuma filial. Utilize o formulário acima."
-      : "Nenhum colaborador cadastrado ainda nesta filial. Utilize o formulário acima."
+      ? 'Nenhum colaborador cadastrado ainda em nenhuma filial. Clique em "+ Adicionar colaborador".'
+      : 'Nenhum colaborador cadastrado ainda nesta filial. Clique em "+ Adicionar colaborador".'
     : "Nenhum colaborador cadastrado ainda nesta filial.";
 
   return (
@@ -158,137 +165,12 @@ export function CadastroColaboradores() {
         <span className="view-subtitulo">{subtitulo}</span>
       </div>
 
-      {mostrarFormulario ? (
-        <form onSubmit={tratarSubmit}>
-          <div className="tabela-wrapper">
-            <table className="tabela tabela-planilha">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Nome completo</th>
-                  <th>CPF</th>
-                  <th>Filial</th>
-                  <th>Função</th>
-                  <th>E-mail</th>
-                  <th>Usuário de acesso</th>
-                  <th>Senha de acesso</th>
-                  <th aria-label="Ações" />
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="celula-input">
-                    <input
-                      type="text"
-                      placeholder="Código"
-                      required
-                      value={formulario.codigo}
-                      onChange={(e) => setFormulario((f) => ({ ...f, codigo: e.target.value }))}
-                    />
-                  </td>
-                  <td className="celula-input">
-                    <input
-                      type="text"
-                      placeholder="Nome completo"
-                      required
-                      value={formulario.nome}
-                      onChange={(e) => setFormulario((f) => ({ ...f, nome: e.target.value }))}
-                    />
-                  </td>
-                  <td className="celula-input">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={14}
-                      placeholder="000.000.000-00"
-                      required
-                      value={formulario.cpf}
-                      onChange={(e) => setFormulario((f) => ({ ...f, cpf: mascararCpf(e.target.value) }))}
-                    />
-                  </td>
-                  <td className="celula-input">
-                    <select
-                      aria-label="Filial"
-                      required
-                      value={formulario.filial}
-                      onChange={(e) => setFormulario((f) => ({ ...f, filial: e.target.value }))}
-                    >
-                      {FILIAIS.map((filial) => (
-                        <option key={filial} value={filial}>
-                          Filial {filial}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="celula-input">
-                    <select value={formulario.cargo} onChange={(e) => setFormulario((f) => ({ ...f, cargo: e.target.value }))}>
-                      {CARGOS_COLABORADOR.map((cargo) => (
-                        <option key={cargo} value={cargo}>
-                          {cargo}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="celula-input">
-                    <input
-                      type="email"
-                      placeholder="email@exemplo.com"
-                      value={formulario.email}
-                      onChange={(e) => setFormulario((f) => ({ ...f, email: e.target.value }))}
-                    />
-                  </td>
-                  <td className="celula-input">
-                    <input
-                      type="text"
-                      placeholder="usuario.acesso"
-                      required
-                      value={formulario.usuarioAcesso}
-                      onChange={(e) => setFormulario((f) => ({ ...f, usuarioAcesso: e.target.value }))}
-                    />
-                  </td>
-                  <td className="celula-input">
-                    <input
-                      type="text"
-                      placeholder="senha"
-                      required
-                      value={formulario.senhaAcesso}
-                      onChange={(e) => setFormulario((f) => ({ ...f, senhaAcesso: e.target.value }))}
-                    />
-                  </td>
-                  <td className="celula-acoes-form">
-                    <button type="submit" className="botao botao-primario">
-                      {idEmEdicao ? "Salvar alterações" : "Cadastrar"}
-                    </button>
-                    {idEmEdicao ? (
-                      <button type="button" className="botao botao-secundario" onClick={cancelarEdicao}>
-                        Cancelar
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div className="checklist-telas">
-            <span className="checklist-telas-titulo">Este colaborador aparece nas telas:</span>
-            {TELAS_COLABORADOR.map((chave) => (
-              <label key={chave}>
-                <input
-                  type="checkbox"
-                  checked={formulario.telas[chave]}
-                  onChange={(e) => setFormulario((f) => ({ ...f, telas: { ...f.telas, [chave]: e.target.checked } }))}
-                />
-                {ROTULOS_TELAS_COLABORADOR[chave]}
-              </label>
-            ))}
-          </div>
-
-          <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>
-            O colaborador é vinculado à filial escolhida acima e usa o usuário/senha para ver apenas as próprias
-            métricas.
-          </p>
-        </form>
+      {ehAdmin ? (
+        <div className="acoes-tabela" style={{ justifyContent: "flex-end", marginBottom: "20px" }}>
+          <Button variant="primario" onClick={abrirParaAdicionar}>
+            + Adicionar colaborador
+          </Button>
+        </div>
       ) : null}
 
       <div className="tabela-wrapper">
@@ -348,7 +230,7 @@ export function CadastroColaboradores() {
                     </td>
                     {ehAdmin ? (
                       <td className="celula-acoes-form">
-                        <button type="button" className="botao botao-secundario" onClick={() => iniciarEdicao(colaborador)}>
+                        <button type="button" className="botao botao-secundario" onClick={() => abrirParaEditar(colaborador)}>
                           Editar
                         </button>
                         <button type="button" className="botao botao-perigo" onClick={() => remover(colaborador.id)}>
@@ -363,6 +245,135 @@ export function CadastroColaboradores() {
           </tbody>
         </table>
       </div>
+
+      <Modal aberto={modalAberto} titulo={idEmEdicao ? "Editar colaborador" : "Adicionar colaborador"} onFechar={fecharModal}>
+        <form onSubmit={tratarSubmit}>
+          <div className="grade-formulario">
+            <div className="campo">
+              <label htmlFor="colaborador-codigo">Código</label>
+              <input
+                id="colaborador-codigo"
+                type="text"
+                required
+                value={formulario.codigo}
+                onChange={(e) => setFormulario((f) => ({ ...f, codigo: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-nome">Nome completo</label>
+              <input
+                id="colaborador-nome"
+                type="text"
+                required
+                value={formulario.nome}
+                onChange={(e) => setFormulario((f) => ({ ...f, nome: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-cpf">CPF</label>
+              <input
+                id="colaborador-cpf"
+                type="text"
+                inputMode="numeric"
+                maxLength={14}
+                placeholder="000.000.000-00"
+                required
+                value={formulario.cpf}
+                onChange={(e) => setFormulario((f) => ({ ...f, cpf: mascararCpf(e.target.value) }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-filial">Filial</label>
+              <select
+                id="colaborador-filial"
+                required
+                value={formulario.filial}
+                onChange={(e) => setFormulario((f) => ({ ...f, filial: e.target.value }))}
+              >
+                {FILIAIS.map((filial) => (
+                  <option key={filial} value={filial}>
+                    Filial {filial}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-cargo">Função</label>
+              <select
+                id="colaborador-cargo"
+                value={formulario.cargo}
+                onChange={(e) => setFormulario((f) => ({ ...f, cargo: e.target.value }))}
+              >
+                {CARGOS_COLABORADOR.map((cargo) => (
+                  <option key={cargo} value={cargo}>
+                    {cargo}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-email">E-mail</label>
+              <input
+                id="colaborador-email"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={formulario.email}
+                onChange={(e) => setFormulario((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-usuario">Usuário de acesso</label>
+              <input
+                id="colaborador-usuario"
+                type="text"
+                placeholder="usuario.acesso"
+                required
+                value={formulario.usuarioAcesso}
+                onChange={(e) => setFormulario((f) => ({ ...f, usuarioAcesso: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="colaborador-senha">Senha de acesso</label>
+              <input
+                id="colaborador-senha"
+                type="text"
+                placeholder="senha"
+                required
+                value={formulario.senhaAcesso}
+                onChange={(e) => setFormulario((f) => ({ ...f, senhaAcesso: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="checklist-telas">
+            <span className="checklist-telas-titulo">Este colaborador aparece nas telas:</span>
+            {TELAS_COLABORADOR.map((chave) => (
+              <label key={chave}>
+                <input
+                  type="checkbox"
+                  checked={formulario.telas[chave]}
+                  onChange={(e) => setFormulario((f) => ({ ...f, telas: { ...f.telas, [chave]: e.target.checked } }))}
+                />
+                {ROTULOS_TELAS_COLABORADOR[chave]}
+              </label>
+            ))}
+          </div>
+
+          <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>
+            O colaborador é vinculado à filial escolhida acima e usa o usuário/senha para ver apenas as próprias
+            métricas.
+          </p>
+
+          <div className="formulario-rodape" style={{ marginTop: "var(--esp-5)" }}>
+            <Button type="submit" variant="primario">
+              {idEmEdicao ? "Salvar alterações" : "Cadastrar"}
+            </Button>
+            <Button type="button" variant="secundario" onClick={fecharModal}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }

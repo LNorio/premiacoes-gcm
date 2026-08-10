@@ -49,6 +49,12 @@
 - **Motivo:** pedido do usuário — ao cadastrar um usuário, é preciso indicar explicitamente a qual filial ele está vinculado, inclusive quando o Admin está vendo todas as filiais ao mesmo tempo.
 - **Impacto:** `salvarColaborador` passou a receber `filial: formulario.filial` em vez de `sessao.filialAtiva`; a listagem ganhou uma coluna Filial quando o Admin está em "Todas as filiais".
 
+### 2026-08-10 — Modal para adicionar/editar colaborador
+
+- **O que foi modificado:** o formulário inline de Cadastro de Colaboradores (linha de `<input>`s no topo da tabela) foi substituído por uma modal. Um botão "+ Adicionar colaborador" abre a modal em branco; o botão "Editar" de cada linha abre a mesma modal pré-preenchida; salvar ou fechar (X, Escape, clique fora) fecha a modal. Novo componente base `src/components/ui/Modal.tsx` (`createPortal`, `role="dialog"`, fecha em Escape/overlay/X), com testes próprios.
+- **Motivo:** pedido do usuário — o formulário inline ocupava espaço permanente no topo da tela mesmo quando ninguém estava cadastrando; a modal deixa a tabela como foco principal da tela.
+- **Impacto:** `CadastroColaboradores.tsx` ganhou `abrirParaAdicionar`/`abrirParaEditar`/`fecharModal` e estado `modalAberto`; os campos do formulário passaram de células de tabela para divs `.grade-formulario`/`.campo` dentro da modal; `src/components/ui/index.ts` passou a exportar `Modal`.
+
 ## Correções em funcionalidades prontas
 
 ### 2026-08-10 — `consolidadoPevServiceMock` (adapter mock, F1)

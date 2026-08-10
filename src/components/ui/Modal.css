@@ -1,0 +1,58 @@
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 40, 70, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--esp-5);
+  z-index: 200;
+}
+.modal-caixa {
+  background: var(--cor-surface);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-lg);
+  width: min(92vw, 640px);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: surgir 220ms ease both;
+}
+.modal-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  padding: var(--esp-5) var(--esp-6);
+  border-bottom: 1px solid var(--cor-divider);
+  position: sticky;
+  top: 0;
+  background: var(--cor-surface);
+}
+.modal-cabecalho h3 {
+  font-size: 1.1rem;
+  color: var(--cor-text-primary);
+}
+.modal-fechar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--raio-sm);
+  color: var(--cor-text-muted);
+  font-size: 1rem;
+}
+.modal-fechar:hover {
+  background: var(--cor-primary-subtle);
+  color: var(--cor-primary);
+}
+.modal-conteudo {
+  padding: var(--esp-6);
+}
+
+@media (max-width: 480px) {
+  .modal-cabecalho,
+  .modal-conteudo {
+    padding: var(--esp-5) var(--esp-4);
+  }
+}

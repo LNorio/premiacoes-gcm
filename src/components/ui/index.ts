@@ -8,3 +8,4 @@ export { Header } from "./Header";
 export { Nav } from "./Nav";
 export type { NavItemData } from "./Nav";
 export { Carregando, MensagemErro, MensagemVazia } from "./Estado";
+export { Modal } from "./Modal";
