@@ -12,7 +12,7 @@ export const consolidadoPevServiceMock: ConsolidadoPevService = {
   async listarConsolidadoPev(filial, anoCiclo, meses) {
     garantirSeed();
     const colaboradores = lerColecao<Colaborador>("colaboradores").filter(
-      (c) => filial === FILIAL_TODAS || c.filial === filial,
+      (c) => (filial === FILIAL_TODAS || c.filial === filial) && c.telas.premiacoes,
     );
     const premiacoes = lerColecao<Premiacao>("premiacoes");
     const adiantamentos = lerColecao<AdiantamentoFerias>("adiantamentosFerias");

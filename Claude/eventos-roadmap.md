@@ -30,3 +30,10 @@
 - Tela de Cadastro de Colaboradores completa (`src/views/vendedores/CadastroColaboradores.tsx`): formulário com máscara de CPF e checklist de telas, validação, CRUD, visibilidade restrita a Admin numa filial específica.
 - 88 testes unitários no total (68 de F0+F1 + 20 novos), todos passando (`Claude/testes/f2-shell-auth-cadastro.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless (login → shell → cadastro → logout, sem erros de console).
 - **Pendência sinalizada, fora do escopo de F2:** o conteúdo real do Painel Geral (cartões com estatísticas) não tem subtarefa própria no `ROADMAP.md`; `Inicio.tsx` ficou como placeholder mínimo até isso ser agendado.
+
+## Correções em funcionalidades prontas
+
+### 2026-08-10 — `consolidadoPevServiceMock` (adapter mock, F1)
+
+- **Erro/incompatibilidade encontrada:** o protótipo usa `vendedoresParaTela('premiacoes')` para listar quem aparece no Consolidado PEV — ou seja, só colaboradores com `telas.premiacoes = true`, o mesmo filtro da Planilha de Premiação (faz sentido: o PEV vem de lá). O `consolidadoPevServiceMock` de F1 listava todos os colaboradores da filial, sem checar `telas.premiacoes`.
+- **O que foi alterado para corrigir:** `listarConsolidadoPev` (`src/adapters/mock/consolidadoPevService.mock.ts`) passou a filtrar também por `c.telas.premiacoes`.
