@@ -171,7 +171,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 - **F7-01** Auth para API: guardar token/sessão e injetar `Authorization` no wrapper HTTP.
 - **F7-02** Interceptor de 401/expiração (logout/refresh).
-- **F7-03** Config por ambiente: base URL da API por ambiente (variáveis), sem URL fixa.
+- [x] **F7-03** Config por ambiente: base URL da API por ambiente (variáveis), sem URL fixa. → Iniciado adiantado (fora da ordem sequencial, a pedido do usuário): `.env`/`.env.example` com `VITE_API_BASE_URL` criados; a leitura pelo `HttpClient` (`src/adapters/http/httpClient.ts`) e a troca mock↔HTTP continuam pendentes de F8.
 - **F7-04** Mapper por entidade (tradução payload API ↔ shape do front) — esqueleto pronto.
 - **F7-05** Padronizar tratamento de erro por tipo (validação, permissão, rede, servidor) e retry onde couber.
 - **F7-06** Marcar campos calculados que deixarão de ser calculados no front (passam a exibir o valor do serviço).
