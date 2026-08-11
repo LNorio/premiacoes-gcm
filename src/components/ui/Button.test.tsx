@@ -29,4 +29,18 @@ describe("Button", () => {
     render(<Button disabled>Bloqueado</Button>);
     expect(screen.getByRole("button", { name: "Bloqueado" })).toBeDisabled();
   });
+
+  it("carregando desabilita o botão, marca aria-busy e mostra o spinner", () => {
+    const { container } = render(<Button carregando>Salvar</Button>);
+    const botao = screen.getByRole("button", { name: "Salvar" });
+    expect(botao).toBeDisabled();
+    expect(botao).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelector(".spinner-botao")).toBeInTheDocument();
+  });
+
+  it("sem carregando não mostra o spinner nem aria-busy", () => {
+    const { container } = render(<Button>Salvar</Button>);
+    expect(container.querySelector(".spinner-botao")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).not.toHaveAttribute("aria-busy");
+  });
 });

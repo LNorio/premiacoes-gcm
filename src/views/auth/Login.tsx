@@ -65,7 +65,7 @@ export function Login() {
           />
 
           <div className="login-acoes">
-            <Button type="submit" variant="dourado" className="login-botao-entrar" disabled={entrando}>
+            <Button type="submit" variant="dourado" className="login-botao-entrar" carregando={entrando}>
               {entrando ? "Entrando..." : "Entrar"}
             </Button>
           </div>

@@ -19,6 +19,7 @@ export function ConsolidadoPev() {
   const [erro, setErro] = useState<string | null>(null);
   const [linhas, setLinhas] = useState<LinhaConsolidadoPev[]>([]);
   const [adiantamentosEditados, setAdiantamentosEditados] = useState<Record<string, number>>({});
+  const [salvando, setSalvando] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? "";
   const podeEditarAdiantamento = sessao?.role === "admin";
@@ -46,17 +47,22 @@ export function ConsolidadoPev() {
   }, [sessao?.filialAtiva, anoCiclo, de, ate]);
 
   async function salvarAdiantamentos() {
-    for (const linha of linhas) {
-      const valor = adiantamentosEditados[linha.vendedorId] ?? 0;
-      await consolidadoPevService.salvarAdiantamento(linha.vendedorId, anoCiclo, valor);
+    setSalvando(true);
+    try {
+      for (const linha of linhas) {
+        const valor = adiantamentosEditados[linha.vendedorId] ?? 0;
+        await consolidadoPevService.salvarAdiantamento(linha.vendedorId, anoCiclo, valor);
+      }
+      mostrarToast("Adiantamentos de férias salvos com sucesso.", "sucesso");
+      setLinhas((atual) =>
+        atual.map((l) => {
+          const adiantamento = adiantamentosEditados[l.vendedorId] ?? 0;
+          return { ...l, adiantamento, premiacaoAdicionalReceber: calcularPremiacaoAdicionalReceber(l.baseCalculo, adiantamento) };
+        }),
+      );
+    } finally {
+      setSalvando(false);
     }
-    mostrarToast("Adiantamentos de férias salvos com sucesso.", "sucesso");
-    setLinhas((atual) =>
-      atual.map((l) => {
-        const adiantamento = adiantamentosEditados[l.vendedorId] ?? 0;
-        return { ...l, adiantamento, premiacaoAdicionalReceber: calcularPremiacaoAdicionalReceber(l.baseCalculo, adiantamento) };
-      }),
-    );
   }
 
   function exportarCSV() {
@@ -203,7 +209,7 @@ export function ConsolidadoPev() {
 
           {podeEditarAdiantamento && linhas.length > 0 ? (
             <div className="acoes-tabela">
-              <Button variant="dourado" onClick={salvarAdiantamentos}>
+              <Button variant="dourado" onClick={salvarAdiantamentos} carregando={salvando}>
                 💾 Salvar adiantamentos de férias
               </Button>
             </div>

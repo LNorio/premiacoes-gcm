@@ -1,4 +1,6 @@
+import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useCarregandoHttp } from "../../utils/cargaHttp";
 import { ErroHttp, HttpClient } from "./httpClient";
 
 describe("HttpClient", () => {
@@ -68,5 +70,22 @@ describe("HttpClient", () => {
 
     const client = new HttpClient({ baseUrl: "http://api.teste" });
     await expect(client.delete("/rota")).resolves.toBeUndefined();
+  });
+
+  it("marca useCarregandoHttp como true durante a requisição e false depois (mesmo em erro)", async () => {
+    const { result } = renderHook(() => useCarregandoHttp());
+    expect(result.current).toBe(false);
+
+    let resolverFetch!: (resposta: Response) => void;
+    const fetchMock = vi.fn().mockReturnValue(new Promise<Response>((resolve) => (resolverFetch = resolve)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new HttpClient({ baseUrl: "http://api.teste" });
+    const chamada = client.get("/rota");
+    await waitFor(() => expect(result.current).toBe(true));
+
+    resolverFetch(new Response(JSON.stringify({}), { status: 200 }));
+    await chamada;
+    expect(result.current).toBe(false);
   });
 });

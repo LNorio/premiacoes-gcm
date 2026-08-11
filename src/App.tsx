@@ -1,3 +1,4 @@
+import { BarraCarregamentoGlobal } from "./components/BarraCarregamentoGlobal";
 import { ToastHost } from "./components/ToastHost";
 import { useSessao } from "./state/SessaoContext";
 import { Login } from "./views/auth/Login";
@@ -8,6 +9,7 @@ function App() {
 
   return (
     <>
+      <BarraCarregamentoGlobal />
       {sessao ? <Shell /> : <Login />}
       <ToastHost />
     </>

@@ -33,6 +33,9 @@ export function Descontos() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [linhas, setLinhas] = useState<LinhaDesconto[]>([]);
   const [bloqueado, setBloqueado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -104,10 +107,15 @@ export function Descontos() {
       return;
     }
     if (!linha.novo) {
-      const resultado = await descontosService.removerDesconto(linha.id);
-      if (resultado.status !== "sucesso") {
-        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao remover.", "erro");
-        return;
+      setRemovendoId(linha.id);
+      try {
+        const resultado = await descontosService.removerDesconto(linha.id);
+        if (resultado.status !== "sucesso") {
+          mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao remover.", "erro");
+          return;
+        }
+      } finally {
+        setRemovendoId(null);
       }
     }
     setLinhas((atual) => atual.filter((l) => l.id !== linha.id));
@@ -124,43 +132,53 @@ export function Descontos() {
       return;
     }
 
-    const resultado = await descontosService.salvarDescontos(
-      linhas.map((l) => ({
-        id: l.novo ? undefined : l.id,
-        vendedorId: l.vendedorId,
-        mesReferencia,
-        tipo: l.tipo as TipoDescontoBonificacao,
-        valor: l.valor,
-        observacoes: l.observacoes,
-      })),
-    );
-    if (resultado.status !== "sucesso") {
-      mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
-      return;
+    setSalvando(true);
+    try {
+      const resultado = await descontosService.salvarDescontos(
+        linhas.map((l) => ({
+          id: l.novo ? undefined : l.id,
+          vendedorId: l.vendedorId,
+          mesReferencia,
+          tipo: l.tipo as TipoDescontoBonificacao,
+          valor: l.valor,
+          observacoes: l.observacoes,
+        })),
+      );
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
+        return;
+      }
+      setLinhas(
+        resultado.dados.map((d) => ({
+          id: d.id,
+          vendedorId: d.vendedorId,
+          tipo: d.tipo,
+          valor: d.valor,
+          observacoes: d.observacoes,
+          novo: false,
+        })),
+      );
+      mostrarToast(`Descontos e bonificações de ${mesReferencia} salvos com sucesso.`, "sucesso");
+    } finally {
+      setSalvando(false);
     }
-    setLinhas(
-      resultado.dados.map((d) => ({
-        id: d.id,
-        vendedorId: d.vendedorId,
-        tipo: d.tipo,
-        valor: d.valor,
-        observacoes: d.observacoes,
-        novo: false,
-      })),
-    );
-    mostrarToast(`Descontos e bonificações de ${mesReferencia} salvos com sucesso.`, "sucesso");
   }
 
   async function alternarBloqueio() {
-    const resultado = await bloqueioService.alternarBloqueio("descontos", filialAtiva, mesReferencia);
-    if (resultado.status === "sucesso") {
-      setBloqueado(resultado.dados);
-      mostrarToast(
-        resultado.dados
-          ? `Lançamentos de Descontos de ${mesReferencia} bloqueados.`
-          : `Lançamentos de Descontos de ${mesReferencia} desbloqueados.`,
-        "sucesso",
-      );
+    setAlternandoBloqueio(true);
+    try {
+      const resultado = await bloqueioService.alternarBloqueio("descontos", filialAtiva, mesReferencia);
+      if (resultado.status === "sucesso") {
+        setBloqueado(resultado.dados);
+        mostrarToast(
+          resultado.dados
+            ? `Lançamentos de Descontos de ${mesReferencia} bloqueados.`
+            : `Lançamentos de Descontos de ${mesReferencia} desbloqueados.`,
+          "sucesso",
+        );
+      }
+    } finally {
+      setAlternandoBloqueio(false);
     }
   }
 
@@ -202,7 +220,7 @@ export function Descontos() {
 
       <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
         {ehAdmin && !mostrarFilial ? (
-          <Button variant="secundario" onClick={alternarBloqueio}>
+          <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
           </Button>
         ) : null}
@@ -308,7 +326,7 @@ export function Descontos() {
                       <td className="celula-acoes-form">
                         {indice === linhasColaborador.length - 1 ? botaoAdicionar : null}
                         {!bloqueadoParaEdicao ? (
-                          <Button variant="perigo" onClick={() => removerLinha(linha)}>
+                          <Button variant="perigo" onClick={() => removerLinha(linha)} carregando={removendoId === linha.id}>
                             Remover
                           </Button>
                         ) : null}
@@ -330,7 +348,7 @@ export function Descontos() {
           </Table>
 
           <div className="acoes-tabela">
-            <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao}>
+            <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao} carregando={salvando}>
               💾 Salvar lançamento do mês
             </Button>
           </div>

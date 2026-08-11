@@ -29,6 +29,8 @@ export function Premiacao() {
   const [premiacoesSalvas, setPremiacoesSalvas] = useState<PremiacaoEntidade[]>([]);
   const [valores, setValores] = useState<Record<string, ValoresLinha>>({});
   const [bloqueado, setBloqueado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -105,26 +107,36 @@ export function Premiacao() {
       return;
     }
 
-    const linhas = colaboradores.map((c) => ({ vendedorId: c.id, ...(valores[c.id] ?? LINHA_ZERADA) }));
-    const resultado = await premiacaoService.salvarPremiacoes(filialAtiva, mesReferencia, linhas);
-    if (resultado.status !== "sucesso") {
-      mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
-      return;
+    setSalvando(true);
+    try {
+      const linhas = colaboradores.map((c) => ({ vendedorId: c.id, ...(valores[c.id] ?? LINHA_ZERADA) }));
+      const resultado = await premiacaoService.salvarPremiacoes(filialAtiva, mesReferencia, linhas);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
+        return;
+      }
+      setPremiacoesSalvas(resultado.dados);
+      mostrarToast(`Planilha de ${mesReferencia} salva com sucesso.`, "sucesso");
+    } finally {
+      setSalvando(false);
     }
-    setPremiacoesSalvas(resultado.dados);
-    mostrarToast(`Planilha de ${mesReferencia} salva com sucesso.`, "sucesso");
   }
 
   async function alternarBloqueio() {
-    const resultado = await bloqueioService.alternarBloqueio("premiacao", filialAtiva, mesReferencia);
-    if (resultado.status === "sucesso") {
-      setBloqueado(resultado.dados);
-      mostrarToast(
-        resultado.dados
-          ? `Lançamentos de Premiação de ${mesReferencia} bloqueados.`
-          : `Lançamentos de Premiação de ${mesReferencia} desbloqueados.`,
-        "sucesso",
-      );
+    setAlternandoBloqueio(true);
+    try {
+      const resultado = await bloqueioService.alternarBloqueio("premiacao", filialAtiva, mesReferencia);
+      if (resultado.status === "sucesso") {
+        setBloqueado(resultado.dados);
+        mostrarToast(
+          resultado.dados
+            ? `Lançamentos de Premiação de ${mesReferencia} bloqueados.`
+            : `Lançamentos de Premiação de ${mesReferencia} desbloqueados.`,
+          "sucesso",
+        );
+      }
+    } finally {
+      setAlternandoBloqueio(false);
     }
   }
 
@@ -171,7 +183,7 @@ export function Premiacao() {
 
       <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
         {ehAdmin && !mostrarFilial ? (
-          <Button variant="secundario" onClick={alternarBloqueio}>
+          <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
           </Button>
         ) : null}
@@ -253,7 +265,7 @@ export function Premiacao() {
           </Table>
 
           <div className="acoes-tabela">
-            <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao}>
+            <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao} carregando={salvando}>
               💾 Salvar planilha do mês
             </Button>
           </div>

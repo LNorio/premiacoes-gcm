@@ -26,6 +26,8 @@ export function Comissao() {
   const [comissoesSalvas, setComissoesSalvas] = useState<ComissaoEntidade[]>([]);
   const [valores, setValores] = useState<Record<string, ValoresLinha>>({});
   const [bloqueado, setBloqueado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -105,34 +107,44 @@ export function Comissao() {
       return;
     }
 
-    const salvos: ComissaoEntidade[] = [];
-    for (const colaborador of colaboradores) {
-      const linha = valores[colaborador.id] ?? LINHA_ZERADA;
-      const resultado = await comissaoService.salvarComissao(filialAtiva, mesReferencia, {
-        vendedorId: colaborador.id,
-        valor: linha.valor,
-        garantido: linha.garantido,
-      });
-      if (resultado.status !== "sucesso") {
-        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
-        return;
+    setSalvando(true);
+    try {
+      const salvos: ComissaoEntidade[] = [];
+      for (const colaborador of colaboradores) {
+        const linha = valores[colaborador.id] ?? LINHA_ZERADA;
+        const resultado = await comissaoService.salvarComissao(filialAtiva, mesReferencia, {
+          vendedorId: colaborador.id,
+          valor: linha.valor,
+          garantido: linha.garantido,
+        });
+        if (resultado.status !== "sucesso") {
+          mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
+          return;
+        }
+        salvos.push(resultado.dados);
       }
-      salvos.push(resultado.dados);
+      setComissoesSalvas(salvos);
+      mostrarToast(`Comissões de ${mesReferencia} salvas com sucesso.`, "sucesso");
+    } finally {
+      setSalvando(false);
     }
-    setComissoesSalvas(salvos);
-    mostrarToast(`Comissões de ${mesReferencia} salvas com sucesso.`, "sucesso");
   }
 
   async function alternarBloqueio() {
-    const resultado = await bloqueioService.alternarBloqueio("comissao", filialAtiva, mesReferencia);
-    if (resultado.status === "sucesso") {
-      setBloqueado(resultado.dados);
-      mostrarToast(
-        resultado.dados
-          ? `Lançamentos de Comissão de ${mesReferencia} bloqueados.`
-          : `Lançamentos de Comissão de ${mesReferencia} desbloqueados.`,
-        "sucesso",
-      );
+    setAlternandoBloqueio(true);
+    try {
+      const resultado = await bloqueioService.alternarBloqueio("comissao", filialAtiva, mesReferencia);
+      if (resultado.status === "sucesso") {
+        setBloqueado(resultado.dados);
+        mostrarToast(
+          resultado.dados
+            ? `Lançamentos de Comissão de ${mesReferencia} bloqueados.`
+            : `Lançamentos de Comissão de ${mesReferencia} desbloqueados.`,
+          "sucesso",
+        );
+      }
+    } finally {
+      setAlternandoBloqueio(false);
     }
   }
 
@@ -169,7 +181,7 @@ export function Comissao() {
 
       <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
         {ehAdmin && !mostrarFilial ? (
-          <Button variant="secundario" onClick={alternarBloqueio}>
+          <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
           </Button>
         ) : null}
@@ -252,7 +264,7 @@ export function Comissao() {
           </Table>
 
           <div className="acoes-tabela">
-            <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao}>
+            <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao} carregando={salvando}>
               💾 Salvar comissões do mês
             </Button>
           </div>
