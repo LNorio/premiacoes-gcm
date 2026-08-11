@@ -28,3 +28,6 @@ dist-ssr
 
 # Claude Code project files (skills)
 .claude/
+
+# Documentos de API (gerenciados manualmente pelo usuário, fora do controle de versão)
+Claude/API*.md
