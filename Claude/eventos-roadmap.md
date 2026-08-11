@@ -41,6 +41,15 @@
 - 107 testes unitários no total (88 de F0+F1+F2 + 19 novos), todos passando (`Claude/testes/f3-nucleo-premiacao.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless (Premiação → Consolidado PEV → Consulta, dados fluindo corretamente entre as três telas, sem erros de console).
 - **Ao construir estas telas, quatro lacunas/bugs do adapter mock de F1 foram descobertos e corrigidos** (commits `fix(F1)` anteriores a este) — nenhum tinha sido pego pelos testes isolados de F1 porque não exercitavam os cenários reais das telas (Admin em "Todas as filiais", filtro vazio, etc.).
 
+### 2026-08-11 — F4: Comissão e Descontos
+
+- Comissão (`src/views/comissao/Comissao.tsx`): grade Código/Colaborador/CPF/Função/[PEV]/Comissão/Garantido, sem coluna Total; PEV somente leitura (lido da Planilha de Premiação, gravado como snapshot ao salvar) e visível só para o Admin; bloqueio (editor Gerente); filtro de mês; exportação Excel.
+- Descontos e Bonificações (`src/views/descontos/Descontos.tsx`): grade agrupada por colaborador com múltiplos lançamentos no mesmo mês, Tipo (lista fixa de 10 opções)/Valor/Observações por lançamento, Total por colaborador na primeira linha do grupo + rodapé geral, adicionar/remover lançamento, bloqueio (editor Coordenador), exportação Excel.
+- Utilitário de exportação Excel (`baixarExcel` em `src/utils/exportar.ts`) carregando o SheetJS por CDN sob demanda (mesmo padrão do protótipo, Seção 1), com cache de carregamento que se limpa sozinho se o script falhar, para permitir nova tentativa depois. `exportarComissoesExcel` (`src/services/comissaoService.ts`) e `exportarDescontosExcel` (`src/services/descontosService.ts`) seguem exatamente as colunas da Seção 4 do documento técnico.
+- As duas telas ligadas ao Shell, substituindo o placeholder `EmConstrucao`.
+- 142 testes unitários no total (107 de F0+F1+F2+F3 + 35 novos), todos passando (`Claude/testes/f4-comissao-descontos.md`). Verificação visual real feita rodando o dev server e dirigindo o app com Playwright headless.
+- **Ao construir a tela de Comissão, uma lacuna do adapter mock de F1 foi descoberta e corrigida** (ver seção "Correções em funcionalidades prontas" abaixo) — mesmo padrão dos bugs de `FILIAL_TODAS` já encontrados em F3.
+
 ## Alterações não planejadas
 
 ### 2026-08-10 — Campo de Filial no cadastro de colaboradores

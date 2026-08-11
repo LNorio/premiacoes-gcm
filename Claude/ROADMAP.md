@@ -99,27 +99,27 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 ## F4 — Comissão e Descontos
 
 **Tela: Comissão** — código `F4.COM`
-- **F4.COM-01** Estrutura: filtro (mês) + grade.
-- **F4.COM-02** Serviço + mock: `listarComissoes(filial, mes)`, `salvarComissao(...)`; obter PEV da Premiação para leitura.
-- **F4.COM-03** Render (Código, Colaborador, CPF, Função, [PEV], Comissão, Garantido) + estados. **Sem coluna Total.**
-- **F4.COM-04** Edição de Comissão e Garantido + salvar; ao salvar, gravar **snapshot do PEV**.
-- **F4.COM-05** Rodapé: PEV (se visível), Comissão, Garantido, sem perder foco.
-- **F4.COM-06** Coluna **PEV só para Admin** (cabeçalho/linhas/rodapé); Coordenador não acessa a tela.
-- **F4.COM-07** Bloqueio `comissao` (editor Gerente).
-- **F4.COM-08** Filtro de mês + filial.
-- **F4.COM-09** Exportação Excel (Código, Nome, PEV, Comissão, Garantido).
-- **F4.COM-10** Testes da tela.
+- [x] **F4.COM-01** Estrutura: filtro (mês) + grade. → `src/views/comissao/Comissao.tsx`.
+- [x] **F4.COM-02** Serviço + mock: `listarComissoes(filial, mes)`, `salvarComissao(...)`; obter PEV da Premiação para leitura. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap).
+- [x] **F4.COM-03** Render (Código, Colaborador, CPF, Função, [PEV], Comissão, Garantido) + estados. **Sem coluna Total.**
+- [x] **F4.COM-04** Edição de Comissão e Garantido + salvar; ao salvar, gravar **snapshot do PEV**.
+- [x] **F4.COM-05** Rodapé: PEV (se visível), Comissão, Garantido, sem perder foco.
+- [x] **F4.COM-06** Coluna **PEV só para Admin** (cabeçalho/linhas/rodapé); Coordenador não acessa a tela (fora do `NAV_POR_PAPEL` dele, guarda de rota do Shell).
+- [x] **F4.COM-07** Bloqueio `comissao` (editor Gerente); botão de bloqueio só para Admin numa filial específica.
+- [x] **F4.COM-08** Filtro de mês + filial.
+- [x] **F4.COM-09** Exportação Excel (Código, Nome, PEV, Comissão, Garantido). → `exportarComissoesExcel` (`src/services/comissaoService.ts`) + `baixarExcel` (SheetJS via CDN, `src/utils/exportar.ts`).
+- [x] **F4.COM-10** Testes da tela. → `Claude/testes/f4-comissao-descontos.md`.
 
 **Tela: Descontos e Bonificações** — código `F4.DESC`
-- **F4.DESC-01** Estrutura: filtro (mês) + grade agrupada por colaborador.
-- **F4.DESC-02** Serviço + mock: `listarDescontos(...)`, `salvarDescontos(...)`, `removerDesconto(...)` (persistência por linha).
-- **F4.DESC-03** Render com **múltiplos lançamentos por colaborador** + estados.
-- **F4.DESC-04** Edição: **Tipo** (select fixo de 10 opções), Valor, Observações (livre); adicionar/remover lançamento; salvar.
-- **F4.DESC-05** **Total por colaborador** (1ª linha do grupo) + rodapé geral.
-- **F4.DESC-07** Bloqueio `descontos` (editor Coordenador).
-- **F4.DESC-08** Filtro de mês + filial.
-- **F4.DESC-09** Exportação Excel (CPF, Nome, Mês Referência, Tipo, Valor, Observações — 1 linha por lançamento).
-- **F4.DESC-10** Testes da tela.
+- [x] **F4.DESC-01** Estrutura: filtro (mês) + grade agrupada por colaborador. → `src/views/descontos/Descontos.tsx`.
+- [x] **F4.DESC-02** Serviço + mock: `listarDescontos(...)`, `salvarDescontos(...)`, `removerDesconto(...)` (persistência por linha). → já existia de F1, sem alterações.
+- [x] **F4.DESC-03** Render com **múltiplos lançamentos por colaborador** + estados.
+- [x] **F4.DESC-04** Edição: **Tipo** (select fixo de 10 opções), Valor, Observações (livre); adicionar/remover lançamento; salvar.
+- [x] **F4.DESC-05** **Total por colaborador** (1ª linha do grupo) + rodapé geral.
+- [x] **F4.DESC-07** Bloqueio `descontos` (editor Coordenador); botão de bloqueio só para Admin numa filial específica.
+- [x] **F4.DESC-08** Filtro de mês + filial.
+- [x] **F4.DESC-09** Exportação Excel (CPF, Nome, Mês Referência, Tipo, Valor, Observações — 1 linha por lançamento). → `exportarDescontosExcel` (`src/services/descontosService.ts`).
+- [x] **F4.DESC-10** Testes da tela. → `Claude/testes/f4-comissao-descontos.md`.
 
 ## F5 — Plano de Saúde
 

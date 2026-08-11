@@ -5,8 +5,10 @@ import type { Tela } from "../../types";
 import { FILIAL_TODAS } from "../../types";
 import { FILIAIS, NAV_POR_PAPEL, ROTULOS_TELAS } from "../../utils/constantes";
 import { rotuloFilial } from "../../utils/filial";
+import { Comissao } from "../comissao/Comissao";
 import { ConsolidadoPev } from "../consolidadoPev/ConsolidadoPev";
 import { ConsultaPeriodo } from "../consulta/ConsultaPeriodo";
+import { Descontos } from "../descontos/Descontos";
 import { Inicio } from "../inicio/Inicio";
 import { Premiacao } from "../premiacao/Premiacao";
 import { CadastroColaboradores } from "../vendedores/CadastroColaboradores";
@@ -21,7 +23,7 @@ function IconeInicio() {
   );
 }
 
-/** Renderiza a view ativa. Telas fora do WBS ainda implementado caem em EmConstrucao (F3 em diante). */
+/** Renderiza a view ativa. Telas fora do WBS ainda implementado caem em EmConstrucao (F5 em diante). */
 function renderizarView(view: Tela) {
   switch (view) {
     case "inicio":
@@ -34,6 +36,10 @@ function renderizarView(view: Tela) {
       return <ConsolidadoPev />;
     case "consulta":
       return <ConsultaPeriodo />;
+    case "comissao":
+      return <Comissao />;
+    case "descontos":
+      return <Descontos />;
     default:
       return <EmConstrucao titulo={ROTULOS_TELAS[view]} />;
   }
