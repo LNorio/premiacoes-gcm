@@ -88,3 +88,8 @@
 
 - **Erro/incompatibilidade encontrada:** 4 dos 6 colaboradores seed tinham `cargo: "Vendedor"`, um valor que não existe em `CARGOS_COLABORADOR` (as opções do `<select>` de Função no cadastro). Isso fazia o campo Função exibir silenciosamente a primeira opção da lista em vez do cargo real, com risco de sobrescrever o cargo verdadeiro ao salvar sem querer, caso o usuário não tocasse nesse campo. Encontrado na verificação visual da modal de cadastro (F2.CAD) com Playwright, não pelos testes unitários (que não comparam contra a lista real de opções).
 - **O que foi alterado para corrigir:** `src/adapters/mock/seed.ts` — `cargo: "Vendedor"` trocado por `cargo: "Consultor de Vendas Interno"` (um valor válido de `CARGOS_COLABORADOR`) nos 4 colaboradores afetados.
+
+### 2026-08-11 — `comissaoServiceMock` (adapter mock, F1)
+
+- **Erro/incompatibilidade encontrada:** ao construir a tela de Comissão (F4.COM), o mesmo padrão de bug já visto em F3 apareceu de novo: `buscar()` filtrava por igualdade exata de filial (`c.filial === filial`), então o Admin em "Todas as filiais" via a tela sempre vazia; e `salvarComissao` gravava a `filial` recebida por parâmetro em vez da filial real do colaborador, o que salvaria registros com `filial: "TODAS"` (um valor inválido) se o Admin estivesse vendo todas as filiais ao editar.
+- **O que foi alterado para corrigir:** `buscar` (`src/adapters/mock/comissaoService.mock.ts`) passou a tratar `FILIAL_TODAS` como "sem filtro de filial"; `salvarComissao` passou a gravar `colaborador?.filial ?? existente?.filial ?? filial` em vez da filial recebida por parâmetro — mesmo padrão já usado em `premiacaoServiceMock` e `colaboradoresServiceMock`.
