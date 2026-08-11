@@ -18,6 +18,18 @@ export class ErroHttp extends Error {
   }
 }
 
+/** A API usa `"mensagem"` (às vezes `"message"`) no corpo de erro — ver Claude/API.md. */
+async function extrairMensagemErro(resposta: Response): Promise<string> {
+  try {
+    const corpo = await resposta.json();
+    if (typeof corpo?.mensagem === "string" && corpo.mensagem) return corpo.mensagem;
+    if (typeof corpo?.message === "string" && corpo.message) return corpo.message;
+  } catch {
+    // corpo não é JSON (ou está vazio) — usa a mensagem genérica abaixo.
+  }
+  return `Falha na requisição: ${resposta.status}`;
+}
+
 export class HttpClient {
   private readonly config: ConfigHttpClient;
 
@@ -40,7 +52,7 @@ export class HttpClient {
       this.config.aoReceber401?.();
     }
     if (!resposta.ok) {
-      throw new ErroHttp(`Falha na requisição: ${resposta.status}`, resposta.status);
+      throw new ErroHttp(await extrairMensagemErro(resposta), resposta.status);
     }
     if (resposta.status === 204) {
       return undefined as T;

@@ -169,7 +169,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 ## F7 — Preparação de integração
 
-- **F7-01** Auth para API: guardar token/sessão e injetar `Authorization` no wrapper HTTP.
+- [x] **F7-01** Auth para API: guardar token/sessão e injetar `Authorization` no wrapper HTTP. → Iniciado adiantado (fora da ordem sequencial, a pedido do usuário): `authServiceHttp` (`src/adapters/http/authService.http.ts`) implementado contra `POST /api/valida-usuario` (`Claude/API.md`), token guardado em memória (`src/adapters/http/token.ts`) e injetado pelo `HttpClient` via `Authorization: Bearer`. `src/adapters/index.ts` já troca `authService` para HTTP fora dos testes (Vitest continua no mock). Sessão ainda não persiste entre reloads da página — isso não foi pedido nem implementado.
 - **F7-02** Interceptor de 401/expiração (logout/refresh).
 - [x] **F7-03** Config por ambiente: base URL da API por ambiente (variáveis), sem URL fixa. → Iniciado adiantado (fora da ordem sequencial, a pedido do usuário): `.env`/`.env.example` com `VITE_API_BASE_URL` criados; a leitura pelo `HttpClient` (`src/adapters/http/httpClient.ts`) e a troca mock↔HTTP continuam pendentes de F8.
 - **F7-04** Mapper por entidade (tradução payload API ↔ shape do front) — esqueleto pronto.
