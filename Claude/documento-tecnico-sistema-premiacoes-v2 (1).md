@@ -1,4 +1,5 @@
 # Sistema de Premiações — Comercial Mariano
+
 ## Documento Técnico de Especificação — v2.0 (Julho de 2026)
 
 > Este documento descreve, com o máximo de precisão possível, o estado atual do protótipo (arquivo HTML único, autocontido, sem backend) para orientar a equipe de Desenvolvimento/TI na construção da versão real do sistema. Nomes de funções, IDs de campos e constantes citados abaixo são os literalmente usados no código-fonte do protótipo, para servir de referência exata durante a implementação.
@@ -15,7 +16,7 @@
 ### 1.1 Credenciais de teste (login)
 
 | Perfil | Usuário | Senha | Filial vinculada |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Administrador | `admin` | `admin123` | Todas (`FILIAL_TODAS`), pode restringir a uma no cabeçalho |
 | Gerente | `gerente` | `gerente123` | `100` |
 | Coordenador | `coordenador` | `coord123` | `100` |
@@ -29,6 +30,7 @@ A detecção de perfil no login é automática: `tratarSubmitLogin()` testa, nes
 '100', '101', '201', '202', '300', '302', '303', '401', '403',
 '600', '601', '602', '603', '604', '700', '701', '800', '900', '901'
 ```
+
 As filiais **401** e **403** têm regra diferenciada no módulo de Plano de Saúde (ver Seção 3.5).
 
 ---
@@ -66,6 +68,7 @@ vendedor:    ['inicio', 'consulta']
 
 - Está em `NAV_POR_PAPEL.admin`, mas **não** em `gerente`, `coordenador` ou `vendedor` → só o Admin vê a aba no menu.
 - Mesmo para o Admin, a função `renderizarPremiacaoEstoque()` tem, logo no início, um retorno antecipado:
+
   ```js
   function renderizarPremiacaoEstoque() {
     document.getElementById('estoque-conteudo-bloco').hidden = true;
@@ -74,6 +77,7 @@ vendedor:    ['inicio', 'consulta']
     // ...lógica original de política, coletivo e individual, intacta...
   }
   ```
+
 - Isso faz com que apareça apenas o texto **"Esta tela está temporariamente oculta."** — para reativar, basta remover essas 3 linhas.
 
 ---
@@ -161,11 +165,13 @@ const VALOR_PADRAO_ODONTOLOGICO       = 13.56;   // todas as filiais
 
 - Um colaborador pode ter **múltiplos lançamentos no mesmo mês** (`estado.descontosBonificacoes` filtrado por `vendedorId` + `mesReferencia`).
 - **Tipo** é uma lista suspensa fixa (`TIPOS_DESCONTO_BONIFICACAO`), sem opção de texto livre:
+
   ```
   Ajuda de Custo/Gratificação · Bonificação · Compra de mercadorias · Convênio Gás ·
   Desconto autorizado (descrever em observações) · Diária · Farmácia · Franquia ·
   Manutenção veículos · Multa
   ```
+
 - **Observações** é texto livre (`descontos-obs-<id>`), pensado principalmente para detalhar o motivo quando o Tipo for "Desconto autorizado".
 - **Total** (`celula-total`) aparece uma vez por colaborador (na primeira linha do grupo), somando **todos** os lançamentos daquele colaborador no mês.
 - Rodapé (`atualizarRodapeDescontos()`): soma o Valor de **todos** os lançamentos de **todos** os colaboradores exibidos.
@@ -178,6 +184,7 @@ const VALOR_PADRAO_ODONTOLOGICO       = 13.56;   // todas as filiais
 Documentado aqui porque o **código continua ativo** por trás da tela oculta (ver Seção 2.3), e deve ser levado em conta se a tela for reabilitada.
 
 **Política de Estoque** (`estado.politicaEstoque`, só o Admin edita):
+
 ```js
 metas: { romaneios: 0.90, contagens: 3, avaria: 0.0015, segregado: 0 }
 valoresReferencia: { romaneios: 150, contagens: 100, avaria: 75, segregado: 25,
@@ -186,6 +193,7 @@ metaVolumeSeparadoTotal: 0.80
 ```
 
 **Grupos de função** (`grupoFuncaoEstoque(cargo)`):
+
 - `'encarregado_assistente'` → cargos "Encarregado de Estoque" ou "Assistente de Estoque"
 - `'auxiliar'` → cargo "Auxiliar de Estoque"
 - Qualquer outro cargo → `null` (não entra no módulo de Estoque)
@@ -193,7 +201,7 @@ metaVolumeSeparadoTotal: 0.80
 **KPIs coletivos** (`KPIS_COLETIVOS_ESTOQUE`), lançados por filial/mês (`estado.estoqueColetivoMensal`):
 
 | KPI | Unidade | Grupos que valem | Regra de "melhor" |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `romaneios` — % Romaneios bipados | % | só encarregado/assistente | maior é melhor |
 | `contagens` — Contagens Semanais | und | ambos os grupos | maior é melhor |
 | `avaria` — % Estoque Avaria (99) | % | ambos os grupos | **menor** é melhor |
@@ -204,6 +212,7 @@ metaVolumeSeparadoTotal: 0.80
 - `calcularTotalColetivoParaGrupo(grupo, filial, mes)`: soma o valor pago de cada KPI aplicável àquele grupo.
 
 **Avaliação individual** (`estado.estoqueIndividualMensal`, um registro por colaborador/mês):
+
 - `semFaltas` (bool) → paga `valoresReferencia.faltas` se verdadeiro.
 - `organizacaoOk` (bool) → paga `valoresReferencia.organizacao` se verdadeiro.
 - Se o colaborador é do grupo `'auxiliar'`: `metaIndividualVolume = metaVolumeSeparadoTotal / (nº de auxiliares da filial)`; se `volumeSeparadoRealizado >= metaIndividualVolume`, paga `valoresReferencia.volumeSeparado`.
@@ -220,7 +229,7 @@ Aplica-se a `premiacao`, `planoSaude`, `descontos`, `comissao` e `estoque` (ver 
 ## 4. Exportações — tabela de referência exata
 
 | Tela | Botão / função | Formato | Colunas (nesta ordem exata) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Planilha de Premiação | `botao-exportar-csv` → `exportarPremiacoesCSV()` | CSV | CPF, Nome, Valor Total, Observações |
 | Consolidado PEV | `botao-exportar-csv-consolidado-pev` → `exportarConsolidadoPevCSV()` | CSV | CPF, Nome, Premiação Adicional a Receber |
 | Comissão | `botao-exportar-excel-comissao` → `exportarComissoesExcel()` | Excel (.xlsx) | Código, Nome, PEV, Comissão, Garantido |
@@ -235,6 +244,7 @@ Todos os arquivos CSV são gerados com separador `;`, BOM UTF-8 (`\uFEFF`), e no
 ## 5. Modelo de dados (entidades e campos exatos)
 
 ### 5.1 Vendedor / Colaborador
+
 ```
 id, codigo, nome, cpf, filial, cargo, email,
 usuarioAcesso, senhaAcesso,
@@ -244,6 +254,7 @@ adesaoOdontologico    // boolean | undefined (undefined = true)
 ```
 
 ### 5.2 Premiação (`estado.premiacoes`)
+
 ```
 id, vendedorId, vendedorNome, filial, mesReferencia,
 pev, iconic, filtros, campanhasFornecedores, inadimplencia,
@@ -252,6 +263,7 @@ total   // = soma das 5 categorias, gravado
 ```
 
 ### 5.3 Comissão (`estado.comissoes`)
+
 ```
 id, vendedorId, vendedorNome, filial, mesReferencia,
 pev,        // snapshot do PEV da Premiação no momento de salvar
@@ -261,6 +273,7 @@ garantido   // Garantido
 ```
 
 ### 5.4 Plano de Saúde
+
 ```
 Dependente (estado.planoSaudeDependentes):
   id, vendedorId, nome, cpf
@@ -274,6 +287,7 @@ Lançamento (estado.planoSaudeLancamentos):
 ```
 
 ### 5.5 Descontos e Bonificações (`estado.descontosBonificacoes`)
+
 ```
 id, vendedorId, mesReferencia,
 tipo,          // um dos 10 valores fixos (ver 3.7)
@@ -282,11 +296,13 @@ observacoes    // texto livre
 ```
 
 ### 5.6 Adiantamento de Férias (`estado.adiantamentosFerias`)
+
 ```
 id, vendedorId, anoCiclo, valor
 ```
 
 ### 5.7 Bloqueios (`estado.bloqueios`)
+
 ```
 Array de strings no formato "tela::filial::mesReferencia"
 tela ∈ { premiacao, planoSaude, descontos, comissao, estoque }
@@ -318,7 +334,7 @@ Sem alteração de escopo em relação à primeira versão deste documento — s
 ## Anexo — Glossário de termos
 
 | Termo | Significado |
-|---|---|
+| --- | --- |
 | **PEV** | Categoria de premiação apurada mensalmente por colaborador; base do Consolidado PEV; exibida como somente-leitura na Comissão |
 | **Planilha Deivson** | Coluna calculada na Planilha de Premiação: `Total do mês − PEV` |
 | **Adesão (Saúde/Odontológico)** | Flags por titular (`adesaoSaude`/`adesaoOdontologico`, padrão `true`) que decidem se a família aparece em cada sub-aba de Lançamento do Plano de Saúde |
