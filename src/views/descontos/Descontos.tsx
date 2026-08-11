@@ -217,7 +217,7 @@ export function Descontos() {
         <MensagemErro mensagem={erro} />
       ) : (
         <>
-          <Table>
+          <Table planilha>
             <thead>
               <tr>
                 <th>Cód</th>
