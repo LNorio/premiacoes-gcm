@@ -57,9 +57,9 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 **Tela: Cadastro de Colaboradores** — código `F2.CAD`
 - [x] **F2.CAD-01** Estrutura: formulário + tabela da filial. → `src/views/vendedores/CadastroColaboradores.tsx`.
-- [x] **F2.CAD-02** Serviço + mock: `listarColaboradores`, `salvarColaborador`, `removerColaborador`. → já implementado em F1 (`src/services`/`src/adapters/mock`).
+- [x] **F2.CAD-02** Serviço + mock: `listarColaboradores`, `salvarColaborador`, `removerColaborador`. → já implementado em F1 (`src/services`/`src/adapters/mock`). **F8.CAD iniciado adiantado em 2026-08-11:** `colaboradoresServiceHttp` (`src/adapters/http/colaboradoresService.http.ts`) consome `/api/usuarios` fora dos testes; riscos e limitações conhecidas registrados em `Claude/eventos-roadmap.md`.
 - [x] **F2.CAD-03** Render da tabela + estados.
-- [x] **F2.CAD-04** Formulário: campos (código, nome, CPF c/ máscara, **filial**, cargo, e-mail, usuário/senha de acesso), **5 checkboxes de habilitação de tela**, validação (exige código, nome, CPF, filial), salvar/editar/cancelar/remover. **Alterado em 2026-08-10:** campo de Filial adicionado ao formulário (era implícito pelo cabeçalho); depois o formulário inline foi substituído por uma modal ("+ Adicionar colaborador"); ver `Claude/eventos-roadmap.md`.
+- [x] **F2.CAD-04** Formulário: campos (código, nome, CPF c/ máscara, **filial**, cargo, **perfil**, e-mail, usuário/senha de acesso), **5 checkboxes de habilitação de tela**, validação (exige código, nome, CPF, filial), salvar/editar/cancelar/remover. **Alterado em 2026-08-10:** campo de Filial adicionado ao formulário (era implícito pelo cabeçalho); depois o formulário inline foi substituído por uma modal ("+ Adicionar colaborador"). **Alterado em 2026-08-11:** campo de Perfil adicionado (Vendedor/Coordenador/Gerente/Administrador). Ver `Claude/eventos-roadmap.md`.
 - [x] **F2.CAD-06** Visibilidade: apenas perfis com acesso à tela. → guarda de rota do Shell + formulário/Ações visíveis só para Admin numa filial específica.
 - [x] **F2.CAD-10** Testes da tela. → `Claude/testes/f2-shell-auth-cadastro.md` (88 testes no total do projeto).
 
@@ -67,7 +67,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 **Tela: Planilha de Premiação** — código `F3.PREM`
 - [x] **F3.PREM-01** Estrutura: filtros (mês) + grade.
-- [x] **F3.PREM-02** Serviço + mock: `listarPremiacoes(filial, mes)`, `salvarPremiacoes(...)`. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap).
+- [x] **F3.PREM-02** Serviço + mock: `listarPremiacoes(filial, mes)`, `salvarPremiacoes(...)`. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap). **F8.PREM iniciado adiantado em 2026-08-11:** `premiacaoServiceHttp` (`src/adapters/http/premiacaoService.http.ts`) consome `/api/premiacoes` fora dos testes — uma requisição por colaborador (`?id=`), já que a API não devolve id nenhum na resposta; ajustado no mesmo dia para o novo formato agrupado por mês (`"meses"`) da API v3; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PREM-03** Render das linhas (Código, Colaborador, CPF + 5 categorias) + estados. **Alterado em 2026-08-10:** coluna Filial adicionada quando o Admin está em "Todas as filiais"; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PREM-04** Edição das **5 categorias** (pev, iconic, filtros, campanhasFornecedores, inadimplencia) + salvar.
 - [x] **F3.PREM-05** Totais: **Total** = soma das 5; **Planilha Deivson** = Total − PEV (preview); rodapé por categoria + Total + Deivson, sem perder foco.
@@ -78,7 +78,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 **Tela: Consolidado PEV** — código `F3.PEV`
 - [x] **F3.PEV-01** Estrutura: filtros (ano-ciclo, de/até) + grade dinâmica.
-- [x] **F3.PEV-02** Serviço + mock: `listarConsolidadoPev(filial, ciclo, intervalo)`, `salvarAdiantamento(...)`. → já existia de F1; ganhou filtro por `telas.premiacoes` (ver eventos-roadmap).
+- [x] **F3.PEV-02** Serviço + mock: `listarConsolidadoPev(filial, ciclo, intervalo)`, `salvarAdiantamento(...)`. → já existia de F1; ganhou filtro por `telas.premiacoes` (ver eventos-roadmap). **F8.PEV iniciado adiantado em 2026-08-11:** `consolidadoPevServiceHttp` (`src/adapters/http/consolidadoPevService.http.ts`) consome `/api/consolidado` fora dos testes, cruzando com `/api/usuarios` para obter filial e `telas.premiacoes` (a API não devolve isso); ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PEV-03** Render com **colunas dinâmicas por mês** do intervalo + colunas finais (Total Acumulado, Base 28%, Adiantamento, Premiação Adicional a Receber) + estados. **Alterado em 2026-08-10:** coluna Filial adicionada quando o Admin está em "Todas as filiais"; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PEV-04** Lançamento do **Adiantamento de Férias** (somente Admin) + salvar.
 - [x] **F3.PEV-05** Derivados: Base = Total × 0,28; A Receber = Base − Adiantamento; rodapé soma meses + 4 colunas.
@@ -89,7 +89,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 **Tela: Consulta por Período** — código `F3.CONS` *(somente leitura)*
 - [x] **F3.CONS-01** Estrutura: filtros (de/até) + área de cartões.
-- [x] **F3.CONS-02** Serviço + mock: `listarConsulta(filial, filtro, escopo)`. → assinatura ganhou `filial` (era uma lacuna de F1, ver eventos-roadmap).
+- [x] **F3.CONS-02** Serviço + mock: `listarConsulta(filial, filtro, escopo)`. → assinatura ganhou `filial` (era uma lacuna de F1, ver eventos-roadmap). **F8.CONS iniciado adiantado em 2026-08-11:** `consultaServiceHttp` (`src/adapters/http/consultaService.http.ts`) consome `/api/premiacoes` fora dos testes — blocker original (sem quebra por mês) resolvido pela API v3, que passou a agrupar a resposta por mês; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.CONS-03** Render de **um cartão por mês** (5 categorias + Total) + rodapé por mês + estados.
 - [x] **F3.CONS-06** Perfil vendedor: filtrado ao próprio; rótulo "Minhas Premiações por Período".
 - [x] **F3.CONS-08** Filtros de período + limpar filtro.
@@ -189,7 +189,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 - **F9-01** Testes unitários de componentes/serviços.
 - **F9-02** Testes e2e por perfil (lançamento, bloqueio, exportação).
-- **F9-03** Acessibilidade (aria, teclado, contraste, `prefers-reduced-motion`).
+- **F9-03** Acessibilidade (aria, teclado, contraste, `prefers-reduced-motion`). → Efeito de carregamento (spinner nos botões de ação + barra global no topo durante chamadas à API) adiantado em 2026-08-11, a pedido do usuário; ver `Claude/eventos-roadmap.md`.
 - **F9-04** Responsividade (tabelas com rolagem, mobile).
 - **F9-05** Performance e empacotamento de dependências (substituir SheetJS via CDN).
 - **F9-06** UAT com os quatro perfis + correções.

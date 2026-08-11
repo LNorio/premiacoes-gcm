@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesAtualISO, obterMesesCicloPEV } from "./periodo";
+import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesAtualISO, obterMesesCicloPEV, ultimoDiaDoMes } from "./periodo";
 
 describe("obterAnoCicloAtual", () => {
   it("usa o ano corrente para meses de janeiro a novembro", () => {
@@ -53,5 +53,14 @@ describe("nomeCurtoMes", () => {
   it("retorna a abreviação de 3 letras do mês", () => {
     expect(nomeCurtoMes("2026-01")).toBe("jan");
     expect(nomeCurtoMes("2026-12")).toBe("dez");
+  });
+});
+
+describe("ultimoDiaDoMes", () => {
+  it("retorna o último dia de meses com 31, 30 e 28/29 dias", () => {
+    expect(ultimoDiaDoMes("2026-01")).toBe("2026-01-31");
+    expect(ultimoDiaDoMes("2026-04")).toBe("2026-04-30");
+    expect(ultimoDiaDoMes("2026-02")).toBe("2026-02-28");
+    expect(ultimoDiaDoMes("2028-02")).toBe("2028-02-29"); // ano bissexto
   });
 });

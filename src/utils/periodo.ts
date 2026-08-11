@@ -57,3 +57,10 @@ export function nomeCurtoMes(chave: string): string {
   const nomes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   return nomes[mes - 1];
 }
+
+/** Último dia do mês "YYYY-MM", como "YYYY-MM-DD" (usado nos filtros data_fim da API real). */
+export function ultimoDiaDoMes(mesReferencia: string): string {
+  const [ano, mes] = mesReferencia.split("-").map(Number);
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  return `${mesReferencia}-${String(ultimoDia).padStart(2, "0")}`;
+}

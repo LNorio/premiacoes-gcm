@@ -26,6 +26,7 @@ describe("colaboradoresServiceMock", () => {
       cpf: "999.999.999-99",
       filial: "100",
       cargo: "Vendedor",
+      role: "vendedor",
       email: "novo@comercialmariano.com.br",
       usuarioAcesso: "novo.colaborador",
       senhaAcesso: "venda123",

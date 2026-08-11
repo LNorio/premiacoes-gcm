@@ -79,6 +79,17 @@ export const CARGOS_COLABORADOR = [
   "Supervisor",
 ] as const;
 
+/** Rótulos de perfil (campo "Perfil" do Cadastro de Colaboradores) */
+export const ROTULOS_PAPEL: Record<Papel, string> = {
+  vendedor: "Vendedor",
+  coordenador: "Coordenador",
+  gerente: "Gerente",
+  admin: "Administrador",
+};
+
+/** Opções do dropdown de Perfil, na ordem pedida (Vendedor, Coordenador, Gerente, Administrador) */
+export const PAPEIS_COLABORADOR: Papel[] = ["vendedor", "coordenador", "gerente", "admin"];
+
 /** Rótulos das telas habilitáveis por colaborador (checklist do Cadastro) */
 export const ROTULOS_TELAS_COLABORADOR = {
   premiacoes: "Premiações",

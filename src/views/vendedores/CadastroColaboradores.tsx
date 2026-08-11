@@ -2,8 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { colaboradoresService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Modal } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
-import { FILIAL_TODAS, type Colaborador, type Resultado, type TelasHabilitadas } from "../../types";
-import { CARGOS_COLABORADOR, FILIAIS, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
+import { FILIAL_TODAS, type Colaborador, type Papel, type Resultado, type TelasHabilitadas } from "../../types";
+import { CARGOS_COLABORADOR, FILIAIS, PAPEIS_COLABORADOR, ROTULOS_PAPEL, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
 import { mascararCpf } from "../../utils/formatadores";
 import { mostrarToast } from "../../utils/toast";
 
@@ -22,6 +22,7 @@ interface FormularioColaborador {
   nome: string;
   cpf: string;
   cargo: string;
+  role: Papel;
   filial: string;
   email: string;
   usuarioAcesso: string;
@@ -35,6 +36,7 @@ function formularioVazio(filialPadrao: string): FormularioColaborador {
     nome: "",
     cpf: "",
     cargo: CARGOS_COLABORADOR[0],
+    role: "vendedor",
     filial: filialPadrao,
     email: "",
     usuarioAcesso: "",
@@ -50,6 +52,8 @@ export function CadastroColaboradores() {
   const [formulario, setFormulario] = useState<FormularioColaborador>(() => formularioVazio(filialPadrao));
   const [idEmEdicao, setIdEmEdicao] = useState<string | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
 
   const ehAdmin = sessao?.role === "admin";
   const mostrarFilial = ehAdmin && sessao?.filialAtiva === FILIAL_TODAS;
@@ -79,6 +83,7 @@ export function CadastroColaboradores() {
       nome: colaborador.nome,
       cpf: colaborador.cpf,
       cargo: colaborador.cargo,
+      role: colaborador.role,
       filial: colaborador.filial,
       email: colaborador.email,
       usuarioAcesso: colaborador.usuarioAcesso,
@@ -96,8 +101,13 @@ export function CadastroColaboradores() {
 
   async function remover(id: string) {
     if (!ehAdmin) return;
-    await colaboradoresService.removerColaborador(id);
-    void carregar();
+    setRemovendoId(id);
+    try {
+      await colaboradoresService.removerColaborador(id);
+      await carregar();
+    } finally {
+      setRemovendoId(null);
+    }
   }
 
   async function tratarSubmit(evento: FormEvent) {
@@ -110,41 +120,46 @@ export function CadastroColaboradores() {
       mostrarToast("Selecione a filial do colaborador.", "erro");
       return;
     }
-    if (!formulario.codigo || !formulario.nome || !formulario.cpf) {
-      mostrarToast("Preencha ao menos código, nome e CPF do colaborador.", "erro");
+    if (!formulario.nome || !formulario.cpf || !formulario.email) {
+      mostrarToast("Preencha ao menos nome, CPF e e-mail do colaborador.", "erro");
       return;
     }
-    if (!formulario.usuarioAcesso || !formulario.senhaAcesso) {
+    if (!formulario.usuarioAcesso || (!idEmEdicao && !formulario.senhaAcesso)) {
       mostrarToast("Defina um usuário e uma senha de acesso para o colaborador.", "erro");
       return;
     }
 
-    const todos = await colaboradoresService.listarColaboradores(FILIAL_TODAS);
-    const usuarioDuplicado =
-      todos.status === "sucesso" &&
-      todos.dados.some((c) => c.usuarioAcesso === formulario.usuarioAcesso && c.id !== idEmEdicao);
-    if (usuarioDuplicado) {
-      mostrarToast("Já existe um colaborador com esse usuário de acesso.", "erro");
-      return;
+    setSalvando(true);
+    try {
+      const todos = await colaboradoresService.listarColaboradores(FILIAL_TODAS);
+      const usuarioDuplicado =
+        todos.status === "sucesso" &&
+        todos.dados.some((c) => c.usuarioAcesso === formulario.usuarioAcesso && c.id !== idEmEdicao);
+      if (usuarioDuplicado) {
+        mostrarToast("Já existe um colaborador com esse usuário de acesso.", "erro");
+        return;
+      }
+
+      const salvo = await colaboradoresService.salvarColaborador({
+        id: idEmEdicao ?? "",
+        ...formulario,
+      });
+
+      if (salvo.status === "erro") {
+        mostrarToast(salvo.mensagem, "erro");
+        return;
+      }
+
+      mostrarToast(idEmEdicao ? "Colaborador atualizado com sucesso." : "Colaborador cadastrado com sucesso.", "sucesso");
+      fecharModal();
+      void carregar();
+    } finally {
+      setSalvando(false);
     }
-
-    const salvo = await colaboradoresService.salvarColaborador({
-      id: idEmEdicao ?? "",
-      ...formulario,
-    });
-
-    if (salvo.status === "erro") {
-      mostrarToast(salvo.mensagem, "erro");
-      return;
-    }
-
-    mostrarToast(idEmEdicao ? "Colaborador atualizado com sucesso." : "Colaborador cadastrado com sucesso.", "sucesso");
-    fecharModal();
-    void carregar();
   }
 
   const lista = resultado.status === "sucesso" ? resultado.dados : [];
-  const colspanVazio = 7 + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
+  const colspanVazio = 8 + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
 
   const subtitulo = mostrarFilial
     ? "Colaboradores de todas as filiais"
@@ -182,6 +197,7 @@ export function CadastroColaboradores() {
               {mostrarFilial ? <th>Filial</th> : null}
               <th>CPF</th>
               <th>Função</th>
+              <th>Perfil</th>
               <th>E-mail</th>
               <th>Usuário de acesso</th>
               <th>Telas</th>
@@ -217,6 +233,7 @@ export function CadastroColaboradores() {
                     {mostrarFilial ? <td>Filial {colaborador.filial}</td> : null}
                     <td>{colaborador.cpf}</td>
                     <td>{colaborador.cargo}</td>
+                    <td>{ROTULOS_PAPEL[colaborador.role]}</td>
                     <td>{colaborador.email || "—"}</td>
                     <td>{colaborador.usuarioAcesso}</td>
                     <td>
@@ -230,12 +247,16 @@ export function CadastroColaboradores() {
                     </td>
                     {ehAdmin ? (
                       <td className="celula-acoes-form">
-                        <button type="button" className="botao botao-secundario" onClick={() => abrirParaEditar(colaborador)}>
+                        <Button variant="secundario" onClick={() => abrirParaEditar(colaborador)}>
                           Editar
-                        </button>
-                        <button type="button" className="botao botao-perigo" onClick={() => remover(colaborador.id)}>
+                        </Button>
+                        <Button
+                          variant="perigo"
+                          carregando={removendoId === colaborador.id}
+                          onClick={() => remover(colaborador.id)}
+                        >
                           Remover
-                        </button>
+                        </Button>
                       </td>
                     ) : null}
                   </tr>
@@ -254,7 +275,6 @@ export function CadastroColaboradores() {
               <input
                 id="colaborador-codigo"
                 type="text"
-                required
                 value={formulario.codigo}
                 onChange={(e) => setFormulario((f) => ({ ...f, codigo: e.target.value }))}
               />
@@ -312,11 +332,27 @@ export function CadastroColaboradores() {
               </select>
             </div>
             <div className="campo">
+              <label htmlFor="colaborador-perfil">Perfil</label>
+              <select
+                id="colaborador-perfil"
+                required
+                value={formulario.role}
+                onChange={(e) => setFormulario((f) => ({ ...f, role: e.target.value as Papel }))}
+              >
+                {PAPEIS_COLABORADOR.map((papel) => (
+                  <option key={papel} value={papel}>
+                    {ROTULOS_PAPEL[papel]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="campo">
               <label htmlFor="colaborador-email">E-mail</label>
               <input
                 id="colaborador-email"
                 type="email"
                 placeholder="email@exemplo.com"
+                required
                 value={formulario.email}
                 onChange={(e) => setFormulario((f) => ({ ...f, email: e.target.value }))}
               />
@@ -337,8 +373,8 @@ export function CadastroColaboradores() {
               <input
                 id="colaborador-senha"
                 type="text"
-                placeholder="senha"
-                required
+                placeholder={idEmEdicao ? "deixe em branco para manter a senha atual" : "senha"}
+                required={!idEmEdicao}
                 value={formulario.senhaAcesso}
                 onChange={(e) => setFormulario((f) => ({ ...f, senhaAcesso: e.target.value }))}
               />
@@ -365,10 +401,10 @@ export function CadastroColaboradores() {
           </p>
 
           <div className="formulario-rodape" style={{ marginTop: "var(--esp-5)" }}>
-            <Button type="submit" variant="primario">
+            <Button type="submit" variant="primario" carregando={salvando}>
               {idEmEdicao ? "Salvar alterações" : "Cadastrar"}
             </Button>
-            <Button type="button" variant="secundario" onClick={fecharModal}>
+            <Button type="button" variant="secundario" onClick={fecharModal} disabled={salvando}>
               Cancelar
             </Button>
           </div>
