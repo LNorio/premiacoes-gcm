@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesAtualISO, obterMesesCicloPEV, ultimoDiaDoMes } from "./periodo";
+import {
+  gerarIntervaloMeses,
+  nomeCurtoMes,
+  obterAnoCicloAtual,
+  obterMesAtualISO,
+  obterMesPassadoISO,
+  obterMesesCicloPEV,
+  ultimoDiaDoMes,
+} from "./periodo";
 
 describe("obterAnoCicloAtual", () => {
   it("usa o ano corrente para meses de janeiro a novembro", () => {
@@ -46,6 +54,16 @@ describe("gerarIntervaloMeses", () => {
 describe("obterMesAtualISO", () => {
   it("formata a data informada como 'YYYY-MM'", () => {
     expect(obterMesAtualISO(new Date(2026, 6, 15))).toBe("2026-07");
+  });
+});
+
+describe("obterMesPassadoISO", () => {
+  it("retorna o mês anterior ao informado", () => {
+    expect(obterMesPassadoISO(new Date(2026, 6, 15))).toBe("2026-06"); // julho/2026 → junho/2026
+  });
+
+  it("volta para dezembro do ano anterior quando o mês corrente é janeiro", () => {
+    expect(obterMesPassadoISO(new Date(2026, 0, 10))).toBe("2025-12");
   });
 });
 

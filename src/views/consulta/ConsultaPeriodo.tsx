@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { consultaService } from "../../adapters";
 import { Button, Carregando, MensagemErro } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
@@ -6,7 +6,9 @@ import { CATEGORIAS_PREMIACAO, FILIAL_TODAS, type CategoriaPremiacao } from "../
 import type { CartaoMesConsulta } from "../../services/consultaService";
 import { baixarCSV } from "../../utils/exportar";
 import { formatarMesReferencia, formatarMoeda } from "../../utils/formatadores";
+import { obterMesPassadoISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
+import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 import "./ConsultaPeriodo.css";
 
 const ROTULOS_CATEGORIA_CURTO: Record<CategoriaPremiacao, string> = {
@@ -19,8 +21,8 @@ const ROTULOS_CATEGORIA_CURTO: Record<CategoriaPremiacao, string> = {
 
 export function ConsultaPeriodo() {
   const { sessao } = useSessao();
-  const [de, setDe] = useState("");
-  const [ate, setAte] = useState("");
+  const [de, setDe] = useState(obterMesPassadoISO());
+  const [ate, setAte] = useState(obterMesPassadoISO());
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [cartoes, setCartoes] = useState<CartaoMesConsulta[]>([]);
@@ -30,21 +32,24 @@ export function ConsultaPeriodo() {
   const mostrarFilial = filialAtiva === FILIAL_TODAS;
   const escopo = ehVendedor && sessao?.vendedorId ? { vendedorId: sessao.vendedorId } : undefined;
 
-  useEffect(() => {
-    if (!sessao) return;
-    setCarregando(true);
-    setErro(null);
-    consultaService.listarConsulta(filialAtiva, { de, ate }, escopo).then((resConsulta) => {
-      if (resConsulta.status !== "sucesso") {
-        setErro(resConsulta.status === "erro" ? resConsulta.mensagem : "Falha ao carregar.");
+  useEfeitoAssincrono(
+    (foiCancelado) => {
+      if (!sessao) return;
+      setCarregando(true);
+      setErro(null);
+      consultaService.listarConsulta(filialAtiva, { de, ate }, escopo).then((resConsulta) => {
+        if (foiCancelado()) return;
+        if (resConsulta.status !== "sucesso") {
+          setErro(resConsulta.status === "erro" ? resConsulta.mensagem : "Falha ao carregar.");
+          setCarregando(false);
+          return;
+        }
+        setCartoes(resConsulta.dados);
         setCarregando(false);
-        return;
-      }
-      setCartoes(resConsulta.dados);
-      setCarregando(false);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao?.filialAtiva, sessao?.vendedorId, de, ate]);
+      });
+    },
+    [sessao?.filialAtiva, sessao?.vendedorId, de, ate],
+  );
 
   async function exportarCSV() {
     // A exportação usa todo o escopo da filial/vendedor, não só o período filtrado na

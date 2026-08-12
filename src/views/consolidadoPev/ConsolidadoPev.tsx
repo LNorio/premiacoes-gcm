@@ -8,6 +8,7 @@ import { baixarCSV } from "../../utils/exportar";
 import { formatarMoeda } from "../../utils/formatadores";
 import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesesCicloPEV } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
+import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
 export function ConsolidadoPev() {
   const { sessao } = useSessao();
@@ -26,25 +27,35 @@ export function ConsolidadoPev() {
   const mostrarFilial = filialAtiva === FILIAL_TODAS;
   const mesesExibidos = de > ate ? [] : gerarIntervaloMeses(de, ate);
 
+  // Campos De/Até ficam somente-leitura (só o Ciclo é editável) — mantidos em sincronia com ele.
   useEffect(() => {
-    if (!sessao || de > ate) {
-      setCarregando(false);
-      return;
-    }
-    setCarregando(true);
-    setErro(null);
-    consolidadoPevService.listarConsolidadoPev(filialAtiva, anoCiclo, gerarIntervaloMeses(de, ate)).then((resultado) => {
-      if (resultado.status !== "sucesso") {
-        setErro(resultado.status === "erro" ? resultado.mensagem : "Falha ao carregar.");
+    const meses = obterMesesCicloPEV(anoCiclo);
+    setDe(meses[0]);
+    setAte(meses[meses.length - 1]);
+  }, [anoCiclo]);
+
+  useEfeitoAssincrono(
+    (foiCancelado) => {
+      if (!sessao || de > ate) {
         setCarregando(false);
         return;
       }
-      setLinhas(resultado.dados);
-      setAdiantamentosEditados(Object.fromEntries(resultado.dados.map((l) => [l.vendedorId, l.adiantamento])));
-      setCarregando(false);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao?.filialAtiva, anoCiclo, de, ate]);
+      setCarregando(true);
+      setErro(null);
+      consolidadoPevService.listarConsolidadoPev(filialAtiva, anoCiclo, gerarIntervaloMeses(de, ate)).then((resultado) => {
+        if (foiCancelado()) return;
+        if (resultado.status !== "sucesso") {
+          setErro(resultado.status === "erro" ? resultado.mensagem : "Falha ao carregar.");
+          setCarregando(false);
+          return;
+        }
+        setLinhas(resultado.dados);
+        setAdiantamentosEditados(Object.fromEntries(resultado.dados.map((l) => [l.vendedorId, l.adiantamento])));
+        setCarregando(false);
+      });
+    },
+    [sessao?.filialAtiva, anoCiclo, de, ate],
+  );
 
   async function salvarAdiantamentos() {
     setSalvando(true);
@@ -104,11 +115,11 @@ export function ConsolidadoPev() {
         </div>
         <div className="campo">
           <label htmlFor="pev-filtro-de">De</label>
-          <input type="month" id="pev-filtro-de" value={de} onChange={(e) => setDe(e.target.value)} />
+          <input type="month" id="pev-filtro-de" value={de} disabled readOnly />
         </div>
         <div className="campo">
           <label htmlFor="pev-filtro-ate">Até</label>
-          <input type="month" id="pev-filtro-ate" value={ate} onChange={(e) => setAte(e.target.value)} />
+          <input type="month" id="pev-filtro-ate" value={ate} disabled readOnly />
         </div>
       </form>
 

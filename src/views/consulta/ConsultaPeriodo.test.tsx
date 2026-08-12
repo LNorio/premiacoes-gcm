@@ -4,11 +4,20 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { premiacaoServiceMock } from "../../adapters/mock/premiacaoService.mock";
 import { SessaoProvider } from "../../state/SessaoContext";
 import { ComSessao } from "../../testUtils/ComSessao";
+import { obterMesPassadoISO } from "../../utils/periodo";
 import { ConsultaPeriodo } from "./ConsultaPeriodo";
+
+const MES_PASSADO = obterMesPassadoISO();
 
 beforeEach(() => {
   localStorage.clear();
 });
+
+/** Limpa o filtro padrão (mês passado, ver F3.CONS-08) para os testes que precisam ver todos os meses. */
+async function verTodosOsMeses() {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Ver todos os meses" }));
+}
 
 function renderComoVendedor() {
   return render(
@@ -50,6 +59,7 @@ describe("ConsultaPeriodo — cartões por mês (F3.CONS-01/02/03)", () => {
     ]);
 
     renderComoGerente();
+    await verTodosOsMeses();
     const cartoes = await screen.findAllByText(/lançamento\(s\)/);
     expect(cartoes).toHaveLength(2);
 
@@ -61,13 +71,30 @@ describe("ConsultaPeriodo — cartões por mês (F3.CONS-01/02/03)", () => {
 
   it("mostra mensagem vazia quando não há premiações lançadas", async () => {
     renderComoGerente();
+    await verTodosOsMeses();
     expect(await screen.findByText(/Nenhuma premiação lançada ainda/)).toBeInTheDocument();
+  });
+});
+
+describe("ConsultaPeriodo — filtro padrão do primeiro carregamento (F3.CONS-08)", () => {
+  it("traz só o mês passado por padrão, sem precisar filtrar", async () => {
+    await premiacaoServiceMock.salvarPremiacoes("100", MES_PASSADO, [
+      { vendedorId: "seed-v1", pev: 100, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
+    ]);
+    await premiacaoServiceMock.salvarPremiacoes("100", "2020-01", [
+      { vendedorId: "seed-v1", pev: 100, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
+    ]);
+
+    renderComoGerente();
+    await waitFor(() => expect(screen.getAllByText(/lançamento\(s\)/)).toHaveLength(1));
+    expect(screen.getByLabelText("De")).toHaveValue(MES_PASSADO);
+    expect(screen.getByLabelText("Até")).toHaveValue(MES_PASSADO);
   });
 });
 
 describe("ConsultaPeriodo — escopo por perfil (F3.CONS-06)", () => {
   it("Vendedor vê só os próprios lançamentos, com título 'Minhas Premiações'", async () => {
-    await premiacaoServiceMock.salvarPremiacoes("100", "2026-06", [
+    await premiacaoServiceMock.salvarPremiacoes("100", MES_PASSADO, [
       { vendedorId: "seed-v1", pev: 100, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
       { vendedorId: "seed-v2", pev: 300, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
     ]);
@@ -80,12 +107,12 @@ describe("ConsultaPeriodo — escopo por perfil (F3.CONS-06)", () => {
 
   it("Vendedor não vê o botão de exportar CSV", async () => {
     renderComoVendedor();
-    await waitFor(() => expect(screen.getByText(/Nenhuma premiação lançada/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Nenhuma premiação/)).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /Exportar CSV/ })).not.toBeInTheDocument();
   });
 
   it("Admin em 'Todas as filiais' vê a coluna Filial", async () => {
-    await premiacaoServiceMock.salvarPremiacoes("100", "2026-06", [
+    await premiacaoServiceMock.salvarPremiacoes("100", MES_PASSADO, [
       { vendedorId: "seed-v1", pev: 100, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
     ]);
     renderComoAdminEmTodasAsFiliais();
@@ -105,6 +132,7 @@ describe("ConsultaPeriodo — filtros (F3.CONS-08)", () => {
     ]);
 
     renderComoGerente();
+    await verTodosOsMeses();
     await waitFor(() => expect(screen.getAllByText(/lançamento\(s\)/)).toHaveLength(2));
 
     await user.type(screen.getByLabelText("De"), "2026-06");

@@ -51,6 +51,12 @@ export function obterMesAtualISO(hoje: Date = new Date()): string {
   return chaveMes(hoje.getFullYear(), hoje.getMonth());
 }
 
+/** "YYYY-MM" do mês anterior ao atual, no fuso local — valor padrão do filtro da Consulta por Período. */
+export function obterMesPassadoISO(hoje: Date = new Date()): string {
+  const mesIndex0 = hoje.getMonth() - 1;
+  return mesIndex0 < 0 ? chaveMes(hoje.getFullYear() - 1, 11) : chaveMes(hoje.getFullYear(), mesIndex0);
+}
+
 /** Abreviação de 3 letras do mês (jan, fev, ...) a partir de "YYYY-MM" */
 export function nomeCurtoMes(chave: string): string {
   const [, mes] = chave.split("-").map(Number);

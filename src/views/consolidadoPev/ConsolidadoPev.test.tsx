@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { premiacaoServiceMock } from "../../adapters/mock/premiacaoService.mock";
@@ -6,7 +6,7 @@ import { SessaoProvider } from "../../state/SessaoContext";
 import { ComoAdminNaFilial } from "../../testUtils/ComoAdminNaFilial";
 import { ComSessao } from "../../testUtils/ComSessao";
 import { formatarMoeda } from "../../utils/formatadores";
-import { obterMesAtualISO } from "../../utils/periodo";
+import { obterAnoCicloAtual, obterMesAtualISO, obterMesesCicloPEV } from "../../utils/periodo";
 import { ConsolidadoPev } from "./ConsolidadoPev";
 
 beforeEach(() => {
@@ -102,15 +102,26 @@ describe("ConsolidadoPev — adiantamento de férias (F3.PEV-04/05/06)", () => {
 });
 
 describe("ConsolidadoPev — filtros (F3.PEV-08)", () => {
-  it("mostra erro quando 'De' vem depois de 'Até'", async () => {
-    const user = userEvent.setup();
+  it("traz o ciclo do ano atual por padrão, com os campos De/Até somente-leitura", async () => {
     renderComoGerente();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
-    const campoDe = screen.getByLabelText("De");
-    await user.clear(campoDe);
-    await user.type(campoDe, "2030-01");
+    const meses = obterMesesCicloPEV(obterAnoCicloAtual());
+    expect(screen.getByLabelText("De")).toHaveValue(meses[0]);
+    expect(screen.getByLabelText("De")).toBeDisabled();
+    expect(screen.getByLabelText("Até")).toHaveValue(meses[meses.length - 1]);
+    expect(screen.getByLabelText("Até")).toBeDisabled();
+  });
 
-    expect(await screen.findByText(/não pode ser posterior/)).toBeInTheDocument();
+  it("trocar o Ciclo atualiza De/Até para o novo ano", async () => {
+    renderComoGerente();
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    const campoCiclo = screen.getByLabelText("Ciclo (ano de referência de Novembro)");
+    fireEvent.change(campoCiclo, { target: { value: "2025" } });
+
+    const meses2025 = obterMesesCicloPEV(2025);
+    await waitFor(() => expect(screen.getByLabelText("De")).toHaveValue(meses2025[0]));
+    expect(screen.getByLabelText("Até")).toHaveValue(meses2025[meses2025.length - 1]);
   });
 });
