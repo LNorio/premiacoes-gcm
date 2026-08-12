@@ -24,10 +24,10 @@ function IconeInicio() {
 }
 
 /** Renderiza a view ativa. Telas fora do WBS ainda implementado caem em EmConstrucao (F5 em diante). */
-function renderizarView(view: Tela) {
+function renderizarView(view: Tela, aoNavegar: (tela: Tela) => void) {
   switch (view) {
     case "inicio":
-      return <Inicio />;
+      return <Inicio aoNavegar={aoNavegar} />;
     case "vendedores":
       return <CadastroColaboradores />;
     case "premiacao":
@@ -129,7 +129,7 @@ export function Shell() {
       </Header>
 
       <main className="conteudo" ref={conteudoRef}>
-        {renderizarView(viewAtiva)}
+        {renderizarView(viewAtiva, setViewAtiva)}
       </main>
     </div>
   );

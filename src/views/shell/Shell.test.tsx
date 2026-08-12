@@ -33,7 +33,7 @@ describe("Shell", () => {
       "Premiação",
       "Comissão",
       "Premiações Estoque",
-      "Descontos",
+      "Descontos/Bonificações",
       "Plano de Saúde",
     ]) {
       expect(nav.getByRole("button", { name: rotulo })).toBeInTheDocument();
@@ -64,6 +64,6 @@ describe("Shell", () => {
     await waitFor(() => expect(screen.getByText("Painel Geral")).toBeInTheDocument());
 
     expect(screen.queryByLabelText("Filial")).not.toBeInTheDocument();
-    expect(screen.getByText("Filial 100")).toBeInTheDocument();
+    expect(within(screen.getByRole("banner")).getByText("Filial 100")).toBeInTheDocument();
   });
 });
