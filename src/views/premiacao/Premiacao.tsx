@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { bloqueioService, colaboradoresService, premiacaoService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
@@ -8,6 +8,7 @@ import { CATEGORIAS_PREMIACAO, FILIAL_TODAS, type CategoriaPremiacao, type Colab
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
+import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
 type ValoresLinha = Record<CategoriaPremiacao, number>;
 const LINHA_ZERADA: ValoresLinha = { pev: 0, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 };
@@ -37,7 +38,7 @@ export function Premiacao() {
   const mostrarFilial = filialAtiva === FILIAL_TODAS;
   const bloqueadoParaEdicao = sessao ? usuarioEstaBloqueadoNaTela("premiacao", sessao.role, bloqueado) : false;
 
-  async function carregar() {
+  async function carregar(foiCancelado: () => boolean = () => false) {
     if (!sessao) return;
     setCarregando(true);
     setErro(null);
@@ -46,6 +47,7 @@ export function Premiacao() {
       colaboradoresService.listarColaboradores(filialAtiva),
       premiacaoService.listarPremiacoes(filialAtiva, mesReferencia),
     ]);
+    if (foiCancelado()) return;
 
     if (resColaboradores.status !== "sucesso") {
       setErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
@@ -79,6 +81,7 @@ export function Premiacao() {
 
     if (!mostrarFilial) {
       const resBloqueio = await bloqueioService.consultarBloqueio("premiacao", filialAtiva, mesReferencia);
+      if (foiCancelado()) return;
       setBloqueado(resBloqueio.status === "sucesso" ? resBloqueio.dados : false);
     } else {
       setBloqueado(false);
@@ -87,10 +90,12 @@ export function Premiacao() {
     setCarregando(false);
   }
 
-  useEffect(() => {
-    void carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao?.filialAtiva, mesReferencia]);
+  useEfeitoAssincrono(
+    (foiCancelado) => {
+      void carregar(foiCancelado);
+    },
+    [sessao?.filialAtiva, mesReferencia],
+  );
 
   function editarCelula(vendedorId: string, categoria: CategoriaPremiacao, valor: number) {
     setValores((atual) => ({ ...atual, [vendedorId]: { ...(atual[vendedorId] ?? LINHA_ZERADA), [categoria]: valor } }));

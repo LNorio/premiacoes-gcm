@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { colaboradoresService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Modal } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
@@ -6,6 +6,7 @@ import { FILIAL_TODAS, type Colaborador, type Papel, type Resultado, type TelasH
 import { CARGOS_COLABORADOR, FILIAIS, PAPEIS_COLABORADOR, ROTULOS_PAPEL, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
 import { mascararCpf } from "../../utils/formatadores";
 import { mostrarToast } from "../../utils/toast";
+import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
 const TELAS_COLABORADOR = Object.keys(ROTULOS_TELAS_COLABORADOR) as (keyof TelasHabilitadas)[];
 
@@ -58,16 +59,20 @@ export function CadastroColaboradores() {
   const ehAdmin = sessao?.role === "admin";
   const mostrarFilial = ehAdmin && sessao?.filialAtiva === FILIAL_TODAS;
 
-  async function carregar() {
+  async function carregar(foiCancelado: () => boolean = () => false) {
     if (!sessao) return;
     setResultado({ status: "carregando" });
-    setResultado(await colaboradoresService.listarColaboradores(sessao.filialAtiva));
+    const resultado = await colaboradoresService.listarColaboradores(sessao.filialAtiva);
+    if (foiCancelado()) return;
+    setResultado(resultado);
   }
 
-  useEffect(() => {
-    void carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao?.filialAtiva]);
+  useEfeitoAssincrono(
+    (foiCancelado) => {
+      void carregar(foiCancelado);
+    },
+    [sessao?.filialAtiva],
+  );
 
   function abrirParaAdicionar() {
     setIdEmEdicao(null);

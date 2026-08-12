@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { bloqueioService, colaboradoresService, comissaoService, premiacaoService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
 import { exportarComissoesExcel } from "../../services/comissaoService";
@@ -9,6 +9,7 @@ import { FILIAL_TODAS, type Colaborador, type Comissao as ComissaoEntidade } fro
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
+import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
 interface ValoresLinha {
   valor: number;
@@ -36,7 +37,7 @@ export function Comissao() {
   const mostrarPev = ehAdmin;
   const bloqueadoParaEdicao = sessao ? usuarioEstaBloqueadoNaTela("comissao", sessao.role, bloqueado) : false;
 
-  async function carregar() {
+  async function carregar(foiCancelado: () => boolean = () => false) {
     if (!sessao) return;
     setCarregando(true);
     setErro(null);
@@ -46,6 +47,7 @@ export function Comissao() {
       comissaoService.listarComissoes(filialAtiva, mesReferencia),
       premiacaoService.listarPremiacoes(filialAtiva, mesReferencia),
     ]);
+    if (foiCancelado()) return;
 
     if (resColaboradores.status !== "sucesso") {
       setErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
@@ -79,6 +81,7 @@ export function Comissao() {
 
     if (!mostrarFilial) {
       const resBloqueio = await bloqueioService.consultarBloqueio("comissao", filialAtiva, mesReferencia);
+      if (foiCancelado()) return;
       setBloqueado(resBloqueio.status === "sucesso" ? resBloqueio.dados : false);
     } else {
       setBloqueado(false);
@@ -87,10 +90,12 @@ export function Comissao() {
     setCarregando(false);
   }
 
-  useEffect(() => {
-    void carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao?.filialAtiva, mesReferencia]);
+  useEfeitoAssincrono(
+    (foiCancelado) => {
+      void carregar(foiCancelado);
+    },
+    [sessao?.filialAtiva, mesReferencia],
+  );
 
   function editarCelula(vendedorId: string, campo: keyof ValoresLinha, valor: number) {
     setValores((atual) => ({ ...atual, [vendedorId]: { ...(atual[vendedorId] ?? LINHA_ZERADA), [campo]: valor } }));

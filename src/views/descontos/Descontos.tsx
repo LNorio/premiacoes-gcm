@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { bloqueioService, colaboradoresService, descontosService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
@@ -8,6 +8,7 @@ import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type TipoDe
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
+import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
 interface LinhaDesconto {
   id: string;
@@ -42,7 +43,7 @@ export function Descontos() {
   const mostrarFilial = filialAtiva === FILIAL_TODAS;
   const bloqueadoParaEdicao = sessao ? usuarioEstaBloqueadoNaTela("descontos", sessao.role, bloqueado) : false;
 
-  async function carregar() {
+  async function carregar(foiCancelado: () => boolean = () => false) {
     if (!sessao) return;
     setCarregando(true);
     setErro(null);
@@ -51,6 +52,7 @@ export function Descontos() {
       colaboradoresService.listarColaboradores(filialAtiva),
       descontosService.listarDescontos(filialAtiva, mesReferencia),
     ]);
+    if (foiCancelado()) return;
 
     if (resColaboradores.status !== "sucesso") {
       setErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
@@ -77,6 +79,7 @@ export function Descontos() {
 
     if (!mostrarFilial) {
       const resBloqueio = await bloqueioService.consultarBloqueio("descontos", filialAtiva, mesReferencia);
+      if (foiCancelado()) return;
       setBloqueado(resBloqueio.status === "sucesso" ? resBloqueio.dados : false);
     } else {
       setBloqueado(false);
@@ -85,10 +88,12 @@ export function Descontos() {
     setCarregando(false);
   }
 
-  useEffect(() => {
-    void carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao?.filialAtiva, mesReferencia]);
+  useEfeitoAssincrono(
+    (foiCancelado) => {
+      void carregar(foiCancelado);
+    },
+    [sessao?.filialAtiva, mesReferencia],
+  );
 
   function adicionarLinha(vendedorId: string) {
     if (bloqueadoParaEdicao) {
