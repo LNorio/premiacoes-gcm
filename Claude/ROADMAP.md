@@ -55,6 +55,13 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F2.AUTH-02** `login`/`logout` via serviço (mock); montar sessão; tratar erro; alternar login/app. → `src/state/SessaoContext.tsx` + `App.tsx`.
 - [x] **F2.UI-01** Componentes de estado **carregando / vazio / erro** reutilizáveis para todas as telas. → `src/components/ui/Estado.tsx`.
 
+**Tela: Início (Painel Geral)** — código `F2.INICIO` *(view padrão do Shell)*
+- [x] **F2.INICIO-01** Estrutura: cartões de estatísticas, dois painéis (gestor × vendedor) conforme protótipo (`view-inicio`/`inicio-gestor`/`inicio-vendedor`). → `src/views/inicio/Inicio.tsx`, reaproveitando `Card`/`CardGrid` de F0.
+- [x] **F2.INICIO-02** Serviço: reaproveita `colaboradoresService`/`premiacaoService` já existentes (sem serviço próprio).
+- [x] **F2.INICIO-03** Render + estados (carregando/erro).
+- [x] **F2.INICIO-06** Painel do gestor (Admin/Gerente/Coordenador): cartões Filial, Colaboradores cadastrados, Premiações lançadas (mês atual), Total a pagar (mês atual, destaque); ações rápidas "+ Cadastrar vendedor" (só Admin) e "+ Preencher planilha do mês" (só se o papel acessa `premiacao`). Painel do vendedor: cartões Minha filial, Minha função, Premiações recebidas (mês atual), Total a receber (mês atual, destaque); ação rápida "Ver minhas premiações por mês". **Decisão de 2026-08-12:** os cartões de premiação usam o mês atual, não o histórico completo do protótipo (que soma todos os meses já lançados). **Corrigido em 2026-08-12:** "+ Cadastrar vendedor" restrito ao Admin (Gerente/Coordenador só têm leitura em Colaboradores) — ver `Claude/eventos-roadmap.md`.
+- [x] **F2.INICIO-10** Testes da tela. → `Claude/testes/f2-inicio-painel-geral.md`.
+
 **Tela: Cadastro de Colaboradores** — código `F2.CAD`
 - [x] **F2.CAD-01** Estrutura: formulário + tabela da filial. → `src/views/vendedores/CadastroColaboradores.tsx`.
 - [x] **F2.CAD-02** Serviço + mock: `listarColaboradores`, `salvarColaborador`, `removerColaborador`. → já implementado em F1 (`src/services`/`src/adapters/mock`). **F8.CAD iniciado adiantado em 2026-08-11:** `colaboradoresServiceHttp` (`src/adapters/http/colaboradoresService.http.ts`) consome `/api/usuarios` fora dos testes; riscos e limitações conhecidas registrados em `Claude/eventos-roadmap.md`.
@@ -202,6 +209,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 | Código | Tela | Fase |
 |---|---|---|
+| `F2.INICIO` | Início (Painel Geral) | F2 |
 | `F2.CAD` | Cadastro de Colaboradores | F2 |
 | `F3.PREM` | Planilha de Premiação | F3 |
 | `F3.PEV` | Consolidado PEV | F3 |
