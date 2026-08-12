@@ -83,7 +83,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F3.PEV-04** Lançamento do **Adiantamento de Férias** (somente Admin) + salvar.
 - [x] **F3.PEV-05** Derivados: Base = Total × 0,28; A Receber = Base − Adiantamento; rodapé soma meses + 4 colunas.
 - [x] **F3.PEV-06** Visibilidade da coluna Adiantamento conforme perfil.
-- [x] **F3.PEV-08** Filtros de ciclo e intervalo de meses.
+- [x] **F3.PEV-08** Filtros de ciclo e intervalo de meses. **Alterado em 2026-08-12:** campos "De"/"Até" passaram a ser somente-leitura, sempre refletindo o ciclo do ano informado em "Ciclo" (ver `Claude/eventos-roadmap.md`).
 - [x] **F3.PEV-09** Exportação CSV (CPF, Nome, Premiação Adicional a Receber).
 - [x] **F3.PEV-10** Testes da tela. → `Claude/testes/f3-nucleo-premiacao.md`.
 
@@ -92,7 +92,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F3.CONS-02** Serviço + mock: `listarConsulta(filial, filtro, escopo)`. → assinatura ganhou `filial` (era uma lacuna de F1, ver eventos-roadmap). **F8.CONS iniciado adiantado em 2026-08-11:** `consultaServiceHttp` (`src/adapters/http/consultaService.http.ts`) consome `/api/premiacoes` fora dos testes — blocker original (sem quebra por mês) resolvido pela API v3, que passou a agrupar a resposta por mês; ver `Claude/eventos-roadmap.md`.
 - [x] **F3.CONS-03** Render de **um cartão por mês** (5 categorias + Total) + rodapé por mês + estados.
 - [x] **F3.CONS-06** Perfil vendedor: filtrado ao próprio; rótulo "Minhas Premiações por Período".
-- [x] **F3.CONS-08** Filtros de período + limpar filtro.
+- [x] **F3.CONS-08** Filtros de período + limpar filtro. **Alterado em 2026-08-12:** padrão do primeiro carregamento passou de "todos os meses" para "só o mês passado" (ver `Claude/eventos-roadmap.md`).
 - [x] **F3.CONS-09** Exportação CSV.
 - [x] **F3.CONS-10** Testes da tela. → `Claude/testes/f3-nucleo-premiacao.md`.
 
@@ -100,7 +100,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 **Tela: Comissão** — código `F4.COM`
 - [x] **F4.COM-01** Estrutura: filtro (mês) + grade. → `src/views/comissao/Comissao.tsx`.
-- [x] **F4.COM-02** Serviço + mock: `listarComissoes(filial, mes)`, `salvarComissao(...)`; obter PEV da Premiação para leitura. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap).
+- [x] **F4.COM-02** Serviço + mock: `listarComissoes(filial, mes)`, `salvarComissao(...)`; obter PEV da Premiação para leitura. → já existia de F1; ganhou suporte a `FILIAL_TODAS` (ver eventos-roadmap). **F8.COM iniciado adiantado em 2026-08-12:** `comissaoServiceHttp` (`src/adapters/http/comissaoService.http.ts`) consome `GET/PUT /api/comissoes` fora dos testes — o `pev` já vem calculado ao vivo pela própria API; ver `Claude/eventos-roadmap.md`.
 - [x] **F4.COM-03** Render (Código, Colaborador, CPF, Função, [PEV], Comissão, Garantido) + estados. **Sem coluna Total.**
 - [x] **F4.COM-04** Edição de Comissão e Garantido + salvar; ao salvar, gravar **snapshot do PEV**.
 - [x] **F4.COM-05** Rodapé: PEV (se visível), Comissão, Garantido, sem perder foco.
@@ -112,7 +112,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 
 **Tela: Descontos e Bonificações** — código `F4.DESC`
 - [x] **F4.DESC-01** Estrutura: filtro (mês) + grade agrupada por colaborador. → `src/views/descontos/Descontos.tsx`.
-- [x] **F4.DESC-02** Serviço + mock: `listarDescontos(...)`, `salvarDescontos(...)`, `removerDesconto(...)` (persistência por linha). → já existia de F1, sem alterações.
+- [x] **F4.DESC-02** Serviço + mock: `listarDescontos(...)`, `salvarDescontos(...)`, `removerDesconto(...)` (persistência por linha). → já existia de F1, sem alterações. **F8.DESC iniciado adiantado em 2026-08-12:** `descontosServiceHttp` (`src/adapters/http/descontosService.http.ts`) consome `GET/PUT/DELETE /api/descontos-bonificacoes` fora dos testes — a API só cria lançamentos (nunca atualiza por id), então editar um lançamento existente apaga e recria; ver `Claude/eventos-roadmap.md`.
 - [x] **F4.DESC-03** Render com **múltiplos lançamentos por colaborador** + estados.
 - [x] **F4.DESC-04** Edição: **Tipo** (select fixo de 10 opções), Valor, Observações (livre); adicionar/remover lançamento; salvar.
 - [x] **F4.DESC-05** **Total por colaborador** (1ª linha do grupo) + rodapé geral.
