@@ -53,6 +53,33 @@ describe("authServiceHttp.login", () => {
     expect(obterToken()).toBeNull();
   });
 
+  it("Admin sempre entra vendo 'Todas as filiais', mesmo a API devolvendo a filial vinculada a ele", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          "id colaborador": 1,
+          codigo: null,
+          funcao: "Administrador",
+          nome: "Administrador",
+          role: "admin",
+          filial: "100",
+          "quantidade de premiacoes": 0,
+          "valor premiacoes": 0,
+          token: "68|abc",
+          mensagem: "usuario encontrado",
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await authServiceHttp.login("admin", "admin123");
+    expect(resultado).toEqual({
+      status: "sucesso",
+      dados: { role: "admin", nome: "Administrador", vendedorId: "1", filialAtiva: "TODAS" },
+    });
+  });
+
   it("devolve mensagem genérica quando a chamada falha por rede", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 

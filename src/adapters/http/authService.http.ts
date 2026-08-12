@@ -1,5 +1,5 @@
 import type { AuthService } from "../../services/authService";
-import { resultadoErro, resultadoSucesso, type Papel, type Resultado, type Sessao } from "../../types";
+import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type Papel, type Resultado, type Sessao } from "../../types";
 import { httpClient } from "./cliente";
 import { ErroHttp } from "./httpClient";
 import { definirToken } from "./token";
@@ -27,7 +27,10 @@ export const authServiceHttp: AuthService = {
         role: resposta.role,
         nome: resposta.nome,
         vendedorId: String(resposta["id colaborador"]),
-        filialAtiva: resposta.filial,
+        // Admin sempre entra vendo todas as filiais (documento técnico, Seção 1) — a API devolve
+        // a filial vinculada ao próprio usuário admin, não "TODAS"; o seletor no cabeçalho permite
+        // restringir a uma filial específica depois.
+        filialAtiva: resposta.role === "admin" ? FILIAL_TODAS : resposta.filial,
       });
     } catch (erro) {
       if (erro instanceof ErroHttp) return resultadoErro(erro.message);
