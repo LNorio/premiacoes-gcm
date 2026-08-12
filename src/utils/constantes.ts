@@ -52,7 +52,7 @@ export const ROTULOS_TELAS: Record<Tela, string> = {
   premiacao: "Premiação",
   comissao: "Comissão",
   "premiacao-estoque": "Premiações Estoque",
-  descontos: "Descontos",
+  descontos: "Descontos/Bonificações",
   "plano-saude": "Plano de Saúde",
 };
 
