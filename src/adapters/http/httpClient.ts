@@ -79,7 +79,7 @@ export class HttpClient {
     return this.requisitar<T>(caminho, { method: "PUT", body: JSON.stringify(corpo) });
   }
 
-  delete<T>(caminho: string): Promise<T> {
-    return this.requisitar<T>(caminho, { method: "DELETE" });
+  delete<T>(caminho: string, corpo?: unknown): Promise<T> {
+    return this.requisitar<T>(caminho, { method: "DELETE", ...(corpo !== undefined ? { body: JSON.stringify(corpo) } : {}) });
   }
 }

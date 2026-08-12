@@ -72,6 +72,18 @@ describe("HttpClient", () => {
     await expect(client.delete("/rota")).resolves.toBeUndefined();
   });
 
+  it("delete envia corpo JSON quando informado (ex.: DELETE /api/descontos-bonificacoes)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ mensagem: "ok" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new HttpClient({ baseUrl: "http://api.teste" });
+    await client.delete("/rota", { id: 1 });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("DELETE");
+    expect(init.body).toBe(JSON.stringify({ id: 1 }));
+  });
+
   it("marca useCarregandoHttp como true durante a requisição e false depois (mesmo em erro)", async () => {
     const { result } = renderHook(() => useCarregandoHttp());
     expect(result.current).toBe(false);
