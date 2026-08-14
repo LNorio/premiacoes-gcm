@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { Button } from "../../components/ui";
+import { useSessao } from "../../state/SessaoContext";
+import { CadastroPeriodoPlano } from "./CadastroPeriodoPlano";
 import { CadastroTitulares } from "./CadastroTitulares";
 import { LancamentoPlanoSaude } from "./LancamentoPlanoSaude";
 
-type SubAba = "cadastro" | "lancamento";
+type SubAba = "cadastro" | "lancamento" | "periodo";
 
 export function PlanoSaude() {
+  const { sessao } = useSessao();
   const [subaba, setSubaba] = useState<SubAba>("cadastro");
+  const ehAdmin = sessao?.role === "admin";
 
   return (
     <section className="view">
@@ -22,9 +26,20 @@ export function PlanoSaude() {
         <Button variant={subaba === "lancamento" ? "dourado" : "secundario"} onClick={() => setSubaba("lancamento")}>
           Lançamento
         </Button>
+        {ehAdmin ? (
+          <Button variant={subaba === "periodo" ? "dourado" : "secundario"} onClick={() => setSubaba("periodo")}>
+            Período do Plano
+          </Button>
+        ) : null}
       </div>
 
-      {subaba === "cadastro" ? <CadastroTitulares /> : <LancamentoPlanoSaude />}
+      {subaba === "cadastro" ? (
+        <CadastroTitulares />
+      ) : subaba === "lancamento" ? (
+        <LancamentoPlanoSaude />
+      ) : ehAdmin ? (
+        <CadastroPeriodoPlano />
+      ) : null}
     </section>
   );
 }

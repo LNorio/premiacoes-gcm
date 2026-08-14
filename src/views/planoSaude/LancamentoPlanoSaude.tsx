@@ -2,9 +2,16 @@ import { useState } from "react";
 import { bloqueioService, colaboradoresService, planoSaudeService } from "../../adapters";
 import { Button, Carregando, LinhaVazia, MensagemErro, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { exportarPlanoSaudeExcel, listarPessoasPlanoSaude, obterValorPadraoSaude } from "../../services/planoSaudeService";
+import { encontrarPeriodoPlano, exportarPlanoSaudeExcel, listarPessoasPlanoSaude } from "../../services/planoSaudeService";
 import { useSessao } from "../../state/SessaoContext";
-import { FILIAL_TODAS, type Colaborador, type PlanoSaudeDependente, type PlanoSaudeLancamento, type TipoPlanoSaude } from "../../types";
+import {
+  FILIAL_TODAS,
+  type Colaborador,
+  type PlanoSaudeDependente,
+  type PlanoSaudeLancamento,
+  type PlanoSaudePeriodo,
+  type TipoPlanoSaude,
+} from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
@@ -30,6 +37,7 @@ export function LancamentoPlanoSaude() {
   const [titulares, setTitulares] = useState<Colaborador[]>([]);
   const [dependentes, setDependentes] = useState<PlanoSaudeDependente[]>([]);
   const [lancamentos, setLancamentos] = useState<PlanoSaudeLancamento[]>([]);
+  const [periodos, setPeriodos] = useState<PlanoSaudePeriodo[]>([]);
   const [valoresExtras, setValoresExtras] = useState<Record<string, ValoresExtras>>({});
   const [bloqueado, setBloqueado] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -57,9 +65,10 @@ export function LancamentoPlanoSaude() {
         }
 
         const habilitados = resColaboradores.dados.filter((c) => c.telas.planoSaude);
-        const [respostasDependentes, resLancamentos] = await Promise.all([
+        const [respostasDependentes, resLancamentos, resPeriodos] = await Promise.all([
           Promise.all(habilitados.map((t) => planoSaudeService.listarDependentes(t.id))),
           planoSaudeService.listarLancamentosPlanoSaude(filialAtiva, mesReferencia, tipoPlano),
+          planoSaudeService.listarPeriodosPlanoSaude(filialAtiva, tipoPlano),
         ]);
         if (foiCancelado()) return;
 
@@ -72,6 +81,7 @@ export function LancamentoPlanoSaude() {
         setTitulares(habilitados);
         setDependentes(respostasDependentes.flatMap((r) => (r.status === "sucesso" ? r.dados : [])));
         setLancamentos(resLancamentos.dados);
+        setPeriodos(resPeriodos.status === "sucesso" ? resPeriodos.dados : []);
 
         const extras: Record<string, ValoresExtras> = {};
         for (const lancamento of resLancamentos.dados) {
@@ -160,7 +170,7 @@ export function LancamentoPlanoSaude() {
   }
 
   function exportarExcel() {
-    const exportou = exportarPlanoSaudeExcel(pessoas, lancamentos, tipoPlano, filialAtiva);
+    const exportou = exportarPlanoSaudeExcel(pessoas, lancamentos, periodos, tipoPlano, mesReferencia, filialAtiva);
     if (!exportou) mostrarToast("Não há titulares/dependentes com adesão a este plano para exportar.", "erro");
   }
 
@@ -170,7 +180,8 @@ export function LancamentoPlanoSaude() {
   let totalAdicional = 0;
   let totalCoparticipacao = 0;
   for (const pessoa of pessoas) {
-    const valorFixo = obterValorPadraoSaude(pessoa.filial, tipoPlano);
+    const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
+    const valorFixo = periodo?.valor ?? 0;
     if (pessoa.tipo === "titular") totalTitular += valorFixo;
     else totalDependente += valorFixo;
     if (temCamposEditaveis) {
@@ -249,7 +260,8 @@ export function LancamentoPlanoSaude() {
                 />
               ) : (
                 pessoas.map((pessoa) => {
-                  const valorFixo = obterValorPadraoSaude(pessoa.filial, tipoPlano);
+                  const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
+                  const valorFixo = periodo?.valor ?? 0;
                   const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
                   // Usa os valores em edição (valoresExtras), não o lançamento já salvo — senão o
                   // total da linha não reagiria ao que o usuário acabou de digitar.

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { SessaoProvider } from "../../state/SessaoContext";
 import { ComoAdminNaFilial } from "../../testUtils/ComoAdminNaFilial";
+import { ComSessao } from "../../testUtils/ComSessao";
 import { PlanoSaude } from "./PlanoSaude";
 
 beforeEach(() => {
@@ -33,5 +34,26 @@ describe("PlanoSaude — sub-abas (F5.PS-CAD-01/F5.PS-LAN-01/F5.PS-LAN-06)", () 
 
     await user.click(screen.getByRole("button", { name: "Titulares e Dependentes" }));
     expect(await screen.findByText("Titulares e dependentes")).toBeInTheDocument();
+  });
+
+  it("Admin vê a sub-aba Período do Plano e consegue trocar para ela", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Titulares e dependentes");
+
+    await user.click(screen.getByRole("button", { name: "Período do Plano" }));
+    expect(await screen.findByText("Período do plano")).toBeInTheDocument();
+  });
+
+  it("Coordenador não vê a sub-aba Período do Plano", async () => {
+    render(
+      <SessaoProvider>
+        <ComSessao usuario="coordenador" senha="coord123">
+          <PlanoSaude />
+        </ComSessao>
+      </SessaoProvider>,
+    );
+    await screen.findByText("Titulares e dependentes");
+    expect(screen.queryByRole("button", { name: "Período do Plano" })).not.toBeInTheDocument();
   });
 });
