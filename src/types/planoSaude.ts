@@ -11,12 +11,15 @@ export interface PlanoSaudeLancamento {
   id: string;
   /** id do vendedor (titular) OU do dependente */
   pessoaId: string;
+  /** id do vendedor titular da família — sempre preenchido, mesmo quando pessoaId é de um dependente */
+  titularId: string;
   mesReferencia: string;
   tipoPlano: TipoPlanoSaude;
-  /** só um dos dois é != null por pessoa (titular OU dependente) */
-  valorTitular: number | null;
-  valorDependente: number | null;
-  /** só usados na sub-aba "saude", se configurados */
+  /**
+   * Só usados na sub-aba "saude" — o valor de Titular/Dependente nunca é
+   * digitado nem persistido, é sempre fixo por filial/tipo (ver
+   * VALOR_PADRAO_* abaixo) e recalculado a cada leitura.
+   */
   valorAdicional?: number;
   valorCoparticipacao?: number;
 }

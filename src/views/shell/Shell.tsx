@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import logoGcm from "../../assets/logo-gcm.png";
 import { BadgeInfo, Button, Header, Nav, type NavItemData } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import type { Tela } from "../../types";
@@ -10,6 +11,7 @@ import { ConsolidadoPev } from "../consolidadoPev/ConsolidadoPev";
 import { ConsultaPeriodo } from "../consulta/ConsultaPeriodo";
 import { Descontos } from "../descontos/Descontos";
 import { Inicio } from "../inicio/Inicio";
+import { PlanoSaude } from "../planoSaude/PlanoSaude";
 import { Premiacao } from "../premiacao/Premiacao";
 import { CadastroColaboradores } from "../vendedores/CadastroColaboradores";
 import { EmConstrucao } from "./EmConstrucao";
@@ -40,6 +42,8 @@ function renderizarView(view: Tela, aoNavegar: (tela: Tela) => void) {
       return <Comissao />;
     case "descontos":
       return <Descontos />;
+    case "plano-saude":
+      return <PlanoSaude />;
     default:
       return <EmConstrucao titulo={ROTULOS_TELAS[view]} />;
   }
@@ -86,6 +90,7 @@ export function Shell() {
     <div className="app">
       <Header
         ref={cabecalhoRef}
+        logo={<img src={logoGcm} alt="Comercial Mariano" className="cabecalho-logo" />}
         filialSlot={
           <>
             <button
