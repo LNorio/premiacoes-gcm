@@ -38,6 +38,7 @@
 .celula-numerica {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .celula-bloqueada {
   text-align: center;

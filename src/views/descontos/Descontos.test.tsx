@@ -84,6 +84,7 @@ describe("Descontos — múltiplos lançamentos por colaborador (F4.DESC-04/05)"
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
     await user.click(within(screen.getByText("Carlos Silva").closest("tr")!).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva"), "Bonificação");
     await user.type(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva"), "200");
     await waitFor(() => expect(screen.getByText("Carlos Silva").closest("tr")!.textContent).toContain("200,00"));
 
@@ -100,10 +101,12 @@ describe("Descontos — múltiplos lançamentos por colaborador (F4.DESC-04/05)"
 
     const linhaCarlos = screen.getByText("Carlos Silva").closest("tr")!;
     await user.click(within(linhaCarlos).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva"), "Bonificação");
     await user.type(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva"), "100");
 
     const linhaFernanda = screen.getByText("Fernanda Lima").closest("tr")!;
     await user.click(within(linhaFernanda).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Fernanda Lima"), "Bonificação");
     await user.type(screen.getByLabelText("Valor do lançamento 1 de Fernanda Lima"), "50");
 
     const rodape = screen.getByText("Total geral").closest("tr")!;
@@ -126,6 +129,54 @@ describe("Descontos — múltiplos lançamentos por colaborador (F4.DESC-04/05)"
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
     expect(await screen.findByLabelText("Valor do lançamento 1 de Carlos Silva")).toHaveValue(80);
     expect(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva")).toHaveValue("Diária");
+  });
+});
+
+describe("Descontos — Total com sinal: Bonificação/Ajuda de Custo somam, os demais tipos subtraem (visual, não altera o valor salvo)", () => {
+  it("Total do colaborador soma Bonificação e Ajuda de Custo, mas subtrai os demais tipos", async () => {
+    const user = userEvent.setup();
+    renderComoCoordenador();
+    const linhaCarlos = () => screen.getByText("Carlos Silva").closest("tr")!;
+    await waitFor(() => expect(linhaCarlos()).toBeInTheDocument());
+
+    await user.click(within(linhaCarlos()).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva"), "Bonificação");
+    await user.type(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva"), "300");
+
+    await user.click(within(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva").closest("tr")!).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 2 de Carlos Silva"), "Multa");
+    await user.type(screen.getByLabelText("Valor do lançamento 2 de Carlos Silva"), "80");
+
+    // 300 (Bonificação, soma) - 80 (Multa, subtrai) = 220
+    await waitFor(() => expect(linhaCarlos().textContent).toContain("220,00"));
+    // o valor digitado continua positivo na própria célula, só o Total é que reflete o sinal
+    expect(screen.getByLabelText("Valor do lançamento 2 de Carlos Silva")).toHaveValue(80);
+  });
+
+  it("Ajuda de Custo/Gratificação soma, e um total só de tipos que descontam fica negativo", async () => {
+    const user = userEvent.setup();
+    renderComoCoordenador();
+    const linhaCarlos = () => screen.getByText("Carlos Silva").closest("tr")!;
+    await waitFor(() => expect(linhaCarlos()).toBeInTheDocument());
+
+    await user.click(within(linhaCarlos()).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva"), "Farmácia");
+    await user.type(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva"), "50");
+
+    await waitFor(() => expect(linhaCarlos().textContent).toMatch(/-R\$\s*50,00/));
+  });
+
+  it("não envia valores negativos ao salvar — o valor gravado é sempre o digitado", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await user.click(within(screen.getByText("Carlos Silva").closest("tr")!).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva"), "Multa");
+    await user.type(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva"), "60");
+    await user.click(screen.getByRole("button", { name: /Salvar lançamento do mês/ }));
+
+    await waitFor(() => expect(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva")).toHaveValue(60));
   });
 });
 

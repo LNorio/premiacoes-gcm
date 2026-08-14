@@ -2,7 +2,7 @@ import { useState } from "react";
 import { bloqueioService, colaboradoresService, descontosService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { exportarDescontosExcel } from "../../services/descontosService";
+import { exportarDescontosExcel, somarDescontosComSinal } from "../../services/descontosService";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type TipoDescontoBonificacao } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
@@ -202,7 +202,7 @@ export function Descontos() {
     if (!exportou) mostrarToast("Não há descontos ou bonificações salvos para exportar.", "erro");
   }
 
-  const totalGeral = linhas.reduce((soma, l) => soma + l.valor, 0);
+  const totalGeral = somarDescontosComSinal(linhas);
 
   return (
     <section className="view">
@@ -262,7 +262,7 @@ export function Descontos() {
               ) : (
                 colaboradores.map((colaborador) => {
                   const linhasColaborador = linhas.filter((l) => l.vendedorId === colaborador.id);
-                  const totalColaborador = linhasColaborador.reduce((soma, l) => soma + l.valor, 0);
+                  const totalColaborador = somarDescontosComSinal(linhasColaborador);
                   const botaoAdicionar = !bloqueadoParaEdicao ? (
                     <Button variant="secundario" onClick={() => adicionarLinha(colaborador.id)}>
                       + Adicionar
