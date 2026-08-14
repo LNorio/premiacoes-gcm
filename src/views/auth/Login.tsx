@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import logoComercialMariano from "../../assets/logo-comercial-mariano.png";
 import { Button, FloatingField, MensagemErro } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import "./Login.css";
@@ -31,6 +32,7 @@ export function Login() {
   return (
     <div className="tela-login">
       <div className="login-cartao">
+        <img src={logoComercialMariano} alt="Comercial Mariano" className="login-logo" />
         <h1 className="login-titulo">Sistema de Premiações</h1>
 
         <form onSubmit={tratarSubmit}>
