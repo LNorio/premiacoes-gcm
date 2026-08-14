@@ -34,7 +34,8 @@ export const NAV_POR_PAPEL: Record<Papel, Tela[]> = {
     "consolidado-pev",
     "premiacao",
     "comissao",
-    "premiacao-estoque",
+    // "premiacao-estoque" fica de fora por enquanto — F6 não será implementado
+    // num primeiro momento (decisão do usuário, ver Claude/eventos-roadmap.md).
     "descontos",
     "plano-saude",
   ],
