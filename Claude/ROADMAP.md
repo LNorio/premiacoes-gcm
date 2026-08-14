@@ -131,26 +131,26 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 ## F5 — Plano de Saúde
 
 **Tela: Cadastro (Titulares e Dependentes)** — código `F5.PS-CAD`
-- **F5.PS-CAD-01** Estrutura: sub-aba de cadastro + lista de titulares/dependentes.
-- **F5.PS-CAD-02** Serviço + mock: `listarDependentes(titular)`, `salvarDependente(...)`, `removerDependente(...)`, `salvarAdesao(titular, tipo, valor)`.
-- **F5.PS-CAD-03** Render: titulares (colaboradores habilitados) + dependentes + estados.
-- **F5.PS-CAD-04** Formulário de dependente (nome + CPF) adicionar/remover.
-- **F5.PS-CAD-06** Checkboxes de **adesão Saúde/Odonto** por titular (default verdadeiro; **só Admin edita**; demais `disabled`).
-- **F5.PS-CAD-10** Testes da tela.
+- [x] **F5.PS-CAD-01** Estrutura: sub-aba de cadastro + lista de titulares/dependentes. → `src/views/planoSaude/PlanoSaude.tsx` (sub-abas) + `CadastroTitulares.tsx`.
+- [x] **F5.PS-CAD-02** Serviço + mock: `listarDependentes(titular)`, `salvarDependente(...)`, `removerDependente(...)`, `salvarAdesao(titular, tipo, valor)`. → já existia de F1 (`src/services/planoSaudeService.ts`); tipo `PlanoSaudeLancamento` corrigido (ver `Claude/eventos-roadmap.md`).
+- [x] **F5.PS-CAD-03** Render: titulares (colaboradores habilitados) + dependentes + estados.
+- [x] **F5.PS-CAD-04** Formulário de dependente (nome + CPF) adicionar/remover. → modal (`src/components/ui/Modal.tsx`, já existente).
+- [x] **F5.PS-CAD-06** Checkboxes de **adesão Saúde/Odonto** por titular (default verdadeiro; **só Admin edita**; demais `disabled`).
+- [x] **F5.PS-CAD-10** Testes da tela. → `Claude/testes/f5-plano-saude.md`.
 
 **Tela: Lançamento (Saúde / Odontológico)** — código `F5.PS-LAN`
-- **F5.PS-LAN-01** Estrutura: sub-aba de lançamento + sub-sub-abas Saúde/Odonto + filtro (mês) + grade.
-- **F5.PS-LAN-02** Serviço + mock: `listarLancamentosPlanoSaude(filial, mes, tipo)`, `salvarLancamentoPlanoSaude(...)`.
-- **F5.PS-LAN-03** Render **uma linha por pessoa** (titular + dependentes), filtrando famílias sem adesão ao tipo + estados.
-- **F5.PS-LAN-04** Descrição (TITULAR/DEPENDENTE fixa; **editável só pelo Admin**); valores fixos por filial/tipo (185,27 padrão · **255,54 nas filiais 401/403** · 13,56 odonto), nunca digitados; célula `***` na coluna não aplicável.
-- **F5.PS-LAN-05** Rodapé (Titular, Dependente, extras, Total).
-- **F5.PS-LAN-06** Alternância de sub-aba (cadastro/lançamento) e de tipo (saúde/odonto).
-- **F5.PS-LAN-07** Bloqueio `planoSaude` (editor Coordenador).
-- **F5.PS-LAN-08** Filtro de mês + filial.
-- **F5.PS-LAN-09** Exportação Excel respeitando sub-aba e filial.
-- **F5.PS-LAN-10** Testes da tela.
+- [x] **F5.PS-LAN-01** Estrutura: sub-aba de lançamento + sub-sub-abas Saúde/Odonto + filtro (mês) + grade. → `src/views/planoSaude/LancamentoPlanoSaude.tsx`.
+- [x] **F5.PS-LAN-02** Serviço + mock: `listarLancamentosPlanoSaude(filial, mes, tipo)`, `salvarLancamentoPlanoSaude(...)`.
+- [x] **F5.PS-LAN-03** Render **uma linha por pessoa** (titular + dependentes), filtrando famílias sem adesão ao tipo + estados.
+- [x] **F5.PS-LAN-04** Descrição (TITULAR/DEPENDENTE, texto fixo — **nunca editável, nem pelo Admin**; ver decisão em `Claude/eventos-roadmap.md`, o protótipo contradiz uma frase do documento técnico); valores fixos por filial/tipo (185,27 padrão · **255,54 nas filiais 401/403** · 13,56 odonto), nunca digitados; célula `***` na coluna não aplicável.
+- [x] **F5.PS-LAN-05** Rodapé (Titular, Dependente, extras, Total).
+- [x] **F5.PS-LAN-06** Alternância de sub-aba (cadastro/lançamento) e de tipo (saúde/odonto).
+- [x] **F5.PS-LAN-07** Bloqueio `planoSaude` (editor Coordenador) — só existe (botão/checagem) na sub-aba Saúde; Odontológico não tem nada editável para bloquear.
+- [x] **F5.PS-LAN-08** Filtro de mês + filial.
+- [x] **F5.PS-LAN-09** Exportação Excel respeitando sub-aba e filial. → `exportarPlanoSaudeExcel` (`src/services/planoSaudeService.ts`).
+- [x] **F5.PS-LAN-10** Testes da tela. → `Claude/testes/f5-plano-saude.md`.
 
-## F6 — Premiações Estoque *(condicional à decisão de negócio)*
+## F6 — Premiações Estoque *(decidido: não será implementado num primeiro momento — ver `Claude/eventos-roadmap.md`, 2026-08-13. A aba foi retirada de `NAV_POR_PAPEL` do Admin para não ficar visível.)*
 
 **Tela: Política de Estoque** — código `F6.EST-POL` *(só Admin)*
 - **F6.EST-POL-01** Estrutura: formulário de metas e valores de referência.
