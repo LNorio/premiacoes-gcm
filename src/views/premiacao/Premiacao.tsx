@@ -14,7 +14,7 @@ type ValoresLinha = Record<CategoriaPremiacao, number>;
 const LINHA_ZERADA: ValoresLinha = { pev: 0, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 };
 
 const ROTULOS_CATEGORIA: Record<CategoriaPremiacao, string> = {
-  pev: "PEV",
+  pev: "PEV Atingida",
   iconic: "Premiação Iconic",
   filtros: "Filtros e demais fornecedores",
   campanhasFornecedores: "Campanhas de fornecedores",
@@ -165,7 +165,7 @@ export function Premiacao() {
       <div className="view-cabecalho">
         <h2>Planilha de Premiação</h2>
         <span className="view-subtitulo">
-          PEV, Premiação Iconic, Premiação Filtros e demais fornecedores, Campanhas de fornecedores e Premiação
+          PEV Atingida, Premiação Iconic, Premiação Filtros e demais fornecedores, Campanhas de fornecedores e Premiação
           Inadimplência
         </span>
       </div>

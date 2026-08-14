@@ -68,7 +68,7 @@ describe("Premiacao — edição, totais e salvar (F3.PREM-04/05)", () => {
     renderComoGerente();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
-    await user.type(screen.getByLabelText("PEV de Carlos Silva"), "100");
+    await user.type(screen.getByLabelText("PEV Atingida de Carlos Silva"), "100");
     await user.type(screen.getByLabelText("Premiação Iconic de Carlos Silva"), "50");
 
     const linha = screen.getByText("Carlos Silva").closest("tr")!;
@@ -83,14 +83,14 @@ describe("Premiacao — edição, totais e salvar (F3.PREM-04/05)", () => {
     const { unmount } = renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
-    await user.type(screen.getByLabelText("PEV de Carlos Silva"), "200");
+    await user.type(screen.getByLabelText("PEV Atingida de Carlos Silva"), "200");
     await user.click(screen.getByRole("button", { name: /Salvar planilha do mês/ }));
-    await waitFor(() => expect(screen.getByLabelText("PEV de Carlos Silva")).toHaveValue(200));
+    await waitFor(() => expect(screen.getByLabelText("PEV Atingida de Carlos Silva")).toHaveValue(200));
     unmount();
 
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(await screen.findByLabelText("PEV de Carlos Silva")).toHaveValue(200);
+    expect(await screen.findByLabelText("PEV Atingida de Carlos Silva")).toHaveValue(200);
   });
 });
 
@@ -117,7 +117,7 @@ describe("Premiacao — bloqueio (F3.PREM-07)", () => {
 
     renderComoGerente();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(await screen.findByLabelText("PEV de Carlos Silva")).toBeDisabled();
+    expect(await screen.findByLabelText("PEV Atingida de Carlos Silva")).toBeDisabled();
   });
 });
 

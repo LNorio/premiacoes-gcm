@@ -48,7 +48,7 @@ describe("Comissao — render e visibilidade (F4.COM-01/02/03/06)", () => {
   it("Gerente não vê a coluna PEV", async () => {
     renderComoGerente();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(screen.queryByRole("columnheader", { name: "PEV" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "PEV Atingida" })).not.toBeInTheDocument();
   });
 
   it("Admin vê a coluna PEV, somente leitura, vinda da Planilha de Premiação", async () => {
@@ -57,7 +57,7 @@ describe("Comissao — render e visibilidade (F4.COM-01/02/03/06)", () => {
     ]);
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(screen.getByRole("columnheader", { name: "PEV" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "PEV Atingida" })).toBeInTheDocument();
     const linha = screen.getByText("Carlos Silva").closest("tr")!;
     expect(linha.textContent).toContain("321,00");
     expect(screen.queryByLabelText("PEV de Carlos Silva")).not.toBeInTheDocument(); // nunca editável

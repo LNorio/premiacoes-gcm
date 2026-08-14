@@ -208,8 +208,8 @@ export function Comissao() {
                 <th>Colaborador</th>
                 <th>CPF</th>
                 <th>Função</th>
-                {mostrarPev ? <th>PEV</th> : null}
-                <th>Comissão</th>
+                {mostrarPev ? <th>PEV Atingida</th> : null}
+                <th>Comissão (PEV Base)</th>
                 <th>Garantido</th>
               </tr>
             </thead>
