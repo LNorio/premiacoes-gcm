@@ -122,7 +122,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F4.DESC-02** Serviço + mock: `listarDescontos(...)`, `salvarDescontos(...)`, `removerDesconto(...)` (persistência por linha). → já existia de F1, sem alterações. **F8.DESC iniciado adiantado em 2026-08-12:** `descontosServiceHttp` (`src/adapters/http/descontosService.http.ts`) consome `GET/PUT/DELETE /api/descontos-bonificacoes` fora dos testes — a API só cria lançamentos (nunca atualiza por id), então editar um lançamento existente apaga e recria; ver `Claude/eventos-roadmap.md`.
 - [x] **F4.DESC-03** Render com **múltiplos lançamentos por colaborador** + estados.
 - [x] **F4.DESC-04** Edição: **Tipo** (select fixo de 10 opções), Valor, Observações (livre); adicionar/remover lançamento; salvar.
-- [x] **F4.DESC-05** **Total por colaborador** (1ª linha do grupo) + rodapé geral.
+- [x] **F4.DESC-05** **Total por colaborador** (1ª linha do grupo) + rodapé geral. **Alterado em 2026-08-13:** o Total (por colaborador e geral) soma os tipos "Bonificação"/"Ajuda de Custo/Gratificação" e subtrai os demais — só na exibição, o valor gravado continua sempre positivo, como digitado. Ver `Claude/eventos-roadmap.md`.
 - [x] **F4.DESC-07** Bloqueio `descontos` (editor Coordenador); botão de bloqueio só para Admin numa filial específica.
 - [x] **F4.DESC-08** Filtro de mês + filial.
 - [x] **F4.DESC-09** Exportação Excel (CPF, Nome, Mês Referência, Tipo, Valor, Observações — 1 linha por lançamento). → `exportarDescontosExcel` (`src/services/descontosService.ts`).
@@ -142,13 +142,26 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F5.PS-LAN-01** Estrutura: sub-aba de lançamento + sub-sub-abas Saúde/Odonto + filtro (mês) + grade. → `src/views/planoSaude/LancamentoPlanoSaude.tsx`.
 - [x] **F5.PS-LAN-02** Serviço + mock: `listarLancamentosPlanoSaude(filial, mes, tipo)`, `salvarLancamentoPlanoSaude(...)`.
 - [x] **F5.PS-LAN-03** Render **uma linha por pessoa** (titular + dependentes), filtrando famílias sem adesão ao tipo + estados.
-- [x] **F5.PS-LAN-04** Descrição (TITULAR/DEPENDENTE, texto fixo — **nunca editável, nem pelo Admin**; ver decisão em `Claude/eventos-roadmap.md`, o protótipo contradiz uma frase do documento técnico); valores fixos por filial/tipo (185,27 padrão · **255,54 nas filiais 401/403** · 13,56 odonto), nunca digitados; célula `***` na coluna não aplicável.
+- [x] **F5.PS-LAN-04** Descrição (TITULAR/DEPENDENTE, texto fixo — **nunca editável, nem pelo Admin**; ver decisão em `Claude/eventos-roadmap.md`, o protótipo contradiz uma frase do documento técnico); valor (mesmo para Titular e Dependente) vindo do período vigente cadastrado em `F5.PS-PER` (nunca digitado na grade de Lançamento); célula `***` na coluna não aplicável. **Alterado em 2026-08-14:** antes o valor era fixo por filial/tipo (185,27 padrão · 255,54 nas filiais 401/403 · 13,56 odonto); agora vem do período cadastrado pelo Admin — ver `F5.PS-PER` e `Claude/eventos-roadmap.md`.
 - [x] **F5.PS-LAN-05** Rodapé (Titular, Dependente, extras, Total).
-- [x] **F5.PS-LAN-06** Alternância de sub-aba (cadastro/lançamento) e de tipo (saúde/odonto).
+- [x] **F5.PS-LAN-06** Alternância de sub-aba (cadastro/lançamento/período) e de tipo (saúde/odonto).
 - [x] **F5.PS-LAN-07** Bloqueio `planoSaude` (editor Coordenador) — só existe (botão/checagem) na sub-aba Saúde; Odontológico não tem nada editável para bloquear.
 - [x] **F5.PS-LAN-08** Filtro de mês + filial.
 - [x] **F5.PS-LAN-09** Exportação Excel respeitando sub-aba e filial. → `exportarPlanoSaudeExcel` (`src/services/planoSaudeService.ts`).
 - [x] **F5.PS-LAN-10** Testes da tela. → `Claude/testes/f5-plano-saude.md`.
+
+**Tela: Período do Plano** — código `F5.PS-PER` *(adicionado em 2026-08-14, fora do escopo original — ver `Claude/eventos-roadmap.md`)*
+- [x] **F5.PS-PER-01** Sub-aba "Período do Plano", só visível para o Admin, na visão de uma única filial (fora de "Todas as filiais"). → `src/views/planoSaude/CadastroPeriodoPlano.tsx`.
+- [x] **F5.PS-PER-02** Serviço + mock + HTTP: `listarPeriodosPlanoSaude(filial, tipo)`, `salvarPeriodoPlanoSaude(filial, tipo, tipoPessoa, valor)`, `encerrarPeriodoPlanoSaude(periodo)` (`src/services/planoSaudeService.ts` / `src/adapters/mock/planoSaudeService.mock.ts` / `src/adapters/http/planoSaudeService.http.ts`) — consumindo `GET/POST /api/valores-plano-saude` e `PUT /api/valores-plano-saude/{id}/encerrar` (`Claude/API (5).md`).
+- [x] **F5.PS-PER-03** Formulário: dois campos, **Valor Titular** e **Valor Dependente** — pode preencher só um dos dois ou os dois (cada preenchimento vira um `POST` separado, um por tipo de pessoa); sem campo de data (a API não aceita uma na criação; a Data de Início mostrada é `data_criacao`, sempre "agora"). **Alterado em 2026-08-14 (três vezes):** 1ª versão (só nesta sessão) tinha data inicial/final livres e valor separado de Titular/Dependente no mesmo período; reescrita pra "fechamento de período" (só um vigente por vez, valor único, sem data); a API real ganhou `tipo pessoa` (Titular e Dependente com vigência independente) e a tela ganhou um toggle Titular/Dependente (duas sub-abas); por pedido do usuário, as sub-abas foram removidas e viraram os dois campos lado a lado — ver `Claude/eventos-roadmap.md`.
+- [x] **F5.PS-PER-04** Lista única de períodos da filial/tipo de plano (Titular e Dependente juntos, vigente + histórico), com coluna **Tipo de Pessoa** identificando de quem é cada linha, e botão **Encerrar vigência** na linha vigente (sem botão de remover — o histórico é preservado; `PUT .../encerrar`).
+- [x] **F5.PS-PER-05** O valor do período vigente substitui o valor usado em `F5.PS-LAN-04`; só existe um período vigente por filial + tipo de plano + tipo de pessoa por vez (o Admin precisa encerrar o atual antes de cadastrar um novo — a tentativa de duplicar é recusada). Filiais seguem com um período vigente pré-semeado por tipo de pessoa (mesmos valores que eram fixos antes, iguais para Titular e Dependente) para não ficar sem valor algum.
+- [x] **F5.PS-PER-06** Testes da tela. → `Claude/testes/f5-plano-saude.md`.
+
+**Migração para a API real** — código `F8.PS` *(adiantado, junto com F5.PS-PER)*
+- [x] **F8.PS-01** `planoSaudeServiceHttp` (`src/adapters/http/planoSaudeService.http.ts`) implementa toda a interface `PlanoSaudeService` (dependentes, adesão, lançamentos, período) contra `Claude/API (5).md`; ligado fora dos testes em `src/adapters/index.ts` — Plano de Saúde deixa de ser mock-only.
+- [x] **F8.PS-02** Adesão (`salvarAdesao`) grava via `PUT /api/usuarios/{id}` (`"plano saude"`/`"plano odontologico"`), reaproveitando o mesmo endpoint de Colaboradores.
+- [x] **F8.PS-03** Shapes de resposta de `GET /api/dependentes`, `GET /api/lancamentos` e `GET/POST/PUT /api/valores-plano-saude` confirmados ao vivo contra o backend real antes de implementar (não são documentados com exemplo em `Claude/API (5).md`, exceto Valores de Plano de Saúde) — ver `Claude/eventos-roadmap.md`.
 
 ## F6 — Premiações Estoque *(decidido: não será implementado num primeiro momento — ver `Claude/eventos-roadmap.md`, 2026-08-13. A aba foi retirada de `NAV_POR_PAPEL` do Admin para não ficar visível.)*
 
