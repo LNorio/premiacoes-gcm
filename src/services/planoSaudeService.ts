@@ -14,6 +14,8 @@ export interface PlanoSaudeService {
   salvarDependente(dependente: Omit<PlanoSaudeDependente, "id"> & { id?: string }): Promise<Resultado<PlanoSaudeDependente>>;
   removerDependente(id: string): Promise<Resultado<void>>;
   salvarAdesao(titularId: string, tipo: TipoPlanoSaude, valor: boolean): Promise<Resultado<void>>;
+  /** Adesão própria do dependente — ver nota em `PlanoSaudeDependente` (só local até a API ganhar o campo). */
+  salvarAdesaoDependente(dependenteId: string, tipo: TipoPlanoSaude, valor: boolean): Promise<Resultado<void>>;
 
   // Sub-aba Lançamento
   listarLancamentosPlanoSaude(filial: string, mesReferencia: string, tipo: TipoPlanoSaude): Promise<Resultado<PlanoSaudeLancamento[]>>;
@@ -21,13 +23,21 @@ export interface PlanoSaudeService {
 
   // Sub-aba Período (Admin, por filial) — fechamento de período: só um `ativo` por filial + tipo de plano + tipo de pessoa.
   listarPeriodosPlanoSaude(filial: string, tipoPlano: TipoPlanoSaude): Promise<Resultado<PlanoSaudePeriodo[]>>;
+  /**
+   * `dataInicio` opcional (YYYY-MM-DD, pode ser retroativa) — quando não informada, a API usa
+   * hoje. `dataFim` opcional — quando informada, o período já nasce encerrado (histórico direto,
+   * sem concorrer com um período vigente existente).
+   */
   salvarPeriodoPlanoSaude(
     filial: string,
     tipoPlano: TipoPlanoSaude,
     tipoPessoa: "titular" | "dependente",
     valor: number,
+    dataInicio?: string,
+    dataFim?: string,
   ): Promise<Resultado<PlanoSaudePeriodo>>;
-  encerrarPeriodoPlanoSaude(periodo: PlanoSaudePeriodo): Promise<Resultado<PlanoSaudePeriodo>>;
+  /** `dataValidade` opcional (YYYY-MM-DD) — quando não informada, a API usa a data de hoje. */
+  encerrarPeriodoPlanoSaude(periodo: PlanoSaudePeriodo, dataValidade?: string): Promise<Resultado<PlanoSaudePeriodo>>;
 }
 
 /** Uma linha da grade de Lançamento — o titular, ou um dos seus dependentes (documento técnico, Seção 3.6.2). */
@@ -47,17 +57,14 @@ function limitesDoMes(mesReferencia: string): [string, string] {
   return [`${mesReferencia}-01`, `${mesReferencia}-${String(ultimoDia).padStart(2, "0")}`];
 }
 
-/** Só a parte "YYYY-MM-DD" de uma data/hora ("YYYY-MM-DD HH:MM:SS" ou já só a data). */
-function apenasData(dataHora: string): string {
-  return dataHora.slice(0, 10);
-}
-
 /**
  * Período (filial + tipo de plano + tipo de pessoa) vigente no mês pedido — o que começou
- * (`dataCriacao`) até aquele mês e ainda não tinha sido encerrado (`dataValidade` nula) ou só
- * encerrou depois dele. Como só existe um período `ativo` por vez para essa combinação e o
- * histórico é fechado sequencialmente (nunca dois períodos abertos ao mesmo tempo), no máximo
- * um resultado é possível.
+ * (`dataInicio`, que pode ser retroativa) até aquele mês e ainda não tinha sido encerrado
+ * (`dataValidade` nula) ou só encerrou depois dele. Como só existe um período `ativo` por vez
+ * para essa combinação e o histórico é fechado sequencialmente (nunca dois períodos abertos ao
+ * mesmo tempo), no máximo um resultado é possível — a não ser que dois períodos históricos
+ * (cadastrados já com `dataFim`) tenham intervalos sobrepostos por engano; nesse caso o mais
+ * recentemente cadastrado (fim da lista) prevalece.
  */
 export function encontrarPeriodoPlano(
   periodos: PlanoSaudePeriodo[],
@@ -67,19 +74,25 @@ export function encontrarPeriodoPlano(
   mesReferencia: string,
 ): PlanoSaudePeriodo | undefined {
   const [inicioMes, fimMes] = limitesDoMes(mesReferencia);
-  return periodos.find(
-    (periodo) =>
+  for (let i = periodos.length - 1; i >= 0; i--) {
+    const periodo = periodos[i];
+    if (
       periodo.filial === filial &&
       periodo.tipoPlano === tipoPlano &&
       periodo.tipoPessoa === tipoPessoa &&
-      apenasData(periodo.dataCriacao) <= fimMes &&
-      (periodo.dataValidade === null || periodo.dataValidade >= inicioMes),
-  );
+      periodo.dataInicio <= fimMes &&
+      (periodo.dataValidade === null || periodo.dataValidade >= inicioMes)
+    ) {
+      return periodo;
+    }
+  }
+  return undefined;
 }
 
 /**
  * Uma linha por pessoa (titular, depois cada um dos seus dependentes), na ordem do
- * cadastro — só entram famílias cujo titular tem adesão ao `tipoPlano` pedido.
+ * cadastro — só entram famílias cujo titular tem adesão ao `tipoPlano` pedido, e dentro delas
+ * só os dependentes que também têm adesão própria (default aderido quando `undefined`).
  */
 export function listarPessoasPlanoSaude(
   titulares: Colaborador[],
@@ -93,6 +106,9 @@ export function listarPessoasPlanoSaude(
 
     pessoas.push({ id: titular.id, codigo: titular.codigo, nome: titular.nome, tipo: "titular", titularId: titular.id, filial: titular.filial });
     for (const dependente of dependentes.filter((d) => d.vendedorId === titular.id)) {
+      const dependenteAderido = tipoPlano === "saude" ? dependente.adesaoSaude !== false : dependente.adesaoOdontologico !== false;
+      if (!dependenteAderido) continue;
+
       pessoas.push({
         id: dependente.id,
         codigo: titular.codigo,

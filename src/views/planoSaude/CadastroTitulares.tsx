@@ -65,6 +65,22 @@ export function CadastroTitulares() {
     }
   }
 
+  async function alternarAdesaoDependente(dependente: PlanoSaudeDependente, tipo: "saude" | "odontologico") {
+    const campo = tipo === "saude" ? "adesaoSaude" : "adesaoOdontologico";
+    const valorAtual = dependente[campo] !== false;
+    setAlternandoAdesao(`${dependente.id}-${tipo}`);
+    try {
+      const resultado = await planoSaudeService.salvarAdesaoDependente(dependente.id, tipo, !valorAtual);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
+        return;
+      }
+      setDependentes((atual) => atual.map((d) => (d.id === dependente.id ? { ...d, [campo]: !valorAtual } : d)));
+    } finally {
+      setAlternandoAdesao(null);
+    }
+  }
+
   function abrirModalDependente(titular: Colaborador) {
     setTitularModal(titular);
     setFormulario({ nome: "", cpf: "" });
@@ -122,8 +138,8 @@ export function CadastroTitulares() {
       <h3 style={{ marginBottom: "var(--esp-3)" }}>Titulares e dependentes</h3>
       <p className="dica-campo" style={{ marginBottom: "var(--esp-4)" }}>
         Os titulares são os vendedores já cadastrados na filial. Use o botão "+ Dependente" para adicionar os dependentes de
-        cada colaborador. Marque, para cada titular, se a família tem Plano de Saúde, Plano Odontológico ou os dois — isso
-        decide quem aparece em cada aba do Lançamento.
+        cada colaborador. Marque, para cada titular ou dependente, se tem Plano de Saúde, Plano Odontológico ou os dois —
+        isso decide quem aparece em cada aba do Lançamento; um dependente pode ter adesão diferente do titular da família.
       </p>
 
       {carregando ? (
@@ -189,27 +205,47 @@ export function CadastroTitulares() {
                   </tr>
                 );
 
-                const linhasDependentes = dependentesDoTitular.map((dependente) => (
-                  <tr key={dependente.id}>
-                    <td style={{ paddingLeft: "var(--esp-6)" }}>{dependente.nome}</td>
-                    <td>{dependente.cpf || "—"}</td>
-                    {mostrarFilial ? <td>Filial {titular.filial}</td> : null}
-                    <td>Dependente</td>
-                    <td className="celula-checkbox">{temSaude ? "✓" : "—"}</td>
-                    <td className="celula-checkbox">{temOdonto ? "✓" : "—"}</td>
-                    <td className="celula-acoes-form">
-                      {ehAdmin ? (
-                        <Button
-                          variant="perigo"
-                          carregando={removendoId === dependente.id}
-                          onClick={() => removerDependente(dependente)}
-                        >
-                          Remover
-                        </Button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ));
+                const linhasDependentes = dependentesDoTitular.map((dependente) => {
+                  const dependenteTemSaude = dependente.adesaoSaude !== false;
+                  const dependenteTemOdonto = dependente.adesaoOdontologico !== false;
+                  return (
+                    <tr key={dependente.id}>
+                      <td style={{ paddingLeft: "var(--esp-6)" }}>{dependente.nome}</td>
+                      <td>{dependente.cpf || "—"}</td>
+                      {mostrarFilial ? <td>Filial {titular.filial}</td> : null}
+                      <td>Dependente</td>
+                      <td className="celula-checkbox">
+                        <input
+                          type="checkbox"
+                          aria-label={`Plano de Saúde de ${dependente.nome}`}
+                          checked={dependenteTemSaude}
+                          disabled={!ehAdmin || alternandoAdesao === `${dependente.id}-saude`}
+                          onChange={() => void alternarAdesaoDependente(dependente, "saude")}
+                        />
+                      </td>
+                      <td className="celula-checkbox">
+                        <input
+                          type="checkbox"
+                          aria-label={`Plano Odontológico de ${dependente.nome}`}
+                          checked={dependenteTemOdonto}
+                          disabled={!ehAdmin || alternandoAdesao === `${dependente.id}-odontologico`}
+                          onChange={() => void alternarAdesaoDependente(dependente, "odontologico")}
+                        />
+                      </td>
+                      <td className="celula-acoes-form">
+                        {ehAdmin ? (
+                          <Button
+                            variant="perigo"
+                            carregando={removendoId === dependente.id}
+                            onClick={() => removerDependente(dependente)}
+                          >
+                            Remover
+                          </Button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                });
 
                 return [linhaTitular, ...linhasDependentes];
               })

@@ -5,6 +5,16 @@ export interface PlanoSaudeDependente {
   vendedorId: string;
   nome: string;
   cpf: string;
+  /**
+   * Adesão própria do dependente (default `true` quando `undefined`, mesma convenção do
+   * titular) — controla se ele aparece na grade de Lançamento daquele tipo de plano,
+   * independente da adesão do titular. **Só local por enquanto**: a API de Dependentes
+   * (`Claude/API (7).md`) ainda não tem nenhum campo de adesão — só `nome`/`cpf` — então isso
+   * persiste de verdade só no adapter mock; no HTTP real, fica só na sessão atual da tela (não
+   * sobrevive a um recarregamento), até a API ganhar suporte. Ver `Claude/eventos-roadmap.md`.
+   */
+  adesaoSaude?: boolean;
+  adesaoOdontologico?: boolean;
 }
 
 export interface PlanoSaudeLancamento {
@@ -26,14 +36,15 @@ export interface PlanoSaudeLancamento {
 
 /**
  * Período de vigência do valor do plano, cadastrado pelo Admin por filial + tipo de plano +
- * tipo de pessoa — segue a lógica de fechamento de período da API real (`Claude/API (5).md`,
+ * tipo de pessoa — segue a lógica de fechamento de período da API real (`Claude/API (7).md`,
  * "Valores de Plano de Saúde"): só existe um período **vigente** (`ativo`) por filial + tipo de
  * plano + tipo de pessoa por vez; pra trocar o valor, primeiro encerra o vigente (`dataValidade`
- * passa a ser preenchida), só depois cadastra um novo. Um período encerrado é histórico e
- * imutável. **Titular e Dependente têm valor e vigência independentes** — cada um é um período
- * (registro) separado, não dois campos no mesmo período (ver `Claude/eventos-roadmap.md`,
- * 2026-08-14 — a API já teve as duas fases: só um `valor` para os dois, depois valor
- * independente por `tipoPessoa`).
+ * passa a ser preenchida), só depois cadastra um novo — exceto quando `dataValidade` já é
+ * enviada no cadastro (o período nasce direto como histórico, sem concorrer com o vigente).
+ * **Titular e Dependente têm valor e vigência independentes** — cada um é um período (registro)
+ * separado, não dois campos no mesmo período (ver `Claude/eventos-roadmap.md`, 2026-08-14 — a
+ * API já teve as duas fases: só um `valor` para os dois, depois valor independente por
+ * `tipoPessoa`).
  */
 export interface PlanoSaudePeriodo {
   id: string;
@@ -41,11 +52,13 @@ export interface PlanoSaudePeriodo {
   tipoPlano: TipoPlanoSaude;
   tipoPessoa: "titular" | "dependente";
   valor: number;
-  /** `true` = período vigente (usado nos meses a partir de `dataCriacao`); `false` = encerrado/histórico. */
+  /** `true` = período vigente; `false` = encerrado/histórico. */
   ativo: boolean;
-  /** Data de início — quando o período foi cadastrado. Formato "YYYY-MM-DD HH:MM:SS" ou "YYYY-MM-DD". */
+  /** Quando o período passa a valer. "YYYY-MM-DD" — pode ser retroativa. */
+  dataInicio: string;
+  /** Timestamp de quando o registro foi criado no sistema (não confundir com `dataInicio`). "YYYY-MM-DD HH:MM:SS". */
   dataCriacao: string;
-  /** Preenchida só ao encerrar o período (nunca antes). "YYYY-MM-DD", ou `null` enquanto vigente. */
+  /** Preenchida ao encerrar o período (na hora, ou já no cadastro se `dataFim` foi informada). "YYYY-MM-DD", ou `null` enquanto vigente. */
   dataValidade: string | null;
 }
 

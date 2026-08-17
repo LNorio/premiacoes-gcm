@@ -76,6 +76,7 @@ interface RespostaPeriodo {
   "tipo pessoa": "titular" | "dependente";
   valor: number;
   ativo: boolean;
+  "data inicio": string;
   "data validade": string | null;
   "data criacao": string;
 }
@@ -88,6 +89,7 @@ function paraPeriodo(resposta: RespostaPeriodo): PlanoSaudePeriodo {
     tipoPessoa: resposta["tipo pessoa"],
     valor: Number(resposta.valor),
     ativo: resposta.ativo,
+    dataInicio: resposta["data inicio"],
     dataCriacao: resposta["data criacao"],
     dataValidade: resposta["data validade"],
   };
@@ -145,6 +147,13 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
     }
   },
 
+  // A API de Dependentes (Claude/API (7).md) não tem nenhum campo de adesão — só nome/cpf.
+  // Sem endpoint pra chamar, então isso não persiste de verdade contra o backend real ainda;
+  // fica só no estado da tela (React), perdido ao recarregar, até a API ganhar suporte.
+  async salvarAdesaoDependente() {
+    return resultadoSucesso(undefined);
+  },
+
   async listarLancamentosPlanoSaude(filial, mesReferencia, tipoPlano) {
     try {
       const resposta = await httpClient.get<RespostaLancamentos>(
@@ -188,22 +197,35 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
     }
   },
 
-  async salvarPeriodoPlanoSaude(filial, tipoPlano, tipoPessoa, valor) {
+  async salvarPeriodoPlanoSaude(filial, tipoPlano, tipoPessoa, valor, dataInicio, dataFim) {
     try {
-      await httpClient.post("/api/valores-plano-saude", { filial, "tipo plano": tipoPlano, "tipo pessoa": tipoPessoa, valor });
-      // POST não devolve o registro criado — relista e pega o vigente (só pode existir um por filial/tipo/tipo de pessoa).
+      await httpClient.post("/api/valores-plano-saude", {
+        filial,
+        "tipo plano": tipoPlano,
+        "tipo pessoa": tipoPessoa,
+        valor,
+        ...(dataInicio ? { "data inicio": dataInicio } : {}),
+        ...(dataFim ? { "data fim": dataFim } : {}),
+      });
+      // POST não devolve o registro criado — relista pra obter a verdade. Sem "data fim", só pode
+      // existir um vigente por filial/tipo/tipo de pessoa; com "data fim", o período já nasce
+      // encerrado, então identifica pelo valor/datas que acabaram de ser enviados.
       const resLista = await planoSaudeServiceHttp.listarPeriodosPlanoSaude(filial, tipoPlano);
       if (resLista.status !== "sucesso") return resultadoErro(resLista.status === "erro" ? resLista.mensagem : "Falha ao cadastrar.");
-      const criado = resLista.dados.find((p) => p.ativo && p.tipoPessoa === tipoPessoa);
+      const criado = dataFim
+        ? resLista.dados.find(
+            (p) => p.tipoPessoa === tipoPessoa && p.valor === valor && p.dataValidade === dataFim && (!dataInicio || p.dataInicio === dataInicio),
+          )
+        : resLista.dados.find((p) => p.ativo && p.tipoPessoa === tipoPessoa);
       return criado ? resultadoSucesso(criado) : resultadoErro("Período cadastrado, mas não encontrado ao relistar.");
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }
   },
 
-  async encerrarPeriodoPlanoSaude(periodo) {
+  async encerrarPeriodoPlanoSaude(periodo, dataValidade) {
     try {
-      await httpClient.put(`/api/valores-plano-saude/${periodo.id}/encerrar`, {});
+      await httpClient.put(`/api/valores-plano-saude/${periodo.id}/encerrar`, dataValidade ? { "data validade": dataValidade } : {});
       // Resposta do endpoint de encerrar não é documentada — relista pra obter a verdade em vez de arriscar montar o registro à mão.
       const resLista = await planoSaudeServiceHttp.listarPeriodosPlanoSaude(periodo.filial, periodo.tipoPlano);
       if (resLista.status !== "sucesso") return resultadoErro(resLista.status === "erro" ? resLista.mensagem : "Falha ao encerrar.");

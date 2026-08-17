@@ -70,6 +70,17 @@ describe("planoSaudeServiceHttp.salvarAdesao", () => {
   });
 });
 
+describe("planoSaudeServiceHttp.salvarAdesaoDependente", () => {
+  it("não chama a API (sem endpoint pra isso) e resolve sucesso mesmo assim", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await planoSaudeServiceHttp.salvarAdesaoDependente("9", "saude", false);
+    expect(resultado).toEqual({ status: "sucesso", dados: undefined });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("planoSaudeServiceHttp.listarLancamentosPlanoSaude", () => {
   it("mapeia 'dados' do GET /api/lancamentos, distinguindo titular/dependente pelo id dependente", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
@@ -165,6 +176,7 @@ describe("planoSaudeServiceHttp.listarPeriodosPlanoSaude", () => {
           "tipo pessoa": "titular",
           valor: 185.27,
           ativo: true,
+          "data inicio": "2000-01-01",
           "data validade": null,
           "data criacao": "2000-01-01 00:00:00",
         },
@@ -183,6 +195,7 @@ describe("planoSaudeServiceHttp.listarPeriodosPlanoSaude", () => {
           tipoPessoa: "titular",
           valor: 185.27,
           ativo: true,
+          dataInicio: "2000-01-01",
           dataCriacao: "2000-01-01 00:00:00",
           dataValidade: null,
         },
@@ -207,6 +220,7 @@ describe("planoSaudeServiceHttp.salvarPeriodoPlanoSaude", () => {
             "tipo pessoa": "titular",
             valor: 185.27,
             ativo: true,
+            "data inicio": "2000-01-01",
             "data validade": null,
             "data criacao": "2000-01-01 00:00:00",
           },
@@ -217,6 +231,7 @@ describe("planoSaudeServiceHttp.salvarPeriodoPlanoSaude", () => {
             "tipo pessoa": "dependente",
             valor: 200,
             ativo: true,
+            "data inicio": "2026-08-17",
             "data validade": null,
             "data criacao": "2026-08-14 10:00:00",
           },
@@ -235,6 +250,7 @@ describe("planoSaudeServiceHttp.salvarPeriodoPlanoSaude", () => {
         tipoPessoa: "dependente",
         valor: 200,
         ativo: true,
+        dataInicio: "2026-08-17",
         dataCriacao: "2026-08-14 10:00:00",
         dataValidade: null,
       },
@@ -246,6 +262,101 @@ describe("planoSaudeServiceHttp.salvarPeriodoPlanoSaude", () => {
       "tipo plano": "saude",
       "tipo pessoa": "dependente",
       valor: 200,
+    });
+  });
+
+  it("envia 'data inicio' retroativa no corpo quando informada", async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return Promise.resolve(jsonResponse({ mensagem: "criado" }));
+      return Promise.resolve(
+        jsonResponse([
+          {
+            id: 5,
+            filial: "100",
+            "tipo plano": "saude",
+            "tipo pessoa": "titular",
+            valor: 190,
+            ativo: true,
+            "data inicio": "2026-01-01",
+            "data validade": null,
+            "data criacao": "2026-08-17 09:00:00",
+          },
+        ]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await planoSaudeServiceHttp.salvarPeriodoPlanoSaude("100", "saude", "titular", 190, "2026-01-01");
+
+    const postCall = fetchMock.mock.calls.find((c) => (c[1] as RequestInit)?.method === "POST")!;
+    expect(JSON.parse((postCall[1] as RequestInit).body as string)).toEqual({
+      filial: "100",
+      "tipo plano": "saude",
+      "tipo pessoa": "titular",
+      valor: 190,
+      "data inicio": "2026-01-01",
+    });
+    expect(resultado.status).toBe("sucesso");
+    if (resultado.status === "sucesso") expect(resultado.dados.dataInicio).toBe("2026-01-01");
+  });
+
+  it("com 'data fim' informada, cria já como histórico (não vigente) e acha o registro certo ao relistar", async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return Promise.resolve(jsonResponse({ mensagem: "criado" }));
+      return Promise.resolve(
+        jsonResponse([
+          // um período vigente qualquer, que não deve ser confundido com o histórico recém-criado
+          {
+            id: 1,
+            filial: "100",
+            "tipo plano": "saude",
+            "tipo pessoa": "titular",
+            valor: 185.27,
+            ativo: true,
+            "data inicio": "2000-01-01",
+            "data validade": null,
+            "data criacao": "2000-01-01 00:00:00",
+          },
+          {
+            id: 6,
+            filial: "100",
+            "tipo plano": "saude",
+            "tipo pessoa": "titular",
+            valor: 150,
+            ativo: false,
+            "data inicio": "2025-01-01",
+            "data validade": "2025-06-30",
+            "data criacao": "2026-08-17 09:05:00",
+          },
+        ]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await planoSaudeServiceHttp.salvarPeriodoPlanoSaude("100", "saude", "titular", 150, "2025-01-01", "2025-06-30");
+
+    const postCall = fetchMock.mock.calls.find((c) => (c[1] as RequestInit)?.method === "POST")!;
+    expect(JSON.parse((postCall[1] as RequestInit).body as string)).toEqual({
+      filial: "100",
+      "tipo plano": "saude",
+      "tipo pessoa": "titular",
+      valor: 150,
+      "data inicio": "2025-01-01",
+      "data fim": "2025-06-30",
+    });
+    expect(resultado).toEqual({
+      status: "sucesso",
+      dados: {
+        id: "6",
+        filial: "100",
+        tipoPlano: "saude",
+        tipoPessoa: "titular",
+        valor: 150,
+        ativo: false,
+        dataInicio: "2025-01-01",
+        dataCriacao: "2026-08-17 09:05:00",
+        dataValidade: "2025-06-30",
+      },
     });
   });
 
@@ -272,6 +383,7 @@ describe("planoSaudeServiceHttp.encerrarPeriodoPlanoSaude", () => {
             "tipo pessoa": "titular",
             valor: 185.27,
             ativo: false,
+            "data inicio": "2000-01-01",
             "data validade": "2026-08-14",
             "data criacao": "2000-01-01 00:00:00",
           },
@@ -287,6 +399,7 @@ describe("planoSaudeServiceHttp.encerrarPeriodoPlanoSaude", () => {
       tipoPessoa: "titular",
       valor: 185.27,
       ativo: true,
+      dataInicio: "2000-01-01",
       dataCriacao: "2000-01-01 00:00:00",
       dataValidade: null,
     });
@@ -300,11 +413,55 @@ describe("planoSaudeServiceHttp.encerrarPeriodoPlanoSaude", () => {
         tipoPessoa: "titular",
         valor: 185.27,
         ativo: false,
+        dataInicio: "2000-01-01",
         dataCriacao: "2000-01-01 00:00:00",
         dataValidade: "2026-08-14",
       },
     });
     const putCall = fetchMock.mock.calls.find((c) => (c[1] as RequestInit)?.method === "PUT")!;
     expect(putCall[0]).toContain("/api/valores-plano-saude/1/encerrar");
+    expect(JSON.parse((putCall[1] as RequestInit).body as string)).toEqual({});
+  });
+
+  it("envia 'data validade' no corpo quando uma data é passada", async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "PUT") return Promise.resolve(jsonResponse({ mensagem: "encerrado" }));
+      return Promise.resolve(
+        jsonResponse([
+          {
+            id: 1,
+            filial: "100",
+            "tipo plano": "saude",
+            "tipo pessoa": "titular",
+            valor: 185.27,
+            ativo: false,
+            "data inicio": "2000-01-01",
+            "data validade": "2026-12-31",
+            "data criacao": "2000-01-01 00:00:00",
+          },
+        ]),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await planoSaudeServiceHttp.encerrarPeriodoPlanoSaude(
+      {
+        id: "1",
+        filial: "100",
+        tipoPlano: "saude",
+        tipoPessoa: "titular",
+        valor: 185.27,
+        ativo: true,
+        dataInicio: "2000-01-01",
+        dataCriacao: "2000-01-01 00:00:00",
+        dataValidade: null,
+      },
+      "2026-12-31",
+    );
+
+    const putCall = fetchMock.mock.calls.find((c) => (c[1] as RequestInit)?.method === "PUT")!;
+    expect(JSON.parse((putCall[1] as RequestInit).body as string)).toEqual({ "data validade": "2026-12-31" });
+    expect(resultado.status).toBe("sucesso");
+    if (resultado.status === "sucesso") expect(resultado.dados.dataValidade).toBe("2026-12-31");
   });
 });

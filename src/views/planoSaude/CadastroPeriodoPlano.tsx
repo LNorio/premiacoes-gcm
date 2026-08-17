@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { planoSaudeService } from "../../adapters";
-import { Button, Carregando, LinhaVazia, MensagemErro, Table } from "../../components/ui";
+import { Button, Carregando, LinhaVazia, MensagemErro, Modal, Table } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type PlanoSaudePeriodo, type TipoPlanoSaude } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
@@ -14,14 +14,20 @@ function formatarDataBr(dataIso: string): string {
   return dataIso.slice(0, 10).split("-").reverse().join("/");
 }
 
+function hojeIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const FORMULARIO_VAZIO = { dataInicio: hojeIso(), valorTitular: "", valorDependente: "", dataEncerramento: "" };
+
 export function CadastroPeriodoPlano() {
   const { sessao } = useSessao();
   const [tipoPlano, setTipoPlano] = useState<TipoPlanoSaude>("saude");
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [periodos, setPeriodos] = useState<PlanoSaudePeriodo[]>([]);
-  const [novoValorTitular, setNovoValorTitular] = useState("");
-  const [novoValorDependente, setNovoValorDependente] = useState("");
+  const [modalAberta, setModalAberta] = useState(false);
+  const [formulario, setFormulario] = useState(FORMULARIO_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [encerrandoId, setEncerrandoId] = useState<string | null>(null);
 
@@ -58,14 +64,24 @@ export function CadastroPeriodoPlano() {
     return Number.isNaN(valor) || valor < 0;
   }
 
+  function abrirModal() {
+    setFormulario(FORMULARIO_VAZIO);
+    setModalAberta(true);
+  }
+
   async function cadastrarPeriodo(evento: FormEvent) {
     evento.preventDefault();
-    if (!novoValorTitular && !novoValorDependente) {
+    const { dataInicio, valorTitular, valorDependente, dataEncerramento } = formulario;
+    if (!valorTitular && !valorDependente) {
       mostrarToast("Informe o valor de Titular e/ou Dependente.", "erro");
       return;
     }
-    if (valorInvalido(novoValorTitular) || valorInvalido(novoValorDependente)) {
+    if (valorInvalido(valorTitular) || valorInvalido(valorDependente)) {
       mostrarToast("Informe um valor válido.", "erro");
+      return;
+    }
+    if (dataEncerramento && dataInicio && dataEncerramento < dataInicio) {
+      mostrarToast("A Data de Encerramento não pode ser anterior à Data de Início.", "erro");
       return;
     }
 
@@ -75,11 +91,18 @@ export function CadastroPeriodoPlano() {
       const erros: string[] = [];
 
       for (const [tipoPessoa, valorTexto] of [
-        ["titular", novoValorTitular],
-        ["dependente", novoValorDependente],
+        ["titular", valorTitular],
+        ["dependente", valorDependente],
       ] as const) {
         if (!valorTexto) continue;
-        const resultado = await planoSaudeService.salvarPeriodoPlanoSaude(filialAtiva, tipoPlano, tipoPessoa, parseFloat(valorTexto));
+        const resultado = await planoSaudeService.salvarPeriodoPlanoSaude(
+          filialAtiva,
+          tipoPlano,
+          tipoPessoa,
+          parseFloat(valorTexto),
+          dataInicio || undefined,
+          dataEncerramento || undefined,
+        );
         if (resultado.status === "sucesso") {
           novos.push(resultado.dados);
         } else {
@@ -89,13 +112,10 @@ export function CadastroPeriodoPlano() {
 
       if (novos.length > 0) {
         setPeriodos((atual) => [...novos, ...atual]);
-        if (novos.some((p) => p.tipoPessoa === "titular")) setNovoValorTitular("");
-        if (novos.some((p) => p.tipoPessoa === "dependente")) setNovoValorDependente("");
-      }
-      if (erros.length > 0) {
-        mostrarToast(erros.join(" — "), "erro");
+        mostrarToast(erros.length > 0 ? erros.join(" — ") : "Período cadastrado com sucesso.", erros.length > 0 ? "erro" : "sucesso");
+        setModalAberta(false);
       } else {
-        mostrarToast("Período cadastrado com sucesso.", "sucesso");
+        mostrarToast(erros.join(" — "), "erro");
       }
     } finally {
       setSalvando(false);
@@ -140,35 +160,11 @@ export function CadastroPeriodoPlano() {
         <MensagemErro mensagem="Selecione uma filial específica (menu no topo) para cadastrar períodos do plano." />
       ) : (
         <>
-          <form className="formulario grade-formulario" onSubmit={cadastrarPeriodo}>
-            <div className="campo">
-              <label htmlFor="periodo-novo-valor-titular">Valor Titular</label>
-              <input
-                id="periodo-novo-valor-titular"
-                type="number"
-                min={0}
-                step={0.01}
-                value={novoValorTitular}
-                onChange={(e) => setNovoValorTitular(e.target.value)}
-              />
-            </div>
-            <div className="campo">
-              <label htmlFor="periodo-novo-valor-dependente">Valor Dependente</label>
-              <input
-                id="periodo-novo-valor-dependente"
-                type="number"
-                min={0}
-                step={0.01}
-                value={novoValorDependente}
-                onChange={(e) => setNovoValorDependente(e.target.value)}
-              />
-            </div>
-            <div className="formulario-rodape" style={{ alignSelf: "end" }}>
-              <Button type="submit" variant="dourado" carregando={salvando}>
-                + Novo período
-              </Button>
-            </div>
-          </form>
+          <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
+            <Button variant="dourado" onClick={abrirModal}>
+              + Novo período
+            </Button>
+          </div>
 
           {carregando ? (
             <Carregando />
@@ -192,7 +188,7 @@ export function CadastroPeriodoPlano() {
                 ) : (
                   periodos.map((periodo) => (
                     <tr key={periodo.id}>
-                      <td>{formatarDataBr(periodo.dataCriacao)}</td>
+                      <td>{formatarDataBr(periodo.dataInicio)}</td>
                       <td>{ROTULOS_PESSOA[periodo.tipoPessoa]}</td>
                       <td className="celula-numerica">{formatarMoeda(periodo.valor)}</td>
                       <td>{periodo.ativo ? "Vigente" : "Encerrado"}</td>
@@ -216,6 +212,65 @@ export function CadastroPeriodoPlano() {
           )}
         </>
       )}
+
+      <Modal aberto={modalAberta} titulo={`Novo período — ${ROTULOS_TIPO[tipoPlano]}`} onFechar={() => setModalAberta(false)}>
+        <form onSubmit={cadastrarPeriodo}>
+          <div className="grade-formulario">
+            <div className="campo">
+              <label htmlFor="periodo-data-inicio">Data de Início</label>
+              <input
+                id="periodo-data-inicio"
+                type="date"
+                value={formulario.dataInicio}
+                onChange={(e) => setFormulario((f) => ({ ...f, dataInicio: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="periodo-valor-titular">Valor Titular</label>
+              <input
+                id="periodo-valor-titular"
+                type="number"
+                min={0}
+                step={0.01}
+                value={formulario.valorTitular}
+                onChange={(e) => setFormulario((f) => ({ ...f, valorTitular: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="periodo-valor-dependente">Valor Dependente</label>
+              <input
+                id="periodo-valor-dependente"
+                type="number"
+                min={0}
+                step={0.01}
+                value={formulario.valorDependente}
+                onChange={(e) => setFormulario((f) => ({ ...f, valorDependente: e.target.value }))}
+              />
+            </div>
+            <div className="campo">
+              <label htmlFor="periodo-data-encerramento">Data de Encerramento</label>
+              <input
+                id="periodo-data-encerramento"
+                type="date"
+                value={formulario.dataEncerramento}
+                onChange={(e) => setFormulario((f) => ({ ...f, dataEncerramento: e.target.value }))}
+              />
+            </div>
+          </div>
+          <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>
+            A Data de Início pode ser retroativa, para corrigir ou lançar um período que já deveria valer em meses
+            passados. Preenchendo a Data de Encerramento, o período já nasce como histórico, encerrado nessa data.
+          </p>
+          <div className="formulario-rodape" style={{ marginTop: "var(--esp-5)" }}>
+            <Button type="submit" variant="primario" carregando={salvando}>
+              Adicionar
+            </Button>
+            <Button type="button" variant="secundario" onClick={() => setModalAberta(false)} disabled={salvando}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

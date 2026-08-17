@@ -51,14 +51,24 @@ describe("CadastroTitulares — titulares e dependentes (F5.PS-CAD)", () => {
     await waitFor(() => expect(checkboxSaude).not.toBeChecked());
   });
 
-  it("Coordenador vê as checkboxes desabilitadas e sem os botões de gerenciar dependente", async () => {
+  it("Coordenador vê as checkboxes desabilitadas (titular e dependente) e sem os botões de gerenciar dependente", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+    await user.click(within(screen.getByText("Carlos Silva").closest("tr")!).getByRole("button", { name: "+ Dependente" }));
+    await user.type(await screen.findByLabelText("Nome completo"), "Ana Silva");
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await screen.findByText("Ana Silva");
+    unmount();
+
     renderComoCoordenador();
     const checkboxSaude = await screen.findByLabelText("Plano de Saúde de Carlos Silva");
     expect(checkboxSaude).toBeDisabled();
+    expect(screen.getByLabelText("Plano de Saúde de Ana Silva")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "+ Dependente" })).not.toBeInTheDocument();
   });
 
-  it("Admin adiciona um dependente pela modal e ele aparece indentado, espelhando a adesão do titular", async () => {
+  it("Admin adiciona um dependente pela modal e ele aparece indentado, com adesão própria marcada por padrão", async () => {
     const user = userEvent.setup();
     renderComoAdminNaFilial("100");
     await screen.findByText("Carlos Silva");
@@ -73,8 +83,29 @@ describe("CadastroTitulares — titulares e dependentes (F5.PS-CAD)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     const linhaDependente = (await screen.findByText("Maria Silva")).closest("tr")!;
     expect(within(linhaDependente).getByText("Dependente")).toBeInTheDocument();
-    // adesão do dependente é só leitura, espelhando o titular (que começa com os dois planos ativos)
-    expect(within(linhaDependente).getAllByText("✓")).toHaveLength(2);
+    // adesão do dependente é própria (não mais um espelho do titular) — undefined tratado como aderido
+    expect(within(linhaDependente).getByLabelText("Plano de Saúde de Maria Silva")).toBeChecked();
+    expect(within(linhaDependente).getByLabelText("Plano Odontológico de Maria Silva")).toBeChecked();
+  });
+
+  it("Admin desmarca a adesão de um dependente, independente do titular", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+
+    const linhaCarlos = screen.getByText("Carlos Silva").closest("tr")!;
+    await user.click(within(linhaCarlos).getByRole("button", { name: "+ Dependente" }));
+    await user.type(await screen.findByLabelText("Nome completo"), "João Silva");
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await screen.findByText("João Silva");
+
+    const checkboxSaudeDependente = screen.getByLabelText("Plano de Saúde de João Silva");
+    expect(checkboxSaudeDependente).toBeChecked();
+    await user.click(checkboxSaudeDependente);
+    await waitFor(() => expect(checkboxSaudeDependente).not.toBeChecked());
+
+    // titular continua aderido normalmente — a mudança foi só do dependente
+    expect(screen.getByLabelText("Plano de Saúde de Carlos Silva")).toBeChecked();
   });
 
   it("Admin remove um dependente já cadastrado", async () => {

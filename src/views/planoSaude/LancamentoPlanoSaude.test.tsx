@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
+import { planoSaudeService } from "../../adapters";
 import { SessaoProvider } from "../../state/SessaoContext";
 import { ComoAdminNaFilial } from "../../testUtils/ComoAdminNaFilial";
 import { ComSessao } from "../../testUtils/ComSessao";
@@ -83,6 +84,18 @@ describe("LancamentoPlanoSaude — Plano de Saúde (F5.PS-LAN)", () => {
     renderComoAdminNaFilial("100");
     await screen.findByText("Carlos Silva");
     expect(screen.getByRole("button", { name: /Bloquear lançamentos deste mês/ })).toBeInTheDocument();
+  });
+
+  it("dependente com adesão própria desmarcada não aparece na grade, mesmo com o titular aderido", async () => {
+    const resDependente = await planoSaudeService.salvarDependente({ vendedorId: "seed-v1", nome: "Maria Silva", cpf: "" });
+    expect(resDependente.status).toBe("sucesso");
+    if (resDependente.status === "sucesso") {
+      await planoSaudeService.salvarAdesaoDependente(resDependente.dados.id, "saude", false);
+    }
+
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+    expect(screen.queryByText("Maria Silva")).not.toBeInTheDocument();
   });
 
   it("Admin em 'Todas as filiais' vê a coluna Filial e não vê o botão de bloqueio", async () => {

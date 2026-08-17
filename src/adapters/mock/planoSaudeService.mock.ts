@@ -52,6 +52,17 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
     return resultadoSucesso(undefined);
   },
 
+  async salvarAdesaoDependente(dependenteId, tipo, valor) {
+    garantirSeed();
+    const campo = tipo === "saude" ? "adesaoSaude" : "adesaoOdontologico";
+    const dependentes = lerColecao<PlanoSaudeDependente>(CHAVE_DEPENDENTES);
+    gravarColecao(
+      CHAVE_DEPENDENTES,
+      dependentes.map((d) => (d.id === dependenteId ? { ...d, [campo]: valor } : d)),
+    );
+    return resultadoSucesso(undefined);
+  },
+
   async listarLancamentosPlanoSaude(filial, mesReferencia, tipo) {
     garantirSeed();
     const colaboradores = lerColecao<Colaborador>("colaboradores");
@@ -88,16 +99,22 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
     );
   },
 
-  async salvarPeriodoPlanoSaude(filial, tipoPlano, tipoPessoa, valor) {
+  async salvarPeriodoPlanoSaude(filial, tipoPlano, tipoPessoa, valor, dataInicio, dataFim) {
     garantirSeed();
+    if (dataFim && dataInicio && dataFim < dataInicio) {
+      return resultadoErro("A data final não pode ser anterior à data de início.");
+    }
     const periodos = lerColecao<PlanoSaudePeriodo>(CHAVE_PERIODOS);
-    const jaTemVigente = periodos.some(
-      (p) => p.filial === filial && p.tipoPlano === tipoPlano && p.tipoPessoa === tipoPessoa && p.ativo,
-    );
-    if (jaTemVigente) {
-      return resultadoErro(
-        "Já existe um período vigente para esta filial, tipo de plano e tipo de pessoa — encerre o atual antes de cadastrar um novo.",
+    // cadastrar já com data fim não concorre com o vigente — nasce direto como histórico.
+    if (!dataFim) {
+      const jaTemVigente = periodos.some(
+        (p) => p.filial === filial && p.tipoPlano === tipoPlano && p.tipoPessoa === tipoPessoa && p.ativo,
       );
+      if (jaTemVigente) {
+        return resultadoErro(
+          "Já existe um período vigente para esta filial, tipo de plano e tipo de pessoa — encerre o atual antes de cadastrar um novo.",
+        );
+      }
     }
     const novo: PlanoSaudePeriodo = {
       id: "",
@@ -105,21 +122,22 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
       tipoPlano,
       tipoPessoa,
       valor,
-      ativo: true,
+      ativo: !dataFim,
+      dataInicio: dataInicio || hojeData(),
       dataCriacao: agora(),
-      dataValidade: null,
+      dataValidade: dataFim || null,
     };
     const salvo = upsertPorId<PlanoSaudePeriodo>(CHAVE_PERIODOS, novo, "psp");
     return resultadoSucesso(salvo);
   },
 
-  async encerrarPeriodoPlanoSaude(periodo) {
+  async encerrarPeriodoPlanoSaude(periodo, dataValidade) {
     garantirSeed();
     const periodos = lerColecao<PlanoSaudePeriodo>(CHAVE_PERIODOS);
     const atual = periodos.find((p) => p.id === periodo.id);
     if (!atual) return resultadoErro("Período não encontrado.");
     if (!atual.ativo) return resultadoErro("Este período já está encerrado.");
-    const encerrado: PlanoSaudePeriodo = { ...atual, ativo: false, dataValidade: hojeData() };
+    const encerrado: PlanoSaudePeriodo = { ...atual, ativo: false, dataValidade: dataValidade || hojeData() };
     gravarColecao(
       CHAVE_PERIODOS,
       periodos.map((p) => (p.id === periodo.id ? encerrado : p)),
