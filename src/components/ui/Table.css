@@ -8,6 +8,14 @@
 .tabela {
   min-width: 640px;
 }
+/* Tabelas pequenas (ex.: dentro de uma modal) — sem forçar largura mínima de planilha. */
+.tabela-compacta {
+  min-width: 0;
+}
+.tabela-compacta thead th,
+.tabela-compacta tbody td {
+  padding: 8px var(--esp-3);
+}
 .tabela thead th {
   text-align: left;
   font-size: 0.76rem;

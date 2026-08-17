@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { bloqueioService, colaboradoresService, descontosService } from "../../adapters";
-import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
+import { Button, Carregando, LinhaVazia, MensagemErro, MensagemVazia, Modal, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { exportarDescontosExcel, somarDescontosComSinal } from "../../services/descontosService";
+import { exportarDescontosExcel, totaisPorTipo } from "../../services/descontosService";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type TipoDescontoBonificacao } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
@@ -37,6 +37,7 @@ export function Descontos() {
   const [salvando, setSalvando] = useState(false);
   const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
   const [removendoId, setRemovendoId] = useState<string | null>(null);
+  const [modalTotaisAberta, setModalTotaisAberta] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -202,7 +203,7 @@ export function Descontos() {
     if (!exportou) mostrarToast("Não há descontos ou bonificações salvos para exportar.", "erro");
   }
 
-  const totalGeral = somarDescontosComSinal(linhas);
+  const totais = totaisPorTipo(linhas);
 
   return (
     <section className="view">
@@ -229,6 +230,9 @@ export function Descontos() {
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
           </Button>
         ) : null}
+        <Button variant="secundario" onClick={() => setModalTotaisAberta(true)}>
+          📊 Totais por tipo
+        </Button>
         <Button variant="secundario" onClick={exportarExcel}>
           ⭳ Exportar Excel da filial
         </Button>
@@ -248,21 +252,19 @@ export function Descontos() {
                 <th>Tipo</th>
                 <th>Valor</th>
                 <th>Observações</th>
-                <th>Total</th>
                 <th aria-label="Ações" />
               </tr>
             </thead>
             <tbody>
               {colaboradores.length === 0 ? (
                 <tr className="linha-vazia">
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <MensagemVazia mensagem="Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)." />
                   </td>
                 </tr>
               ) : (
                 colaboradores.map((colaborador) => {
                   const linhasColaborador = linhas.filter((l) => l.vendedorId === colaborador.id);
-                  const totalColaborador = somarDescontosComSinal(linhasColaborador);
                   const botaoAdicionar = !bloqueadoParaEdicao ? (
                     <Button variant="secundario" onClick={() => adicionarLinha(colaborador.id)}>
                       + Adicionar
@@ -277,7 +279,6 @@ export function Descontos() {
                         <td colSpan={3} className="dica-campo">
                           Nenhum lançamento neste mês
                         </td>
-                        <td className="celula-numerica celula-total">{formatarMoeda(0)}</td>
                         <td className="celula-acoes-form">{botaoAdicionar}</td>
                       </tr>
                     );
@@ -325,9 +326,6 @@ export function Descontos() {
                           onChange={(e) => editarLinha(linha.id, "observacoes", e.target.value)}
                         />
                       </td>
-                      <td className="celula-numerica celula-total">
-                        {indice === 0 ? formatarMoeda(totalColaborador) : ""}
-                      </td>
                       <td className="celula-acoes-form">
                         {indice === linhasColaborador.length - 1 ? botaoAdicionar : null}
                         {!bloqueadoParaEdicao ? (
@@ -341,16 +339,30 @@ export function Descontos() {
                 })
               )}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3}>Total geral</td>
-                <td className="celula-numerica celula-total">{formatarMoeda(totalGeral)}</td>
-                <td />
-                <td className="celula-numerica celula-total">{formatarMoeda(totalGeral)}</td>
-                <td />
-              </tr>
-            </tfoot>
           </Table>
+
+          <Modal aberto={modalTotaisAberta} titulo="Totais por tipo de lançamento" onFechar={() => setModalTotaisAberta(false)}>
+            <Table compacta>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {totais.length === 0 ? (
+                  <LinhaVazia colSpan={2} mensagem="Nenhum lançamento neste mês." />
+                ) : (
+                  totais.map((item) => (
+                    <tr key={item.tipo}>
+                      <td>{item.tipo}</td>
+                      <td className="celula-numerica">{formatarMoeda(item.total)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </Modal>
 
           <div className="acoes-tabela">
             <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao} carregando={salvando}>

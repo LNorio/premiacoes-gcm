@@ -1,6 +1,6 @@
 import { formatarMesReferencia } from "../utils/formatadores";
 import { baixarExcel } from "../utils/exportar";
-import type { Colaborador, DescontoBonificacao, Resultado, TipoDescontoBonificacao } from "../types";
+import { TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type DescontoBonificacao, type Resultado, type TipoDescontoBonificacao } from "../types";
 
 export interface NovoLancamentoDesconto {
   vendedorId: string;
@@ -16,17 +16,25 @@ export interface DescontosService {
   removerDesconto(id: string): Promise<Resultado<void>>;
 }
 
-/** Tipos que somam no Total exibido na tela — os demais (descontos de fato) subtraem. */
-const TIPOS_QUE_SOMAM: readonly TipoDescontoBonificacao[] = ["Bonificação", "Ajuda de Custo/Gratificação"];
+export interface TotalPorTipo {
+  tipo: TipoDescontoBonificacao;
+  total: number;
+}
 
 /**
- * Soma dos lançamentos para a coluna/rodapé "Total" de Descontos.tsx: Bonificação e
- * Ajuda de Custo/Gratificação somam, os demais tipos subtraem. Só afeta essa exibição —
- * o valor de cada lançamento continua sempre positivo, como digitado, tanto na célula
- * "Valor" quanto no que é salvo no adapter/API.
+ * Um total por tipo de lançamento presente no mês (modal "Totais por tipo" de Descontos.tsx) —
+ * só entram tipos com pelo menos um lançamento, com a soma simples dos valores (sempre
+ * positivos, já que agora cada tipo aparece separado). Ordem fixa, seguindo
+ * `TIPOS_DESCONTO_BONIFICACAO`.
  */
-export function somarDescontosComSinal(linhas: { tipo: TipoDescontoBonificacao | ""; valor: number }[]): number {
-  return linhas.reduce((soma, l) => soma + (TIPOS_QUE_SOMAM.includes(l.tipo as TipoDescontoBonificacao) ? l.valor : -l.valor), 0);
+export function totaisPorTipo(linhas: { tipo: TipoDescontoBonificacao | ""; valor: number }[]): TotalPorTipo[] {
+  const totais: TotalPorTipo[] = [];
+  for (const tipo of TIPOS_DESCONTO_BONIFICACAO) {
+    const linhasDoTipo = linhas.filter((l) => l.tipo === tipo);
+    if (linhasDoTipo.length === 0) continue;
+    totais.push({ tipo, total: linhasDoTipo.reduce((soma, l) => soma + l.valor, 0) });
+  }
+  return totais;
 }
 
 /** Documento técnico, Seção 4 — CPF, Nome, Mês Referência, Tipo, Valor, Observações (1 linha por lançamento). */

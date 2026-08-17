@@ -4,12 +4,15 @@ import "./Table.css";
 interface TableProps {
   children: ReactNode;
   planilha?: boolean;
+  /** Sem o min-width de 640px e com padding de célula reduzido — para tabelas pequenas (ex.: dentro de uma modal). */
+  compacta?: boolean;
 }
 
-export function Table({ children, planilha = false }: TableProps) {
+export function Table({ children, planilha = false, compacta = false }: TableProps) {
+  const classes = ["tabela", planilha && "tabela-planilha", compacta && "tabela-compacta"].filter(Boolean).join(" ");
   return (
     <div className="tabela-wrapper">
-      <table className={planilha ? "tabela tabela-planilha" : "tabela"}>{children}</table>
+      <table className={classes}>{children}</table>
     </div>
   );
 }
