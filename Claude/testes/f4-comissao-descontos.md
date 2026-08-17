@@ -27,15 +27,15 @@ As duas telas foram ligadas ao `Shell` (substituindo o placeholder `EmConstrucao
 
 **Descontos (F4.DESC)**
 - [x] Lista só os colaboradores habilitados para a tela (`telas.descontos`)
-- [x] Colaborador sem lançamento no mês mostra "Nenhum lançamento neste mês" e total zerado
-- [x] Adiciona um lançamento, preenche Tipo/Valor/Observações e o Total do colaborador atualiza
+- [x] Colaborador sem lançamento no mês mostra "Nenhum lançamento neste mês"
+- [x] Adiciona um lançamento e preenche Tipo/Valor/Observações
 - [x] Permite mais de um lançamento no mesmo mês para o mesmo colaborador, cada um com sua própria ação de Remover
-- [x] Remover tira o lançamento e recalcula o Total do colaborador
-- [x] Soma o Valor de todos os lançamentos de todos os colaboradores no rodapé geral
+- [x] Remover tira o lançamento e volta a mostrar "Nenhum lançamento neste mês"
 - [x] Salva os lançamentos (Tipo/Valor) e eles persistem ao recarregar a tela
 - [x] Mostra o botão de exportar Excel da filial
 - [x] Admin numa filial específica vê o botão de bloqueio; em "Todas as filiais", não
 - [x] Bloqueado pelo Admin, o Coordenador não pode adicionar/remover/editar lançamentos
+- [x] **(2026-08-14)** Não tem mais coluna Total nem rodapé "Total geral" — botão "📊 Totais por tipo" abre uma modal com o total por tipo de lançamento presente no mês (Bonificação/Ajuda de Custo positivos, os demais negativos), só listando tipos com pelo menos um lançamento; mensagem de vazio quando não há nenhum. Ver `Claude/eventos-roadmap.md`.
 
 **baixarExcel (utils/exportar.ts)**
 - [x] Gera a planilha com uma aba "Dados" e baixa o arquivo quando o SheetJS já está carregado
@@ -62,3 +62,22 @@ Ao escrever a tela de Comissão, o mesmo tipo de lacuna já visto em F3 apareceu
 Ambos corrigidos para seguir o mesmo padrão já usado em `premiacaoServiceMock`/`colaboradoresServiceMock`. `descontosServiceMock` já tratava `FILIAL_TODAS` corretamente desde F1 e não precisou de alteração.
 
 Depois do relato inicial de F4, o usuário pediu para ajustar as caixas de entrada da tela de Descontos. Investigando com Playwright ao vivo, a tabela usava `<Table>` sem a prop `planilha` (diferente do protótipo, que usa `class="tabela tabela-planilha"` nessa tela) — sem essa classe, o `<select>` de Tipo se auto-dimensionava pela opção mais longa e a tabela ficava 152px mais larga que o contêiner, escondendo "+ Adicionar"/"Remover" atrás de rolagem horizontal. Corrigido trocando para `<Table planilha>` (registrado em `Claude/eventos-roadmap.md`); reconfirmado com a mesma inspeção ao vivo que a tabela passou a caber exatamente na largura do contêiner (sem rolagem) e com os 142 testes, `tsc`, `build` e `oxlint` passando novamente depois da mudança.
+
+## Atualização — 2026-08-14 (F4.DESC-05: coluna Total/rodapé viram modal "Totais por tipo")
+
+- O usuário pediu pra retirar a coluna "Total" e o rodapé "Total geral" da grade de Descontos e criar uma modal com o total por tipo de lançamento presente no mês — detalhe completo em `Claude/eventos-roadmap.md`.
+- Comando: `npx vitest run src/views/descontos src/components/ui`
+- Total: `Descontos.test.tsx` reescrito — 13 testes, todos passando: assertions que dependiam do texto da coluna Total (`toContain("150,00")` na linha) foram trocadas por `toHaveValue(...)` direto no campo; o describe "Total com sinal" foi reescrito pra abrir a modal e checar lá (Bonificação positiva, Multa/Farmácia negativas, só tipos com lançamento aparecem, mensagem de vazio sem nenhum lançamento).
+- Suíte completa do projeto: `npx vitest run` — 243 testes, 243 passaram.
+- `npx tsc -b --noEmit`, `npx oxlint` e `npm run build` sem erros.
+- **Correção no mesmo dia (mesma sessão, sem commit):** a tabela da modal ficava mais larga que a área interna da modal (herdava `min-width: 640px` de `.tabela`), gerando uma barra de rolagem horizontal que cortava a coluna Total — reportado pelo usuário com screenshot. `Table` (`src/components/ui/Table.tsx`) ganhou uma prop `compacta` (`.tabela-compacta` em `Table.css`: sem min-width, padding de célula reduzido) usada na tabela da modal.
+- Verificado ao vivo (Playwright, servidor real, dados reais da filial 100): grade sem coluna Total/rodapé; modal abre com "Bonificação R$ 450,00"/"Farmácia -R$ 2.550,00" totalmente visíveis, sem rolagem horizontal; nenhum erro de console.
+
+## Atualização — 2026-08-14 (F4.DESC-05: todos os tipos passam a somar positivo na modal)
+
+- Com os totais já separados por tipo, o usuário pediu pra tirar a regra de sinal (Bonificação/Ajuda de Custo positivo, os demais negativo) — cada tipo passou a ser a soma simples e positiva do seu valor. `somarDescontosComSinal`/`TIPOS_QUE_SOMAM` removidos de `descontosService.ts` (sem nenhum outro uso no código). Detalhe completo em `Claude/eventos-roadmap.md`.
+- Comando: `npx vitest run src/views/descontos`
+- Total: `Descontos.test.tsx` — 13 testes, todos passando; o describe da modal foi renomeado e ajustado (Multa/Farmácia agora esperam o valor positivo puro), com um caso novo cobrindo soma de dois lançamentos do mesmo tipo em colaboradores diferentes.
+- Suíte completa do projeto: `npx vitest run` — 243 testes, 243 passaram.
+- `npx tsc -b --noEmit`, `npx oxlint` e `npm run build` sem erros.
+- Verificado ao vivo (Playwright, servidor real, dados reais da filial 100): modal mostra "Farmácia R$ 2.550,00" (antes aparecia negativo) — sem erros de console.
