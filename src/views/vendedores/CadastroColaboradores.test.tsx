@@ -31,6 +31,10 @@ function renderComoAdminNaFilial(filial: string) {
   );
 }
 
+async function abrirMenuAcoes(user: ReturnType<typeof userEvent.setup>, nomeColaborador: string) {
+  await user.click(screen.getByRole("button", { name: `Mais ações de ${nomeColaborador}` }));
+}
+
 describe("CadastroColaboradores — visibilidade por perfil", () => {
   it("Gerente vê a listagem da própria filial, sem colaboradores de outra filial", async () => {
     renderComoGerente(); // gerente é da filial 100
@@ -43,7 +47,7 @@ describe("CadastroColaboradores — visibilidade por perfil", () => {
     renderComoGerente();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /Adicionar colaborador/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mais ações/ })).not.toBeInTheDocument();
   });
 
   it("Admin em 'Todas as filiais' também vê o botão de adicionar, com o seletor de Filial na modal", async () => {
@@ -68,6 +72,59 @@ describe("CadastroColaboradores — visibilidade por perfil", () => {
     const linha = screen.getByText("Carlos Silva").closest("tr")!;
     expect(within(linha).getByText("Premiações")).toBeInTheDocument();
     expect(within(linha).getByText("Comissão")).toBeInTheDocument();
+  });
+});
+
+describe("CadastroColaboradores — barra de busca", () => {
+  it("filtra a lista por nome, sem diferenciar maiúscula/minúscula", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Buscar colaborador"), "fernanda");
+
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+    expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument();
+  });
+
+  it("filtra por CPF, código, e-mail ou usuário de acesso", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Buscar colaborador"), "111.111.111-11");
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Fernanda Lima")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar colaborador"));
+    await user.type(screen.getByLabelText("Buscar colaborador"), "carlos.silva");
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Fernanda Lima")).not.toBeInTheDocument();
+  });
+
+  it("mostra mensagem de vazio quando a busca não encontra ninguém, sem limpar a lista completa", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Buscar colaborador"), "ninguem-com-esse-nome");
+
+    expect(await screen.findByText('Nenhum colaborador encontrado para "ninguem-com-esse-nome".')).toBeInTheDocument();
+    expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar colaborador"));
+    expect(await screen.findByText("Carlos Silva")).toBeInTheDocument();
+  });
+
+  it("Gerente (não-admin) também vê e pode usar a barra de busca", async () => {
+    const user = userEvent.setup();
+    renderComoGerente();
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Buscar colaborador"), "fernanda");
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+    expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument();
   });
 });
 
@@ -191,7 +248,8 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
-    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Editar" }));
 
     expect(screen.getByRole("dialog", { name: "Editar colaborador" })).toBeInTheDocument();
     expect(screen.getByLabelText("Nome completo")).toHaveValue("Carlos Silva");
@@ -208,7 +266,8 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
-    await user.click(screen.getAllByRole("button", { name: "Editar" })[0]);
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Editar" }));
     expect(screen.getByLabelText("Senha de acesso")).not.toBeRequired();
 
     await user.clear(screen.getByLabelText("Senha de acesso"));
@@ -223,9 +282,90 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
 
-    await user.click(screen.getAllByRole("button", { name: "Remover" })[0]);
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Remover" }));
 
     await waitFor(() => expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument());
+  });
+
+  it("Inativar colaborador grava 'desligado: true' e o menu passa a oferecer 'Ativar colaborador'", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    const linha = (await waitFor(() => screen.getByText("Carlos Silva"))).closest("tr")!;
+    expect(within(linha).getByText("Ativo")).toBeInTheDocument();
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Inativar colaborador" }));
+
+    await waitFor(() => expect(within(linha).getByText("Inativo")).toBeInTheDocument());
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    expect(screen.getByRole("menuitem", { name: "Ativar colaborador" })).toBeInTheDocument();
+  });
+
+  it("Ativar colaborador (reverso) grava 'desligado: false' e o badge volta a Ativo", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    const linha = (await waitFor(() => screen.getByText("Carlos Silva"))).closest("tr")!;
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Inativar colaborador" }));
+    await waitFor(() => expect(within(linha).getByText("Inativo")).toBeInTheDocument());
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Ativar colaborador" }));
+    await waitFor(() => expect(within(linha).getByText("Ativo")).toBeInTheDocument());
+  });
+
+  it("editar outros campos de um colaborador inativado não reativa ele por engano", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    const linha = (await waitFor(() => screen.getByText("Carlos Silva"))).closest("tr")!;
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Inativar colaborador" }));
+    await waitFor(() => expect(within(linha).getByText("Inativo")).toBeInTheDocument());
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Editar" }));
+    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(within(screen.getByText("Carlos Silva").closest("tr")!).getByText("Inativo")).toBeInTheDocument();
+  });
+
+  it("Resetar senha grava a senha do colaborador como o próprio CPF", async () => {
+    const user = userEvent.setup();
+    const espiao = vi.spyOn(colaboradoresService, "salvarColaborador");
+    renderComoAdminNaFilial("100");
+    const linha = (await waitFor(() => screen.getByText("Carlos Silva"))).closest("tr")!;
+    const cpf = within(linha).getByText(/\d{3}\.\d{3}\.\d{3}-\d{2}/).textContent!;
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(screen.getByRole("menuitem", { name: "Resetar senha" }));
+
+    await waitFor(() => expect(espiao).toHaveBeenCalled());
+    const argumento = espiao.mock.calls[0][0];
+    expect(argumento.senhaAcesso).toBe(cpf);
+    expect(argumento.nome).toBe("Carlos Silva");
+
+    espiao.mockRestore();
+  });
+
+  it("o menu de ações fecha ao apertar Escape ou clicar fora", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    expect(screen.getByRole("menuitem", { name: "Editar" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menuitem", { name: "Editar" })).not.toBeInTheDocument();
+
+    await abrirMenuAcoes(user, "Carlos Silva");
+    await user.click(document.body);
+    expect(screen.queryByRole("menuitem", { name: "Editar" })).not.toBeInTheDocument();
   });
 
   it("mostra o efeito de carregamento no botão Cadastrar enquanto salva, e desliga ao terminar", async () => {

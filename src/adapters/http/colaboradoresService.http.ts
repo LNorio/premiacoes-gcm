@@ -37,6 +37,7 @@ interface RespostaUsuario {
   filial: string;
   "plano saude": boolean;
   "plano odontologico": boolean;
+  desligado: boolean;
   telas: number[];
 }
 
@@ -61,6 +62,7 @@ function paraColaborador(resposta: RespostaUsuario): Colaborador {
     telas,
     adesaoSaude: resposta["plano saude"],
     adesaoOdontologico: resposta["plano odontologico"],
+    desligado: resposta.desligado,
   };
 }
 
@@ -93,6 +95,7 @@ export const colaboradoresServiceHttp: ColaboradoresService = {
       filial: colaborador.filial,
       "plano saude": colaborador.adesaoSaude ?? true,
       "plano odontologico": colaborador.adesaoOdontologico ?? true,
+      desligado: colaborador.desligado ?? false,
       // Mapeamento telas → IDs assumido (ID_TELA acima); pode estar errado.
       telas: paraIdsTela(colaborador.telas),
     };

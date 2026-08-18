@@ -11,6 +11,7 @@ import {
   type PlanoSaudeLancamento,
   type PlanoSaudePeriodo,
   type TipoPlanoSaude,
+  type TotaisDesligadosPlano,
 } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
@@ -22,6 +23,8 @@ interface ValoresExtras {
   valorCoparticipacao: number;
 }
 const EXTRAS_ZERADOS: ValoresExtras = { valorAdicional: 0, valorCoparticipacao: 0 };
+
+const DESLIGADOS_ZERADOS: TotaisDesligadosPlano = { titular: 0, dependente: 0, adicional: 0, coparticipacao: 0 };
 
 const ROTULOS_TIPO_PLANO: Record<TipoPlanoSaude, { titulo: string; rotuloTitular: string; rotuloDependente: string; rotuloTotal: string }> = {
   saude: { titulo: "Plano de Saúde", rotuloTitular: "R$ Titular", rotuloDependente: "R$ Dep.", rotuloTotal: "R$ Total" },
@@ -39,6 +42,7 @@ export function LancamentoPlanoSaude() {
   const [lancamentos, setLancamentos] = useState<PlanoSaudeLancamento[]>([]);
   const [periodos, setPeriodos] = useState<PlanoSaudePeriodo[]>([]);
   const [valoresExtras, setValoresExtras] = useState<Record<string, ValoresExtras>>({});
+  const [desligadosPorColuna, setDesligadosPorColuna] = useState<TotaisDesligadosPlano>(DESLIGADOS_ZERADOS);
   const [bloqueado, setBloqueado] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
@@ -48,6 +52,8 @@ export function LancamentoPlanoSaude() {
   const mostrarFilial = filialAtiva === FILIAL_TODAS;
   const temCamposEditaveis = tipoPlano === "saude";
   const bloqueadoParaEdicao = sessao ? usuarioEstaBloqueadoNaTela("planoSaude", sessao.role, bloqueado) : false;
+  // Total desligados é um valor único por filial — não dá pra gravar com "Todas as filiais" selecionada.
+  const podeEditarDesligados = !mostrarFilial;
   const rotulos = ROTULOS_TIPO_PLANO[tipoPlano];
 
   useEfeitoAssincrono(
@@ -80,11 +86,12 @@ export function LancamentoPlanoSaude() {
 
         setTitulares(habilitados);
         setDependentes(respostasDependentes.flatMap((r) => (r.status === "sucesso" ? r.dados : [])));
-        setLancamentos(resLancamentos.dados);
+        setLancamentos(resLancamentos.dados.lancamentos);
         setPeriodos(resPeriodos.status === "sucesso" ? resPeriodos.dados : []);
+        setDesligadosPorColuna(resLancamentos.dados.totalDesligados);
 
         const extras: Record<string, ValoresExtras> = {};
-        for (const lancamento of resLancamentos.dados) {
+        for (const lancamento of resLancamentos.dados.lancamentos) {
           extras[lancamento.pessoaId] = {
             valorAdicional: lancamento.valorAdicional ?? 0,
             valorCoparticipacao: lancamento.valorCoparticipacao ?? 0,
@@ -112,39 +119,55 @@ export function LancamentoPlanoSaude() {
     setValoresExtras((atual) => ({ ...atual, [pessoaId]: { ...(atual[pessoaId] ?? EXTRAS_ZERADOS), [campo]: valor } }));
   }
 
+  function editarDesligado(campo: keyof TotaisDesligadosPlano, valor: number) {
+    setDesligadosPorColuna((atual) => ({ ...atual, [campo]: valor }));
+  }
+
   async function salvar() {
-    if (!sessao || !temCamposEditaveis) return;
+    if (!sessao) return;
     if (bloqueadoParaEdicao) {
       mostrarToast("Não é possível salvar: lançamentos bloqueados pelo Administrador.", "erro");
-      return;
-    }
-    if (pessoas.length === 0) {
-      mostrarToast(`Nenhum titular com adesão a ${rotulos.titulo} no momento.`, "erro");
       return;
     }
 
     setSalvando(true);
     try {
-      const salvos: PlanoSaudeLancamento[] = [];
-      for (const pessoa of pessoas) {
-        const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
-        const existente = lancamentos.find((l) => l.pessoaId === pessoa.id);
-        const resultado = await planoSaudeService.salvarLancamentoPlanoSaude({
-          id: existente?.id ?? "",
-          pessoaId: pessoa.id,
-          titularId: pessoa.titularId,
+      if (temCamposEditaveis && pessoas.length > 0) {
+        const salvos: PlanoSaudeLancamento[] = [];
+        for (const pessoa of pessoas) {
+          const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
+          const existente = lancamentos.find((l) => l.pessoaId === pessoa.id);
+          const resultado = await planoSaudeService.salvarLancamentoPlanoSaude({
+            id: existente?.id ?? "",
+            pessoaId: pessoa.id,
+            titularId: pessoa.titularId,
+            mesReferencia,
+            tipoPlano,
+            valorAdicional: extras.valorAdicional,
+            valorCoparticipacao: extras.valorCoparticipacao,
+          });
+          if (resultado.status !== "sucesso") {
+            mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
+            return;
+          }
+          salvos.push(resultado.dados);
+        }
+        setLancamentos(salvos);
+      }
+
+      if (podeEditarDesligados) {
+        const resultadoDesligados = await planoSaudeService.salvarTotalDesligadosPlanoSaude(
+          filialAtiva,
           mesReferencia,
           tipoPlano,
-          valorAdicional: extras.valorAdicional,
-          valorCoparticipacao: extras.valorCoparticipacao,
-        });
-        if (resultado.status !== "sucesso") {
-          mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
+          desligadosPorColuna,
+        );
+        if (resultadoDesligados.status !== "sucesso") {
+          mostrarToast(resultadoDesligados.status === "erro" ? resultadoDesligados.mensagem : "Falha ao salvar total de desligados.", "erro");
           return;
         }
-        salvos.push(resultado.dados);
       }
-      setLancamentos(salvos);
+
       mostrarToast(`${rotulos.titulo} de ${mesReferencia} salvo com sucesso.`, "sucesso");
     } finally {
       setSalvando(false);
@@ -190,7 +213,12 @@ export function LancamentoPlanoSaude() {
       totalCoparticipacao += extras.valorCoparticipacao;
     }
   }
-  const totalGeral = totalTitular + totalDependente + totalAdicional + totalCoparticipacao;
+  const totalAtivos = totalTitular + totalDependente + totalAdicional + totalCoparticipacao;
+  const totalDesligadosSoma =
+    desligadosPorColuna.titular +
+    desligadosPorColuna.dependente +
+    (temCamposEditaveis ? desligadosPorColuna.adicional + desligadosPorColuna.coparticipacao : 0);
+  const totalGeral = totalAtivos + totalDesligadosSoma;
 
   return (
     <div style={{ marginTop: "var(--esp-6)" }}>
@@ -218,7 +246,7 @@ export function LancamentoPlanoSaude() {
       </form>
 
       <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
-        {ehAdmin && !mostrarFilial && temCamposEditaveis ? (
+        {ehAdmin && !mostrarFilial ? (
           <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
           </Button>
@@ -317,25 +345,96 @@ export function LancamentoPlanoSaude() {
                 })
               )}
             </tbody>
-            {pessoas.length > 0 ? (
-              <tfoot>
-                <tr>
-                  <td colSpan={3 + (mostrarFilial ? 1 : 0)}>Total geral</td>
-                  <td className="celula-numerica celula-total">{formatarMoeda(totalTitular)}</td>
-                  <td className="celula-numerica celula-total">{formatarMoeda(totalDependente)}</td>
-                  {temCamposEditaveis ? (
-                    <>
-                      <td className="celula-numerica celula-total">{formatarMoeda(totalAdicional)}</td>
-                      <td className="celula-numerica celula-total">{formatarMoeda(totalCoparticipacao)}</td>
-                    </>
-                  ) : null}
-                  <td className="celula-numerica celula-total">{formatarMoeda(totalGeral)}</td>
-                </tr>
-              </tfoot>
-            ) : null}
+            <tfoot>
+              <tr>
+                <td colSpan={3 + (mostrarFilial ? 1 : 0)}>Total ativos</td>
+                <td className="celula-numerica celula-total">{formatarMoeda(totalTitular)}</td>
+                <td className="celula-numerica celula-total">{formatarMoeda(totalDependente)}</td>
+                {temCamposEditaveis ? (
+                  <>
+                    <td className="celula-numerica celula-total">{formatarMoeda(totalAdicional)}</td>
+                    <td className="celula-numerica celula-total">{formatarMoeda(totalCoparticipacao)}</td>
+                  </>
+                ) : null}
+                <td className="celula-numerica celula-total">{formatarMoeda(totalAtivos)}</td>
+              </tr>
+              <tr>
+                <td colSpan={3 + (mostrarFilial ? 1 : 0)}>Total desligados</td>
+                <td className="celula-input celula-input-dourado">
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    aria-label="Total desligados — Titular"
+                    value={desligadosPorColuna.titular}
+                    disabled={bloqueadoParaEdicao || !podeEditarDesligados}
+                    onChange={(e) => editarDesligado("titular", parseFloat(e.target.value) || 0)}
+                  />
+                </td>
+                <td className="celula-input celula-input-dourado">
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    aria-label="Total desligados — Dependente"
+                    value={desligadosPorColuna.dependente}
+                    disabled={bloqueadoParaEdicao || !podeEditarDesligados}
+                    onChange={(e) => editarDesligado("dependente", parseFloat(e.target.value) || 0)}
+                  />
+                </td>
+                {temCamposEditaveis ? (
+                  <>
+                    <td className="celula-input celula-input-dourado">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        aria-label="Total desligados — Adicional"
+                        value={desligadosPorColuna.adicional}
+                        disabled={bloqueadoParaEdicao || !podeEditarDesligados}
+                        onChange={(e) => editarDesligado("adicional", parseFloat(e.target.value) || 0)}
+                      />
+                    </td>
+                    <td className="celula-input celula-input-dourado">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        aria-label="Total desligados — Coparticipação"
+                        value={desligadosPorColuna.coparticipacao}
+                        disabled={bloqueadoParaEdicao || !podeEditarDesligados}
+                        onChange={(e) => editarDesligado("coparticipacao", parseFloat(e.target.value) || 0)}
+                      />
+                    </td>
+                  </>
+                ) : null}
+                <td className="celula-numerica celula-total">{formatarMoeda(totalDesligadosSoma)}</td>
+              </tr>
+              <tr>
+                <td colSpan={3 + (mostrarFilial ? 1 : 0)}>Total geral</td>
+                <td className="celula-numerica celula-total">{formatarMoeda(totalTitular + desligadosPorColuna.titular)}</td>
+                <td className="celula-numerica celula-total">{formatarMoeda(totalDependente + desligadosPorColuna.dependente)}</td>
+                {temCamposEditaveis ? (
+                  <>
+                    <td className="celula-numerica celula-total">{formatarMoeda(totalAdicional + desligadosPorColuna.adicional)}</td>
+                    <td className="celula-numerica celula-total">
+                      {formatarMoeda(totalCoparticipacao + desligadosPorColuna.coparticipacao)}
+                    </td>
+                  </>
+                ) : null}
+                <td className="celula-numerica celula-total">{formatarMoeda(totalGeral)}</td>
+              </tr>
+            </tfoot>
           </Table>
 
-          {temCamposEditaveis ? (
+          {!podeEditarDesligados ? (
+            <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>
+              Selecione uma filial específica no cabeçalho para editar o Total de desligados — a API não aceita gravar um
+              total agregado de "Todas as filiais".
+            </p>
+          ) : null}
+
+          {temCamposEditaveis || podeEditarDesligados ? (
             <div className="acoes-tabela">
               <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao} carregando={salvando}>
                 💾 Salvar lançamento do mês

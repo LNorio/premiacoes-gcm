@@ -8,13 +8,23 @@ export interface PlanoSaudeDependente {
   /**
    * Adesão própria do dependente (default `true` quando `undefined`, mesma convenção do
    * titular) — controla se ele aparece na grade de Lançamento daquele tipo de plano,
-   * independente da adesão do titular. **Só local por enquanto**: a API de Dependentes
-   * (`Claude/API (7).md`) ainda não tem nenhum campo de adesão — só `nome`/`cpf` — então isso
-   * persiste de verdade só no adapter mock; no HTTP real, fica só na sessão atual da tela (não
-   * sobrevive a um recarregamento), até a API ganhar suporte. Ver `Claude/eventos-roadmap.md`.
+   * independente da adesão do titular. Persiste via `"plano saude"`/`"plano odontologico"` em
+   * `PUT /api/dependentes/{id}` (`Claude/API (8).md`). Ver `Claude/eventos-roadmap.md`.
    */
   adesaoSaude?: boolean;
   adesaoOdontologico?: boolean;
+}
+
+/**
+ * Total agregado (não itemizado por pessoa) de plano de saúde/odontológico dos colaboradores
+ * desligados de uma filial/mês — mesma composição de colunas da grade normal de Lançamento
+ * (`GET/PUT /api/lancamentos/desligados`, `Claude/API (10).md`).
+ */
+export interface TotaisDesligadosPlano {
+  titular: number;
+  dependente: number;
+  adicional: number;
+  coparticipacao: number;
 }
 
 export interface PlanoSaudeLancamento {

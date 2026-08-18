@@ -26,6 +26,12 @@
   box-shadow: 0 0 0 4px var(--cor-primary-subtle);
   outline: none;
 }
+/* Campo ao lado de um botão de ação (ex.: barra de busca) — mesma altura do `.botao` ao lado. */
+.acoes-tabela .campo input {
+  height: 47px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
 
 .formulario {
   background: var(--cor-surface);

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { authService } from "../adapters";
-import type { Sessao } from "../types";
+import type { Resultado, Sessao } from "../types";
 
 interface SessaoContextValor {
   sessao: Sessao | null;
@@ -9,6 +9,8 @@ interface SessaoContextValor {
   entrar: (usuario: string, senha: string) => Promise<void>;
   sair: () => void;
   definirFilialAtiva: (filial: string) => void;
+  /** Autoatendimento — troca a senha do colaborador logado; ao dar certo, encerra a sessão (volta pro login). */
+  trocarSenha: (senhaAtual: string, novaSenha: string) => Promise<Resultado<void>>;
 }
 
 const SessaoContext = createContext<SessaoContextValor | null>(null);
@@ -40,9 +42,18 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     setSessao((atual) => (atual ? { ...atual, filialAtiva: filial } : atual));
   }, []);
 
+  const trocarSenha = useCallback(
+    async (senhaAtual: string, novaSenha: string): Promise<Resultado<void>> => {
+      const resultado = await authService.trocarSenhaPropria(senhaAtual, novaSenha);
+      if (resultado.status === "sucesso") sair();
+      return resultado;
+    },
+    [sair],
+  );
+
   const valor = useMemo(
-    () => ({ sessao, entrando, erro, entrar, sair, definirFilialAtiva }),
-    [sessao, entrando, erro, entrar, sair, definirFilialAtiva],
+    () => ({ sessao, entrando, erro, entrar, sair, definirFilialAtiva, trocarSenha }),
+    [sessao, entrando, erro, entrar, sair, definirFilialAtiva, trocarSenha],
   );
 
   return <SessaoContext.Provider value={valor}>{children}</SessaoContext.Provider>;

@@ -7,6 +7,8 @@ import {
   type PlanoSaudeDependente,
   type PlanoSaudeLancamento,
   type PlanoSaudePeriodo,
+  type TipoPlanoSaude,
+  type TotaisDesligadosPlano,
 } from "../../types";
 import { gravarColecao, lerColecao, removerPorId, upsertPorId } from "./db";
 import { garantirSeed } from "./seed";
@@ -14,6 +16,15 @@ import { garantirSeed } from "./seed";
 const CHAVE_DEPENDENTES = "planoSaudeDependentes";
 const CHAVE_LANCAMENTOS = "planoSaudeLancamentos";
 const CHAVE_PERIODOS = "planoSaudePeriodos";
+const CHAVE_DESLIGADOS = "planoSaudeDesligados";
+
+interface RegistroDesligados extends TotaisDesligadosPlano {
+  filial: string;
+  tipoPlano: TipoPlanoSaude;
+  mesReferencia: string;
+}
+
+const DESLIGADOS_ZERADOS: TotaisDesligadosPlano = { titular: 0, dependente: 0, adicional: 0, coparticipacao: 0 };
 
 function hojeData(): string {
   return new Date().toISOString().slice(0, 10);
@@ -74,7 +85,21 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
     const lancamentos = lerColecao<PlanoSaudeLancamento>(CHAVE_LANCAMENTOS).filter(
       (l) => l.mesReferencia === mesReferencia && l.tipoPlano === tipo && idsPessoas.has(l.pessoaId),
     );
-    return resultadoSucesso(lancamentos);
+
+    const registrosDesligados = lerColecao<RegistroDesligados>(CHAVE_DESLIGADOS).filter(
+      (d) => d.tipoPlano === tipo && d.mesReferencia === mesReferencia && (filial === FILIAL_TODAS || d.filial === filial),
+    );
+    const totalDesligados = registrosDesligados.reduce(
+      (soma, d) => ({
+        titular: soma.titular + d.titular,
+        dependente: soma.dependente + d.dependente,
+        adicional: soma.adicional + d.adicional,
+        coparticipacao: soma.coparticipacao + d.coparticipacao,
+      }),
+      DESLIGADOS_ZERADOS,
+    );
+
+    return resultadoSucesso({ lancamentos, totalDesligados });
   },
 
   async salvarLancamentoPlanoSaude(lancamento) {
@@ -88,6 +113,18 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
       "ps",
     );
     return resultadoSucesso(salvo);
+  },
+
+  async salvarTotalDesligadosPlanoSaude(filial, mesReferencia, tipoPlano, valores) {
+    garantirSeed();
+    if (filial === FILIAL_TODAS) {
+      return resultadoErro("Selecione uma filial específica para salvar o total de desligados.");
+    }
+    const registros = lerColecao<RegistroDesligados>(CHAVE_DESLIGADOS);
+    const indice = registros.findIndex((d) => d.filial === filial && d.tipoPlano === tipoPlano && d.mesReferencia === mesReferencia);
+    const novo: RegistroDesligados = { filial, tipoPlano, mesReferencia, ...valores };
+    gravarColecao(CHAVE_DESLIGADOS, indice === -1 ? [...registros, novo] : registros.map((d, i) => (i === indice ? novo : d)));
+    return resultadoSucesso(valores);
   },
 
   async listarPeriodosPlanoSaude(filial, tipoPlano) {

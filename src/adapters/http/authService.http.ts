@@ -14,8 +14,13 @@ interface RespostaValidaUsuario {
   filial: string;
   "quantidade de premiacoes": number;
   "valor premiacoes": number;
+  "precisa trocar senha"?: boolean;
   token: string;
   mensagem: string;
+}
+
+function paraMensagemErro(erro: unknown): string {
+  return erro instanceof ErroHttp ? erro.message : "Não foi possível conectar ao servidor. Tente novamente.";
 }
 
 export const authServiceHttp: AuthService = {
@@ -31,6 +36,7 @@ export const authServiceHttp: AuthService = {
         // a filial vinculada ao próprio usuário admin, não "TODAS"; o seletor no cabeçalho permite
         // restringir a uma filial específica depois.
         filialAtiva: resposta.role === "admin" ? FILIAL_TODAS : resposta.filial,
+        precisaTrocarSenha: resposta["precisa trocar senha"] || undefined,
       });
     } catch (erro) {
       if (erro instanceof ErroHttp) return resultadoErro(erro.message);
@@ -40,5 +46,16 @@ export const authServiceHttp: AuthService = {
 
   async logout() {
     definirToken(null);
+  },
+
+  async trocarSenhaPropria(senhaAtual, novaSenha): Promise<Resultado<void>> {
+    try {
+      // Autoatendimento de verdade (Claude/API (10).md) — qualquer colaborador logado troca a
+      // própria senha informando a atual; zera "precisa trocar senha" automaticamente no sucesso.
+      await httpClient.put("/api/trocar-senha", { "senha atual": senhaAtual, "senha nova": novaSenha });
+      return resultadoSucesso(undefined);
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
   },
 };

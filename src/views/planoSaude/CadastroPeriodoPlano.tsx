@@ -84,6 +84,13 @@ export function CadastroPeriodoPlano() {
       mostrarToast("A Data de Encerramento não pode ser anterior à Data de Início.", "erro");
       return;
     }
+    if (dataEncerramento && dataEncerramento > hojeIso()) {
+      mostrarToast(
+        "A Data de Encerramento não pode ser futura — isso encerraria a vigência antes da hora. Deixe o campo em branco e use \"Encerrar vigência\" quando a data chegar.",
+        "erro",
+      );
+      return;
+    }
 
     setSalvando(true);
     try {
@@ -160,8 +167,9 @@ export function CadastroPeriodoPlano() {
         <MensagemErro mensagem="Selecione uma filial específica (menu no topo) para cadastrar períodos do plano." />
       ) : (
         <>
-          <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
-            <Button variant="dourado" onClick={abrirModal}>
+          <div className="acoes-tabela" style={{ justifyContent: "flex-end", marginBottom: "10px"
+           }}>
+            <Button variant="primario" onClick={abrirModal}>
               + Novo período
             </Button>
           </div>
@@ -252,6 +260,7 @@ export function CadastroPeriodoPlano() {
               <input
                 id="periodo-data-encerramento"
                 type="date"
+                max={hojeIso()}
                 value={formulario.dataEncerramento}
                 onChange={(e) => setFormulario((f) => ({ ...f, dataEncerramento: e.target.value }))}
               />
@@ -259,7 +268,9 @@ export function CadastroPeriodoPlano() {
           </div>
           <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>
             A Data de Início pode ser retroativa, para corrigir ou lançar um período que já deveria valer em meses
-            passados. Preenchendo a Data de Encerramento, o período já nasce como histórico, encerrado nessa data.
+            passados. Preenchendo a Data de Encerramento com uma data passada ou de hoje, o período já nasce como
+            histórico, encerrado nessa data — não é possível informar uma data futura aqui (isso encerraria a
+            vigência antes da hora); nesse caso deixe em branco e use "Encerrar vigência" quando o dia chegar.
           </p>
           <div className="formulario-rodape" style={{ marginTop: "var(--esp-5)" }}>
             <Button type="submit" variant="primario" carregando={salvando}>

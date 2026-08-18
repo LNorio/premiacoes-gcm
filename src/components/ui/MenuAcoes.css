@@ -1,0 +1,53 @@
+.menu-acoes-botao {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--raio-sm);
+  color: var(--cor-text-secondary);
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: background var(--transicao);
+}
+.menu-acoes-botao:hover,
+.menu-acoes-botao[aria-expanded="true"] {
+  background: var(--cor-primary-subtle);
+  color: var(--cor-primary);
+}
+.menu-acoes-lista {
+  position: fixed;
+  z-index: 150;
+  min-width: 180px;
+  padding: var(--esp-2);
+  background: var(--cor-surface);
+  border: 1px solid var(--cor-divider);
+  border-radius: var(--raio-sm);
+  box-shadow: var(--sombra-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: surgir 140ms ease both;
+}
+.menu-acoes-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px var(--esp-3);
+  border-radius: var(--raio-sm);
+  font-size: 0.9rem;
+  color: var(--cor-text-primary);
+  transition: background var(--transicao);
+}
+.menu-acoes-item:hover:not(:disabled) {
+  background: var(--cor-primary-subtle);
+}
+.menu-acoes-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.menu-acoes-item-perigo {
+  color: var(--cor-danger);
+}
+.menu-acoes-item-perigo:hover:not(:disabled) {
+  background: var(--cor-danger-subtle);
+}

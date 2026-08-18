@@ -24,4 +24,8 @@ export interface Colaborador {
   /** undefined é tratado como true (adesão por padrão) */
   adesaoSaude?: boolean;
   adesaoOdontologico?: boolean;
+  /** `true` = inativo (desligado da empresa) — bloqueia login na API real. `undefined`/`false` = ativo. */
+  desligado?: boolean;
+  /** `true` quando o colaborador precisa trocar a senha no próximo acesso (mock-only — no HTTP real isso vem do login, não do cadastro). */
+  precisaTrocarSenha?: boolean;
 }

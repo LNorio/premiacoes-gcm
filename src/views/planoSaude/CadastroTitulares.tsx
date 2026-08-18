@@ -178,22 +178,38 @@ export function CadastroTitulares() {
                     {mostrarFilial ? <td>Filial {titular.filial}</td> : null}
                     <td>Titular</td>
                     <td className="celula-checkbox">
-                      <input
-                        type="checkbox"
-                        aria-label={`Plano de Saúde de ${titular.nome}`}
-                        checked={temSaude}
-                        disabled={!ehAdmin || alternandoAdesao === `${titular.id}-saude`}
-                        onChange={() => void alternarAdesao(titular, "saude")}
-                      />
+                      <span className="indicador-salvando">
+                        <input
+                          type="checkbox"
+                          aria-label={`Plano de Saúde de ${titular.nome}`}
+                          checked={temSaude}
+                          disabled={!ehAdmin || alternandoAdesao === `${titular.id}-saude`}
+                          onChange={() => void alternarAdesao(titular, "saude")}
+                        />
+                        {alternandoAdesao === `${titular.id}-saude` ? (
+                          <>
+                            <span className="spinner-botao" aria-hidden="true" />
+                            <span className="texto-salvando">Salvando…</span>
+                          </>
+                        ) : null}
+                      </span>
                     </td>
                     <td className="celula-checkbox">
-                      <input
-                        type="checkbox"
-                        aria-label={`Plano Odontológico de ${titular.nome}`}
-                        checked={temOdonto}
-                        disabled={!ehAdmin || alternandoAdesao === `${titular.id}-odontologico`}
-                        onChange={() => void alternarAdesao(titular, "odontologico")}
-                      />
+                      <span className="indicador-salvando">
+                        <input
+                          type="checkbox"
+                          aria-label={`Plano Odontológico de ${titular.nome}`}
+                          checked={temOdonto}
+                          disabled={!ehAdmin || alternandoAdesao === `${titular.id}-odontologico`}
+                          onChange={() => void alternarAdesao(titular, "odontologico")}
+                        />
+                        {alternandoAdesao === `${titular.id}-odontologico` ? (
+                          <>
+                            <span className="spinner-botao" aria-hidden="true" />
+                            <span className="texto-salvando">Salvando…</span>
+                          </>
+                        ) : null}
+                      </span>
                     </td>
                     <td className="celula-acoes-form">
                       {ehAdmin ? (
@@ -215,22 +231,38 @@ export function CadastroTitulares() {
                       {mostrarFilial ? <td>Filial {titular.filial}</td> : null}
                       <td>Dependente</td>
                       <td className="celula-checkbox">
-                        <input
-                          type="checkbox"
-                          aria-label={`Plano de Saúde de ${dependente.nome}`}
-                          checked={dependenteTemSaude}
-                          disabled={!ehAdmin || alternandoAdesao === `${dependente.id}-saude`}
-                          onChange={() => void alternarAdesaoDependente(dependente, "saude")}
-                        />
+                        <span className="indicador-salvando">
+                          <input
+                            type="checkbox"
+                            aria-label={`Plano de Saúde de ${dependente.nome}`}
+                            checked={dependenteTemSaude}
+                            disabled={!ehAdmin || alternandoAdesao === `${dependente.id}-saude`}
+                            onChange={() => void alternarAdesaoDependente(dependente, "saude")}
+                          />
+                          {alternandoAdesao === `${dependente.id}-saude` ? (
+                            <>
+                              <span className="spinner-botao" aria-hidden="true" />
+                              <span className="texto-salvando">Salvando…</span>
+                            </>
+                          ) : null}
+                        </span>
                       </td>
                       <td className="celula-checkbox">
-                        <input
-                          type="checkbox"
-                          aria-label={`Plano Odontológico de ${dependente.nome}`}
-                          checked={dependenteTemOdonto}
-                          disabled={!ehAdmin || alternandoAdesao === `${dependente.id}-odontologico`}
-                          onChange={() => void alternarAdesaoDependente(dependente, "odontologico")}
-                        />
+                        <span className="indicador-salvando">
+                          <input
+                            type="checkbox"
+                            aria-label={`Plano Odontológico de ${dependente.nome}`}
+                            checked={dependenteTemOdonto}
+                            disabled={!ehAdmin || alternandoAdesao === `${dependente.id}-odontologico`}
+                            onChange={() => void alternarAdesaoDependente(dependente, "odontologico")}
+                          />
+                          {alternandoAdesao === `${dependente.id}-odontologico` ? (
+                            <>
+                              <span className="spinner-botao" aria-hidden="true" />
+                              <span className="texto-salvando">Salvando…</span>
+                            </>
+                          ) : null}
+                        </span>
                       </td>
                       <td className="celula-acoes-form">
                         {ehAdmin ? (

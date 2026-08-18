@@ -6,6 +6,7 @@ import {
   type PlanoSaudePeriodo,
   type Resultado,
   type TipoPlanoSaude,
+  type TotaisDesligadosPlano,
 } from "../types";
 
 export interface PlanoSaudeService {
@@ -14,12 +15,28 @@ export interface PlanoSaudeService {
   salvarDependente(dependente: Omit<PlanoSaudeDependente, "id"> & { id?: string }): Promise<Resultado<PlanoSaudeDependente>>;
   removerDependente(id: string): Promise<Resultado<void>>;
   salvarAdesao(titularId: string, tipo: TipoPlanoSaude, valor: boolean): Promise<Resultado<void>>;
-  /** Adesão própria do dependente — ver nota em `PlanoSaudeDependente` (só local até a API ganhar o campo). */
+  /** Adesão própria do dependente — ver nota em `PlanoSaudeDependente`. */
   salvarAdesaoDependente(dependenteId: string, tipo: TipoPlanoSaude, valor: boolean): Promise<Resultado<void>>;
 
   // Sub-aba Lançamento
-  listarLancamentosPlanoSaude(filial: string, mesReferencia: string, tipo: TipoPlanoSaude): Promise<Resultado<PlanoSaudeLancamento[]>>;
+  /**
+   * `totalDesligados` vem do mesmo `GET /api/lancamentos` — total agregado (não itemizado por
+   * pessoa, mas separado por Titular/Dependente/Adicional/Coopart.) dos colaboradores desligados;
+   * em `filial=Todas`, já vem somado pela API.
+   */
+  listarLancamentosPlanoSaude(
+    filial: string,
+    mesReferencia: string,
+    tipo: TipoPlanoSaude,
+  ): Promise<Resultado<{ lancamentos: PlanoSaudeLancamento[]; totalDesligados: TotaisDesligadosPlano }>>;
   salvarLancamentoPlanoSaude(lancamento: PlanoSaudeLancamento): Promise<Resultado<PlanoSaudeLancamento>>;
+  /** Só permitido numa filial específica — a API não aceita gravar o total agregado de "todas". */
+  salvarTotalDesligadosPlanoSaude(
+    filial: string,
+    mesReferencia: string,
+    tipoPlano: TipoPlanoSaude,
+    valores: TotaisDesligadosPlano,
+  ): Promise<Resultado<TotaisDesligadosPlano>>;
 
   // Sub-aba Período (Admin, por filial) — fechamento de período: só um `ativo` por filial + tipo de plano + tipo de pessoa.
   listarPeriodosPlanoSaude(filial: string, tipoPlano: TipoPlanoSaude): Promise<Resultado<PlanoSaudePeriodo[]>>;
@@ -60,11 +77,13 @@ function limitesDoMes(mesReferencia: string): [string, string] {
 /**
  * Período (filial + tipo de plano + tipo de pessoa) vigente no mês pedido — o que começou
  * (`dataInicio`, que pode ser retroativa) até aquele mês e ainda não tinha sido encerrado
- * (`dataValidade` nula) ou só encerrou depois dele. Como só existe um período `ativo` por vez
- * para essa combinação e o histórico é fechado sequencialmente (nunca dois períodos abertos ao
- * mesmo tempo), no máximo um resultado é possível — a não ser que dois períodos históricos
- * (cadastrados já com `dataFim`) tenham intervalos sobrepostos por engano; nesse caso o mais
- * recentemente cadastrado (fim da lista) prevalece.
+ * (`dataValidade` nula) ou só encerrou depois dele. Entre os candidatos que batem no mês, o
+ * `ativo` sempre vence (só pode existir um por combinação); sem nenhum vigente batendo (mês já
+ * ficou pra trás de um período fechado), o candidato com `dataCriacao` mais recente prevalece.
+ * **Não confiar na ordem do array** pra decidir "mais recente" — a API não garante nenhuma ordem
+ * específica em `GET /api/valores-plano-saude` (confirmado ao vivo: um período seed antigo, já
+ * encerrado no mês corrente, apareceu depois de um período novo e realmente vigente na resposta,
+ * o que fazia a busca por posição pegar o registro errado).
  */
 export function encontrarPeriodoPlano(
   periodos: PlanoSaudePeriodo[],
@@ -74,19 +93,18 @@ export function encontrarPeriodoPlano(
   mesReferencia: string,
 ): PlanoSaudePeriodo | undefined {
   const [inicioMes, fimMes] = limitesDoMes(mesReferencia);
-  for (let i = periodos.length - 1; i >= 0; i--) {
-    const periodo = periodos[i];
-    if (
+  const candidatos = periodos.filter(
+    (periodo) =>
       periodo.filial === filial &&
       periodo.tipoPlano === tipoPlano &&
       periodo.tipoPessoa === tipoPessoa &&
       periodo.dataInicio <= fimMes &&
-      (periodo.dataValidade === null || periodo.dataValidade >= inicioMes)
-    ) {
-      return periodo;
-    }
-  }
-  return undefined;
+      (periodo.dataValidade === null || periodo.dataValidade >= inicioMes),
+  );
+  if (candidatos.length === 0) return undefined;
+  const vigente = candidatos.find((periodo) => periodo.ativo);
+  if (vigente) return vigente;
+  return candidatos.reduce((maisRecente, atual) => (atual.dataCriacao > maisRecente.dataCriacao ? atual : maisRecente));
 }
 
 /**

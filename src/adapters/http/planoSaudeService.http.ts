@@ -31,10 +31,19 @@ interface RespostaDependente {
   nome: string;
   cpf: string | null;
   "id colaborador": number;
+  "plano saude": boolean;
+  "plano odontologico": boolean;
 }
 
 function paraDependente(resposta: RespostaDependente): PlanoSaudeDependente {
-  return { id: String(resposta.id), vendedorId: String(resposta["id colaborador"]), nome: resposta.nome, cpf: resposta.cpf ?? "" };
+  return {
+    id: String(resposta.id),
+    vendedorId: String(resposta["id colaborador"]),
+    nome: resposta.nome,
+    cpf: resposta.cpf ?? "",
+    adesaoSaude: resposta["plano saude"],
+    adesaoOdontologico: resposta["plano odontologico"],
+  };
 }
 
 // ---------- Lançamentos ----------
@@ -48,6 +57,10 @@ interface RespostaLinhaLancamento {
 }
 interface RespostaLancamentos {
   dados: RespostaLinhaLancamento[];
+  "total desligados titular": number;
+  "total desligados dependente": number;
+  "total desligados adicional": number;
+  "total desligados coparticipacao": number;
 }
 
 function paraLancamento(linha: RespostaLinhaLancamento, tipoPlano: TipoPlanoSaude, mesReferencia: string): PlanoSaudeLancamento {
@@ -147,11 +160,14 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
     }
   },
 
-  // A API de Dependentes (Claude/API (7).md) não tem nenhum campo de adesão — só nome/cpf.
-  // Sem endpoint pra chamar, então isso não persiste de verdade contra o backend real ainda;
-  // fica só no estado da tela (React), perdido ao recarregar, até a API ganhar suporte.
-  async salvarAdesaoDependente() {
-    return resultadoSucesso(undefined);
+  async salvarAdesaoDependente(dependenteId, tipo, valor) {
+    try {
+      const campo = tipo === "saude" ? "plano saude" : "plano odontologico";
+      await httpClient.put(`/api/dependentes/${dependenteId}`, { [campo]: valor });
+      return resultadoSucesso(undefined);
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
   },
 
   async listarLancamentosPlanoSaude(filial, mesReferencia, tipoPlano) {
@@ -159,7 +175,15 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
       const resposta = await httpClient.get<RespostaLancamentos>(
         `/api/lancamentos?mes_de_referencia=${mesReferencia}-01&tipo_plano=${tipoPlano}${queryFilial(filial)}`,
       );
-      return resultadoSucesso(resposta.dados.map((linha) => paraLancamento(linha, tipoPlano, mesReferencia)));
+      return resultadoSucesso({
+        lancamentos: resposta.dados.map((linha) => paraLancamento(linha, tipoPlano, mesReferencia)),
+        totalDesligados: {
+          titular: Number(resposta["total desligados titular"] ?? 0),
+          dependente: Number(resposta["total desligados dependente"] ?? 0),
+          adicional: Number(resposta["total desligados adicional"] ?? 0),
+          coparticipacao: Number(resposta["total desligados coparticipacao"] ?? 0),
+        },
+      });
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }
@@ -181,8 +205,25 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
       // PUT não devolve o registro salvo (mesmo padrão de Comissão/Premiação) — relista pra obter a verdade.
       const resLista = await planoSaudeServiceHttp.listarLancamentosPlanoSaude(FILIAL_TODAS, lancamento.mesReferencia, lancamento.tipoPlano);
       if (resLista.status !== "sucesso") return resultadoErro(resLista.status === "erro" ? resLista.mensagem : "Falha ao salvar.");
-      const salvo = resLista.dados.find((l) => l.pessoaId === lancamento.pessoaId);
+      const salvo = resLista.dados.lancamentos.find((l) => l.pessoaId === lancamento.pessoaId);
       return resultadoSucesso(salvo ?? lancamento);
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
+  },
+
+  async salvarTotalDesligadosPlanoSaude(filial, mesReferencia, tipoPlano, valores) {
+    try {
+      await httpClient.put("/api/lancamentos/desligados", {
+        filial,
+        "tipo plano": tipoPlano,
+        "mes de referencia": `${mesReferencia}-01`,
+        "valor titular": valores.titular,
+        "valor dependente": valores.dependente,
+        "valor adicional": valores.adicional,
+        "valor coparticipacao": valores.coparticipacao,
+      });
+      return resultadoSucesso(valores);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }

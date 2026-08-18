@@ -9,3 +9,6 @@ export { Nav } from "./Nav";
 export type { NavItemData } from "./Nav";
 export { Carregando, MensagemErro, MensagemVazia } from "./Estado";
 export { Modal } from "./Modal";
+export { MenuAcoes } from "./MenuAcoes";
+export type { ItemMenuAcoes } from "./MenuAcoes";
+export { IconeOlho } from "./IconeOlho";

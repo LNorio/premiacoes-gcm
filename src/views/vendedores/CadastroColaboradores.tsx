@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { colaboradoresService } from "../../adapters";
-import { Button, Carregando, MensagemErro, MensagemVazia, Modal } from "../../components/ui";
+import { Button, Carregando, MenuAcoes, MensagemErro, MensagemVazia, Modal, Selo } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type Papel, type Resultado, type TelasHabilitadas } from "../../types";
 import { CARGOS_COLABORADOR, FILIAIS, PAPEIS_COLABORADOR, ROTULOS_PAPEL, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
@@ -31,6 +31,15 @@ interface FormularioColaborador {
   telas: TelasHabilitadas;
 }
 
+/** Sem acento e minúsculo, pra busca não depender do usuário digitar acento certo. */
+function normalizarBusca(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function formularioVazio(filialPadrao: string): FormularioColaborador {
   return {
     codigo: "",
@@ -55,6 +64,9 @@ export function CadastroColaboradores() {
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [removendoId, setRemovendoId] = useState<string | null>(null);
+  const [resetandoSenhaId, setResetandoSenhaId] = useState<string | null>(null);
+  const [alternandoStatusId, setAlternandoStatusId] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
 
   const ehAdmin = sessao?.role === "admin";
   const mostrarFilial = ehAdmin && sessao?.filialAtiva === FILIAL_TODAS;
@@ -115,6 +127,45 @@ export function CadastroColaboradores() {
     }
   }
 
+  async function resetarSenha(colaborador: Colaborador) {
+    if (!ehAdmin) return;
+    setResetandoSenhaId(colaborador.id);
+    try {
+      // Enviar "senha" força "precisa trocar senha" para true automaticamente na API real
+      // (Claude/API.md) — o colaborador é obrigado a trocar no próximo acesso.
+      const resultado = await colaboradoresService.salvarColaborador({ ...colaborador, senhaAcesso: colaborador.cpf });
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao resetar a senha.", "erro");
+        return;
+      }
+      mostrarToast(`Senha de ${colaborador.nome} redefinida para o CPF. Será exigida a troca no próximo acesso.`, "sucesso");
+    } finally {
+      setResetandoSenhaId(null);
+    }
+  }
+
+  async function alternarStatus(colaborador: Colaborador) {
+    if (!ehAdmin) return;
+    const inativar = !colaborador.desligado;
+    setAlternandoStatusId(colaborador.id);
+    try {
+      const resultado = await colaboradoresService.salvarColaborador({ ...colaborador, desligado: inativar });
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao atualizar o status.", "erro");
+        return;
+      }
+      mostrarToast(
+        inativar
+          ? `${colaborador.nome} inativado(a) — o acesso ao sistema foi bloqueado imediatamente.`
+          : `${colaborador.nome} reativado(a) — pode acessar o sistema novamente.`,
+        "sucesso",
+      );
+      void carregar();
+    } finally {
+      setAlternandoStatusId(null);
+    }
+  }
+
   async function tratarSubmit(evento: FormEvent) {
     evento.preventDefault();
     if (!sessao || sessao.role !== "admin") {
@@ -145,9 +196,12 @@ export function CadastroColaboradores() {
         return;
       }
 
+      const colaboradorEmEdicao = idEmEdicao ? lista.find((c) => c.id === idEmEdicao) : undefined;
       const salvo = await colaboradoresService.salvarColaborador({
         id: idEmEdicao ?? "",
         ...formulario,
+        // Editar nome/cargo/etc. não pode reativar em silêncio um colaborador inativado pelo menu "⋮".
+        desligado: colaboradorEmEdicao?.desligado ?? false,
       });
 
       if (salvo.status === "erro") {
@@ -164,7 +218,13 @@ export function CadastroColaboradores() {
   }
 
   const lista = resultado.status === "sucesso" ? resultado.dados : [];
-  const colspanVazio = 8 + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
+  const buscaNormalizada = normalizarBusca(busca);
+  const listaFiltrada = buscaNormalizada
+    ? lista.filter((c) =>
+        [c.codigo, c.nome, c.cpf, c.cargo, c.email, c.usuarioAcesso].some((campo) => normalizarBusca(campo).includes(buscaNormalizada)),
+      )
+    : lista;
+  const colspanVazio = 9 + (mostrarFilial ? 1 : 0) + (ehAdmin ? 1 : 0);
 
   const subtitulo = mostrarFilial
     ? "Colaboradores de todas as filiais"
@@ -172,11 +232,13 @@ export function CadastroColaboradores() {
       ? "Colaboradores da filial — cada um recebe um usuário próprio para acessar suas métricas"
       : `Consulta dos colaboradores da Filial ${sessao?.filialAtiva}`;
 
-  const mensagemVazia = ehAdmin
-    ? mostrarFilial
-      ? 'Nenhum colaborador cadastrado ainda em nenhuma filial. Clique em "+ Adicionar colaborador".'
-      : 'Nenhum colaborador cadastrado ainda nesta filial. Clique em "+ Adicionar colaborador".'
-    : "Nenhum colaborador cadastrado ainda nesta filial.";
+  const mensagemVazia = buscaNormalizada
+    ? `Nenhum colaborador encontrado para "${busca.trim()}".`
+    : ehAdmin
+      ? mostrarFilial
+        ? 'Nenhum colaborador cadastrado ainda em nenhuma filial. Clique em "+ Adicionar colaborador".'
+        : 'Nenhum colaborador cadastrado ainda nesta filial. Clique em "+ Adicionar colaborador".'
+      : "Nenhum colaborador cadastrado ainda nesta filial.";
 
   return (
     <section className="view">
@@ -185,13 +247,26 @@ export function CadastroColaboradores() {
         <span className="view-subtitulo">{subtitulo}</span>
       </div>
 
-      {ehAdmin ? (
-        <div className="acoes-tabela" style={{ justifyContent: "flex-end", marginBottom: "20px" }}>
+      <div
+        className="acoes-tabela"
+        style={{ justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px", flexWrap: "wrap" }}
+      >
+        <div className="campo" style={{ marginBottom: 0, minWidth: "260px", flex: "1 1 320px" }}>
+          <label htmlFor="colaboradores-busca">Buscar colaborador</label>
+          <input
+            id="colaboradores-busca"
+            type="text"
+            placeholder="Nome, código, CPF, e-mail ou usuário de acesso"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        {ehAdmin ? (
           <Button variant="primario" onClick={abrirParaAdicionar}>
             + Adicionar colaborador
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <div className="tabela-wrapper">
         <table className="tabela">
@@ -206,6 +281,7 @@ export function CadastroColaboradores() {
               <th>E-mail</th>
               <th>Usuário de acesso</th>
               <th>Telas</th>
+              <th>Status</th>
               {ehAdmin ? <th aria-label="Ações" /> : null}
             </tr>
           </thead>
@@ -222,14 +298,14 @@ export function CadastroColaboradores() {
                   <MensagemErro mensagem={resultado.mensagem} />
                 </td>
               </tr>
-            ) : lista.length === 0 ? (
+            ) : listaFiltrada.length === 0 ? (
               <tr className="linha-vazia">
                 <td colSpan={colspanVazio}>
                   <MensagemVazia mensagem={mensagemVazia} />
                 </td>
               </tr>
             ) : (
-              lista.map((colaborador) => {
+              listaFiltrada.map((colaborador) => {
                 const telasAtivas = TELAS_COLABORADOR.filter((chave) => colaborador.telas[chave]);
                 return (
                   <tr key={colaborador.id}>
@@ -250,18 +326,36 @@ export function CadastroColaboradores() {
                           ))
                         : "—"}
                     </td>
+                    <td>
+                      <Selo variante={colaborador.desligado ? "alerta" : "sucesso"}>
+                        {colaborador.desligado ? "Inativo" : "Ativo"}
+                      </Selo>
+                    </td>
                     {ehAdmin ? (
                       <td className="celula-acoes-form">
-                        <Button variant="secundario" onClick={() => abrirParaEditar(colaborador)}>
-                          Editar
-                        </Button>
-                        <Button
-                          variant="perigo"
-                          carregando={removendoId === colaborador.id}
-                          onClick={() => remover(colaborador.id)}
-                        >
-                          Remover
-                        </Button>
+                        <MenuAcoes
+                          rotuloBotao={`Mais ações de ${colaborador.nome}`}
+                          itens={[
+                            { rotulo: "Editar", onSelecionar: () => abrirParaEditar(colaborador) },
+                            {
+                              rotulo: "Resetar senha",
+                              desabilitado: resetandoSenhaId === colaborador.id,
+                              onSelecionar: () => void resetarSenha(colaborador),
+                            },
+                            {
+                              rotulo: colaborador.desligado ? "Ativar colaborador" : "Inativar colaborador",
+                              variante: colaborador.desligado ? "padrao" : "perigo",
+                              desabilitado: alternandoStatusId === colaborador.id,
+                              onSelecionar: () => void alternarStatus(colaborador),
+                            },
+                            {
+                              rotulo: "Remover",
+                              variante: "perigo",
+                              desabilitado: removendoId === colaborador.id,
+                              onSelecionar: () => void remover(colaborador.id),
+                            },
+                          ]}
+                        />
                       </td>
                     ) : null}
                   </tr>

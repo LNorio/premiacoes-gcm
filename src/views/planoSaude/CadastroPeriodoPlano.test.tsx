@@ -157,16 +157,35 @@ describe("CadastroPeriodoPlano — período do plano por filial (Admin)", () => 
     await waitFor(() => expect(screen.getAllByText("Encerrado")).toHaveLength(1));
 
     await abrirModal(user);
+    fireEvent.change(screen.getByLabelText("Data de Início"), { target: { value: "2020-01-01" } });
     await user.type(screen.getByLabelText("Valor Titular"), "400");
-    fireEvent.change(screen.getByLabelText("Data de Encerramento"), { target: { value: "2026-12-31" } });
+    fireEvent.change(screen.getByLabelText("Data de Encerramento"), { target: { value: "2020-12-31" } });
 
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
 
     const linhaNova = await screen.findByText("R$ 400,00");
     const linha = linhaNova.closest("tr")!;
     expect(within(linha).getByText("Encerrado")).toBeInTheDocument();
-    expect(within(linha).getByText("31/12/2026")).toBeInTheDocument();
+    expect(within(linha).getByText("31/12/2020")).toBeInTheDocument();
     expect(within(linha).queryByRole("button", { name: "Encerrar vigência" })).not.toBeInTheDocument();
+  });
+
+  it("rejeita quando a Data de Encerramento é futura (isso encerraria a vigência antes da hora)", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findAllByText("01/01/2000");
+
+    await user.click(screen.getAllByRole("button", { name: "Encerrar vigência" })[0]);
+    await waitFor(() => expect(screen.getAllByText("Encerrado")).toHaveLength(1));
+
+    await abrirModal(user);
+    await user.type(screen.getByLabelText("Valor Titular"), "410");
+    fireEvent.change(screen.getByLabelText("Data de Encerramento"), { target: { value: "2099-01-01" } });
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+
+    // continua na modal, nada foi criado
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByText("R$ 410,00")).not.toBeInTheDocument();
   });
 
   it("Data de Início pode ser retroativa e aparece na lista com a data escolhida", async () => {

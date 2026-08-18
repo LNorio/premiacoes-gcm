@@ -10,16 +10,20 @@ afterEach(() => {
 });
 
 describe("planoSaudeServiceHttp.listarDependentes", () => {
-  it("mapeia o array de dependentes (id colaborador → vendedorId)", async () => {
+  it("mapeia o array de dependentes (id colaborador → vendedorId), incluindo a adesão própria", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse([{ id: 5, nome: "Maria Silva", cpf: "111.111.111-11", "id colaborador": 4 }]),
+      jsonResponse([
+        { id: 5, nome: "Maria Silva", cpf: "111.111.111-11", "id colaborador": 4, "plano saude": true, "plano odontologico": false },
+      ]),
     );
     vi.stubGlobal("fetch", fetchMock);
 
     const resultado = await planoSaudeServiceHttp.listarDependentes("4");
     expect(resultado).toEqual({
       status: "sucesso",
-      dados: [{ id: "5", vendedorId: "4", nome: "Maria Silva", cpf: "111.111.111-11" }],
+      dados: [
+        { id: "5", vendedorId: "4", nome: "Maria Silva", cpf: "111.111.111-11", adesaoSaude: true, adesaoOdontologico: false },
+      ],
     });
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toContain("/api/dependentes?id%20colaborador=4");
@@ -27,15 +31,22 @@ describe("planoSaudeServiceHttp.listarDependentes", () => {
 });
 
 describe("planoSaudeServiceHttp.salvarDependente", () => {
-  it("cria (POST) e relista pra obter o id real", async () => {
+  it("cria (POST) e relista pra obter o id real e a adesão vinda do banco", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ mensagem: "dependente criado" }))
-      .mockResolvedValueOnce(jsonResponse([{ id: 9, nome: "João Silva", cpf: "", "id colaborador": 4 }]));
+      .mockResolvedValueOnce(
+        jsonResponse([
+          { id: 9, nome: "João Silva", cpf: "", "id colaborador": 4, "plano saude": true, "plano odontologico": true },
+        ]),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     const resultado = await planoSaudeServiceHttp.salvarDependente({ vendedorId: "4", nome: "João Silva", cpf: "" });
-    expect(resultado).toEqual({ status: "sucesso", dados: { id: "9", vendedorId: "4", nome: "João Silva", cpf: "" } });
+    expect(resultado).toEqual({
+      status: "sucesso",
+      dados: { id: "9", vendedorId: "4", nome: "João Silva", cpf: "", adesaoSaude: true, adesaoOdontologico: true },
+    });
 
     const postCall = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(postCall[1].method).toBe("POST");
@@ -71,25 +82,31 @@ describe("planoSaudeServiceHttp.salvarAdesao", () => {
 });
 
 describe("planoSaudeServiceHttp.salvarAdesaoDependente", () => {
-  it("não chama a API (sem endpoint pra isso) e resolve sucesso mesmo assim", async () => {
-    const fetchMock = vi.fn();
+  it("envia só o campo do tipo de plano em PUT /api/dependentes/{id}", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ mensagem: "dependente alterado" }));
     vi.stubGlobal("fetch", fetchMock);
 
     const resultado = await planoSaudeServiceHttp.salvarAdesaoDependente("9", "saude", false);
     expect(resultado).toEqual({ status: "sucesso", dados: undefined });
-    expect(fetchMock).not.toHaveBeenCalled();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/dependentes/9");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ "plano saude": false });
   });
 });
 
 describe("planoSaudeServiceHttp.listarLancamentosPlanoSaude", () => {
-  it("mapeia 'dados' do GET /api/lancamentos, distinguindo titular/dependente pelo id dependente", async () => {
+  it("mapeia 'dados' do GET /api/lancamentos, distinguindo titular/dependente pelo id dependente, e o total de desligados por coluna", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         dados: [
           { "id colaborador": 4, "id dependente": null, "valor adicional": 20, "valor coparticipacao": 5 },
           { "id colaborador": 4, "id dependente": 9, "valor adicional": 0, "valor coparticipacao": 0 },
         ],
-        "total geral": 0,
+        "total desligados titular": 3000,
+        "total desligados dependente": 500,
+        "total desligados adicional": 200,
+        "total desligados coparticipacao": 100,
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -97,26 +114,29 @@ describe("planoSaudeServiceHttp.listarLancamentosPlanoSaude", () => {
     const resultado = await planoSaudeServiceHttp.listarLancamentosPlanoSaude("100", "2026-08", "saude");
     expect(resultado).toEqual({
       status: "sucesso",
-      dados: [
-        {
-          id: "4-titular-saude-2026-08",
-          pessoaId: "4",
-          titularId: "4",
-          mesReferencia: "2026-08",
-          tipoPlano: "saude",
-          valorAdicional: 20,
-          valorCoparticipacao: 5,
-        },
-        {
-          id: "4-9-saude-2026-08",
-          pessoaId: "9",
-          titularId: "4",
-          mesReferencia: "2026-08",
-          tipoPlano: "saude",
-          valorAdicional: 0,
-          valorCoparticipacao: 0,
-        },
-      ],
+      dados: {
+        lancamentos: [
+          {
+            id: "4-titular-saude-2026-08",
+            pessoaId: "4",
+            titularId: "4",
+            mesReferencia: "2026-08",
+            tipoPlano: "saude",
+            valorAdicional: 20,
+            valorCoparticipacao: 5,
+          },
+          {
+            id: "4-9-saude-2026-08",
+            pessoaId: "9",
+            titularId: "4",
+            mesReferencia: "2026-08",
+            tipoPlano: "saude",
+            valorAdicional: 0,
+            valorCoparticipacao: 0,
+          },
+        ],
+        totalDesligados: { titular: 3000, dependente: 500, adicional: 200, coparticipacao: 100 },
+      },
     });
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toContain("mes_de_referencia=2026-08-01");
@@ -162,6 +182,29 @@ describe("planoSaudeServiceHttp.salvarLancamentoPlanoSaude", () => {
       expect(resultado.dados.pessoaId).toBe("9");
       expect(resultado.dados.valorAdicional).toBe(20);
     }
+  });
+});
+
+describe("planoSaudeServiceHttp.salvarTotalDesligadosPlanoSaude", () => {
+  it("envia PUT /api/lancamentos/desligados com filial, tipo de plano, mês e os 4 valores por coluna", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ mensagem: "salvo" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const valores = { titular: 3000, dependente: 500, adicional: 200, coparticipacao: 100 };
+    const resultado = await planoSaudeServiceHttp.salvarTotalDesligadosPlanoSaude("100", "2026-08", "saude", valores);
+    expect(resultado).toEqual({ status: "sucesso", dados: valores });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/lancamentos/desligados");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({
+      filial: "100",
+      "tipo plano": "saude",
+      "mes de referencia": "2026-08-01",
+      "valor titular": 3000,
+      "valor dependente": 500,
+      "valor adicional": 200,
+      "valor coparticipacao": 100,
+    });
   });
 });
 

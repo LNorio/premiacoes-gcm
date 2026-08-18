@@ -58,6 +58,32 @@ describe("colaboradoresServiceHttp.listarColaboradores", () => {
     expect(url).toContain("/api/usuarios?filial=100");
   });
 
+  it("mapeia 'desligado' (colaborador inativo)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      respostaUsuarios([
+        {
+          "id colaborador": 7,
+          codigo: "V007",
+          nome: "Ex-Colaborador",
+          cpf: "999.999.999-99",
+          funcao: "Consultor de Vendas Interno",
+          email: "ex@comercialmariano.com.br",
+          usuario: "ex.colaborador",
+          role: "vendedor",
+          filial: "100",
+          "plano saude": true,
+          "plano odontologico": true,
+          desligado: true,
+          telas: [],
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await colaboradoresServiceHttp.listarColaboradores("100");
+    expect(resultado.status === "sucesso" && resultado.dados[0].desligado).toBe(true);
+  });
+
   it("lista colaboradores de qualquer Perfil (Admin/Gerente/Coordenador/Vendedor)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       respostaUsuarios([
@@ -143,6 +169,31 @@ describe("colaboradoresServiceHttp.salvarColaborador", () => {
     expect(corpo.senha).toBeUndefined();
     expect(corpo.telas).toEqual([1]);
     expect(corpo.role).toBe("vendedor");
+    expect(corpo.desligado).toBe(false);
+  });
+
+  it("envia 'desligado: true' pra inativar o colaborador (revoga o acesso na API real)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ mensagem: "usuario atualizado" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await colaboradoresServiceHttp.salvarColaborador({
+      id: "4",
+      codigo: "V001",
+      nome: "Carlos Eduardo Silva",
+      cpf: "123.456.789-01",
+      filial: "100",
+      cargo: "Consultor de Vendas Interno",
+      role: "vendedor",
+      email: "carlos.silva@comercialmariano.com.br",
+      usuarioAcesso: "carlos.silva",
+      senhaAcesso: "",
+      telas: { premiacoes: true, comissao: false, planoSaude: false, estoque: false, descontos: false },
+      desligado: true,
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const corpo = JSON.parse(init.body as string);
+    expect(corpo.desligado).toBe(true);
   });
 
   it("faz POST quando o colaborador é novo (sem id) e envia a senha", async () => {

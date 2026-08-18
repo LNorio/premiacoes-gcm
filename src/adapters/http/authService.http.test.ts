@@ -80,6 +80,31 @@ describe("authServiceHttp.login", () => {
     });
   });
 
+  it("mapeia 'precisa trocar senha' quando a API sinaliza (acesso novo ou senha resetada pelo Admin)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          "id colaborador": 9,
+          codigo: "V009",
+          funcao: "Consultor de Vendas Interno",
+          nome: "Colaborador Novo",
+          role: "vendedor",
+          filial: "100",
+          "quantidade de premiacoes": 0,
+          "valor premiacoes": 0,
+          "precisa trocar senha": true,
+          token: "9|xyz",
+          mensagem: "usuario encontrado",
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await authServiceHttp.login("colaborador.novo", "cpf-como-senha");
+    expect(resultado.status === "sucesso" && resultado.dados.precisaTrocarSenha).toBe(true);
+  });
+
   it("devolve mensagem genérica quando a chamada falha por rede", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 
@@ -107,5 +132,30 @@ describe("authServiceHttp.logout", () => {
 
     await authServiceHttp.logout();
     expect(obterToken()).toBeNull();
+  });
+});
+
+describe("authServiceHttp.trocarSenhaPropria", () => {
+  it("envia PUT /api/trocar-senha com a senha atual e a nova", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ mensagem: "senha alterada" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await authServiceHttp.trocarSenhaPropria("senha-antiga", "nova-senha-123");
+    expect(resultado).toEqual({ status: "sucesso", dados: undefined });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/trocar-senha");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ "senha atual": "senha-antiga", "senha nova": "nova-senha-123" });
+  });
+
+  it("devolve a mensagem da API quando a senha atual está incorreta (403)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ mensagem: "senha atual incorreta" }), { status: 403 })),
+    );
+
+    const resultado = await authServiceHttp.trocarSenhaPropria("senha-errada", "nova-senha-123");
+    expect(resultado).toEqual({ status: "erro", mensagem: "senha atual incorreta" });
   });
 });

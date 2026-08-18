@@ -5,6 +5,7 @@ import { planoSaudeService } from "../../adapters";
 import { SessaoProvider } from "../../state/SessaoContext";
 import { ComoAdminNaFilial } from "../../testUtils/ComoAdminNaFilial";
 import { ComSessao } from "../../testUtils/ComSessao";
+import { formatarMoeda } from "../../utils/formatadores";
 import { LancamentoPlanoSaude } from "./LancamentoPlanoSaude";
 
 beforeEach(() => {
@@ -46,7 +47,7 @@ describe("LancamentoPlanoSaude — Plano de Saúde (F5.PS-LAN)", () => {
     expect(within(linha).getAllByText("R$ 255,54")).toHaveLength(2);
   });
 
-  it("na sub-aba Odontológico usa o valor fixo de R$ 13,56 e não mostra campos editáveis nem o botão de salvar", async () => {
+  it("na sub-aba Odontológico usa o valor fixo de R$ 13,56 e não mostra campos editáveis por pessoa (só o total de desligados)", async () => {
     const user = userEvent.setup();
     renderComoAdminNaFilial("100");
     await screen.findByText("Carlos Silva");
@@ -57,7 +58,97 @@ describe("LancamentoPlanoSaude — Plano de Saúde (F5.PS-LAN)", () => {
     // aparece na coluna Titular e no Total (sem campos extras editáveis, o total é o próprio valor fixo)
     expect(within(linha).getAllByText("R$ 13,56")).toHaveLength(2);
     expect(screen.queryByLabelText(/Valor adicional/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Salvar lançamento do mês/ })).not.toBeInTheDocument();
+    // o botão continua existindo — agora salva o total de desligados, que é editável nas duas sub-abas
+    expect(screen.getByRole("button", { name: /Salvar lançamento do mês/ })).toBeInTheDocument();
+  });
+
+  it("mostra as linhas Total ativos/Total desligados/Total geral, com campos por coluna nos desligados e tudo calculado no geral", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+
+    expect(screen.getByText("Total ativos")).toBeInTheDocument();
+    expect(screen.getByText("Total desligados")).toBeInTheDocument();
+    expect(screen.getByText("Total geral")).toBeInTheDocument();
+
+    const campoTitular = screen.getByLabelText("Total desligados — Titular");
+    const campoDependente = screen.getByLabelText("Total desligados — Dependente");
+    const campoAdicional = screen.getByLabelText("Total desligados — Adicional");
+    const campoCoparticipacao = screen.getByLabelText("Total desligados — Coparticipação");
+    expect(campoTitular).not.toBeDisabled();
+
+    // colunas da linha: [rótulo (colspan), Titular, Dependente, Adicional, Coopart., Total]
+    const linhaAtivos = screen.getByText("Total ativos").closest("tr")!;
+    const celulaAtivos = within(linhaAtivos).getAllByRole("cell");
+    const totalAtivosTitular = Number(celulaAtivos[1].textContent!.replace(/[^\d,-]/g, "").replace(",", "."));
+    const totalAtivosGeral = Number(celulaAtivos.at(-1)!.textContent!.replace(/[^\d,-]/g, "").replace(",", "."));
+
+    await user.type(campoTitular, "100");
+    await user.type(campoDependente, "50");
+    await user.type(campoAdicional, "10");
+    await user.type(campoCoparticipacao, "5");
+
+    // linha Total desligados: a coluna Total é calculada como a soma dos 4 campos preenchidos
+    const linhaDesligados = screen.getByText("Total desligados").closest("tr")!;
+    await waitFor(() => expect(within(linhaDesligados).getByText("R$ 165,00")).toBeInTheDocument());
+
+    // linha Total geral: cada coluna soma ativos + desligados daquela coluna
+    const linhaGeral = screen.getByText("Total geral").closest("tr")!;
+    const celulasGeral = within(linhaGeral).getAllByRole("cell");
+    expect(celulasGeral[1].textContent).toBe(formatarMoeda(totalAtivosTitular + 100));
+    expect(celulasGeral.at(-1)!.textContent).toBe(formatarMoeda(totalAtivosGeral + 165));
+
+    await user.click(screen.getByRole("button", { name: /Salvar lançamento do mês/ }));
+    await waitFor(() => expect(screen.getByLabelText("Total desligados — Titular")).toHaveValue(100));
+  });
+
+  it("recarregando a tela, os campos de Total desligados vêm preenchidos com o que foi salvo (a API agora guarda por coluna)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+
+    await user.type(screen.getByLabelText("Total desligados — Titular"), "300");
+    await user.type(screen.getByLabelText("Total desligados — Dependente"), "40");
+    await user.click(screen.getByRole("button", { name: /Salvar lançamento do mês/ }));
+    await waitFor(() => expect(screen.getByLabelText("Total desligados — Titular")).toHaveValue(300));
+    unmount();
+
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+    await waitFor(() => expect(screen.getByLabelText("Total desligados — Titular")).toHaveValue(300));
+    expect(screen.getByLabelText("Total desligados — Dependente")).toHaveValue(40);
+  });
+
+  it("em 'Todas as filiais' os campos de Total desligados ficam desabilitados e mostra o aviso pra escolher uma filial", async () => {
+    render(
+      <SessaoProvider>
+        <ComSessao usuario="admin" senha="admin123">
+          <LancamentoPlanoSaude />
+        </ComSessao>
+      </SessaoProvider>,
+    );
+    await screen.findByText("Carlos Silva");
+    for (const campo of screen.getAllByLabelText(/Total desligados —/)) {
+      expect(campo).toBeDisabled();
+    }
+    expect(screen.getByText(/Selecione uma filial específica no cabeçalho para editar o Total de desligados/)).toBeInTheDocument();
+  });
+
+  it("numa filial específica, sem aviso, e os campos de Total desligados mostram 0 (não em branco) quando não há valor lançado", async () => {
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+    expect(screen.queryByText(/Selecione uma filial específica no cabeçalho/)).not.toBeInTheDocument();
+    for (const campo of screen.getAllByLabelText(/Total desligados —/)) {
+      expect(campo).toHaveValue(0);
+    }
+  });
+
+  it("Admin numa filial específica vê o botão de bloqueio também na sub-aba Odontológico", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+    await user.click(screen.getByRole("button", { name: "Plano Odontológico" }));
+    expect(screen.getByRole("button", { name: /Bloquear lançamentos deste mês/ })).toBeInTheDocument();
   });
 
   it("edita valor adicional/coparticipação, salva e o total da linha reflete a soma", async () => {
