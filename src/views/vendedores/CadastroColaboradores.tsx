@@ -5,6 +5,7 @@ import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type Papel, type Resultado, type TelasHabilitadas } from "../../types";
 import { CARGOS_COLABORADOR, FILIAIS, PAPEIS_COLABORADOR, ROTULOS_PAPEL, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
 import { mascararCpf } from "../../utils/formatadores";
+import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
@@ -29,15 +30,6 @@ interface FormularioColaborador {
   usuarioAcesso: string;
   senhaAcesso: string;
   telas: TelasHabilitadas;
-}
-
-/** Sem acento e minúsculo, pra busca não depender do usuário digitar acento certo. */
-function normalizarBusca(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
 }
 
 function formularioVazio(filialPadrao: string): FormularioColaborador {

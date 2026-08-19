@@ -123,6 +123,34 @@ describe("CadastroTitulares — titulares e dependentes (F5.PS-CAD)", () => {
     await waitFor(() => expect(screen.queryByText("João Silva")).not.toBeInTheDocument());
   });
 
+  it("barra de busca filtra por titular, e por dependente mantém a família (titular) visível", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+
+    const linhaCarlos = screen.getByText("Carlos Silva").closest("tr")!;
+    await user.click(within(linhaCarlos).getByRole("button", { name: "+ Dependente" }));
+    await user.type(await screen.findByLabelText("Nome completo"), "Maria Silva");
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await screen.findByText("Maria Silva");
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Buscar titular/dependente"), "carlos");
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Fernanda Lima")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar titular/dependente"));
+    await user.type(screen.getByLabelText("Buscar titular/dependente"), "maria");
+    // busca bateu no dependente — o titular (Carlos) continua visível pra dar contexto da família
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Fernanda Lima")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar titular/dependente"));
+    await user.type(screen.getByLabelText("Buscar titular/dependente"), "zzz");
+    expect(screen.getByText('Nenhum titular/dependente encontrado para "zzz".')).toBeInTheDocument();
+  });
+
   it("Admin em 'Todas as filiais' vê a coluna Filial", async () => {
     render(
       <SessaoProvider>

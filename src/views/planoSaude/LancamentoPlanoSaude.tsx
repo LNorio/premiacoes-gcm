@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { bloqueioService, colaboradoresService, planoSaudeService } from "../../adapters";
-import { Button, Carregando, LinhaVazia, MensagemErro, Table } from "../../components/ui";
+import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
 import { encontrarPeriodoPlano, exportarPlanoSaudeExcel, listarPessoasPlanoSaude } from "../../services/planoSaudeService";
 import { useSessao } from "../../state/SessaoContext";
@@ -15,6 +15,7 @@ import {
 } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
+import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
@@ -46,6 +47,7 @@ export function LancamentoPlanoSaude() {
   const [bloqueado, setBloqueado] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
+  const [busca, setBusca] = useState("");
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -220,6 +222,12 @@ export function LancamentoPlanoSaude() {
     (temCamposEditaveis ? desligadosPorColuna.adicional + desligadosPorColuna.coparticipacao : 0);
   const totalGeral = totalAtivos + totalDesligadosSoma;
 
+  // Busca só filtra o que é exibido — os totais acima continuam somando todo mundo, buscado ou não.
+  const buscaNormalizada = normalizarBusca(busca);
+  const pessoasFiltradas = buscaNormalizada
+    ? pessoas.filter((p) => [p.codigo, p.nome].some((campo) => normalizarBusca(campo).includes(buscaNormalizada)))
+    : pessoas;
+
   return (
     <div style={{ marginTop: "var(--esp-6)" }}>
       <h3 style={{ marginBottom: "var(--esp-3)" }}>Lançamento mensal do desconto</h3>
@@ -245,15 +253,32 @@ export function LancamentoPlanoSaude() {
         </div>
       </form>
 
-      <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
-        {ehAdmin && !mostrarFilial ? (
-          <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
-            {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
+      <div className="acoes-tabela" style={{ justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div className="campo" style={{ marginBottom: 0, minWidth: "220px", flex: "1 1 260px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "var(--esp-1)" }}>
+            <label htmlFor="plano-saude-lancamento-busca" style={{ marginBottom: 0 }}>
+              Buscar titular/dependente
+            </label>
+            <AjudaPopover texto="Esta busca serve só para facilitar encontrar um titular/dependente na lista e preencher os valores dele — ela não altera os totais (Total ativos/desligados/geral) nem a exportação para Excel da filial, que sempre consideram todo mundo, buscado ou não." />
+          </div>
+          <input
+            id="plano-saude-lancamento-busca"
+            type="text"
+            placeholder="Nome ou código"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        <div style={{ display: "flex", gap: "var(--esp-3)", flexWrap: "wrap" }}>
+          {ehAdmin && !mostrarFilial ? (
+            <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
+              {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
+            </Button>
+          ) : null}
+          <Button variant="secundario" onClick={exportarExcel}>
+            ⭳ Exportar Excel da filial
           </Button>
-        ) : null}
-        <Button variant="secundario" onClick={exportarExcel}>
-          ⭳ Exportar Excel da filial
-        </Button>
+        </div>
       </div>
 
       {carregando ? (
@@ -281,13 +306,17 @@ export function LancamentoPlanoSaude() {
               </tr>
             </thead>
             <tbody>
-              {pessoas.length === 0 ? (
+              {pessoasFiltradas.length === 0 ? (
                 <LinhaVazia
                   colSpan={totalColunas}
-                  mensagem={`Nenhum titular com adesão a ${rotulos.titulo} no momento (marque a adesão na aba "Titulares e Dependentes").`}
+                  mensagem={
+                    buscaNormalizada
+                      ? `Nenhum titular/dependente encontrado para "${busca.trim()}".`
+                      : `Nenhum titular com adesão a ${rotulos.titulo} no momento (marque a adesão na aba "Titulares e Dependentes").`
+                  }
                 />
               ) : (
-                pessoas.map((pessoa) => {
+                pessoasFiltradas.map((pessoa) => {
                   const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
                   const valorFixo = periodo?.valor ?? 0;
                   const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;

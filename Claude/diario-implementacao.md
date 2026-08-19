@@ -74,3 +74,13 @@
 - Todo o trabalho do dia commitado (3 commits) e enviado para `origin/main`.
 
 **Testes:** 253 testes executados, 253 passaram, 0 falharam (`npx vitest run`, 45 arquivos de teste).
+
+## 2026-08-18
+
+- **Colaboradores — Ativar/Inativar:** novo item no menu de ações (⋮) para ativar/inativar um colaborador (alterna `desligado` via `salvarColaborador`), com nova coluna Status (`Ativo`/`Inativo`) na tabela. Bug pego antes de qualquer teste rodar: editar um colaborador reativava ele silenciosamente, pois `tratarSubmit` não preservava o `desligado` atual — corrigido buscando o colaborador em edição na lista antes de salvar. Também corrigido um bug pré-existente no `MenuAcoes`: o "clique fora" fechava o menu antes do clique no item (porque a lista é portalizada e ficava fora da checagem de "dentro do menu"), cancelando toda ação — adicionada uma segunda ref (`menuRef`) para a lista portalizada.
+- **Troca de senha:** migrada para o novo endpoint `PUT /api/trocar-senha` (`Claude/API (10).md`), agora exigindo senha atual + nova senha + confirmação, com alternador de mostrar/ocultar senha (`IconeOlho`). Discutido com o usuário antes de implementar, já que a API ainda não cobria 100% do fluxo — decisão foi seguir mesmo assim.
+- **Plano de Saúde — Total desligados:** GET/PUT de lançamentos passaram a usar a API real também para essa linha (antes só os totais ativos vinham da API). Ajustes de UX pedidos pelo usuário: texto em dourado/negrito, valor padrão `0` em vez de vazio quando não há lançamento, e aviso explicando que os campos ficam desabilitados quando "Todas as filiais" está selecionada (a API não aceita gravar um total agregado). O que parecia um bug reportado pelo usuário ("total desligados não editável") era esse comportamento esperado — confirmado com o usuário antes de mexer em qualquer código.
+- **Colaboradores — barra de busca:** campo de busca (nome/código/CPF/e-mail/usuário de acesso) acima da tabela, sem diferenciar maiúscula/minúscula nem acento. Dois ajustes de CSS pedidos em seguida pelo próprio usuário, depois de ver o resultado: o botão "+ Adicionar colaborador" esticava verticalmente ao lado do campo (`.acoes-tabela` sem `align-items` definido — corrigido com `align-items: flex-end`) e, mesmo alinhados, o campo ficava ~3px mais alto que o botão (borda do input vs. botão sem borda — corrigido com altura fixa escopada a `.acoes-tabela .campo input`).
+- Todo o trabalho do dia commitado (1 commit) e enviado para `origin/main`.
+
+**Testes:** 286 testes executados, 286 passaram, 0 falharam (`npx vitest run`, 48 arquivos de teste).

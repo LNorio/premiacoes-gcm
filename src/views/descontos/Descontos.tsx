@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { bloqueioService, colaboradoresService, descontosService } from "../../adapters";
-import { Button, Carregando, LinhaVazia, MensagemErro, MensagemVazia, Modal, Table } from "../../components/ui";
+import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, MensagemVazia, Modal, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
 import { exportarDescontosExcel, totaisPorTipo } from "../../services/descontosService";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type TipoDescontoBonificacao } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
+import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
@@ -38,6 +39,7 @@ export function Descontos() {
   const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
   const [removendoId, setRemovendoId] = useState<string | null>(null);
   const [modalTotaisAberta, setModalTotaisAberta] = useState(false);
+  const [busca, setBusca] = useState("");
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -204,6 +206,10 @@ export function Descontos() {
   }
 
   const totais = totaisPorTipo(linhas);
+  const buscaNormalizada = normalizarBusca(busca);
+  const colaboradoresFiltrados = buscaNormalizada
+    ? colaboradores.filter((c) => [c.codigo, c.nome].some((campo) => normalizarBusca(campo).includes(buscaNormalizada)))
+    : colaboradores;
 
   return (
     <section className="view">
@@ -224,18 +230,35 @@ export function Descontos() {
         </div>
       </form>
 
-      <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
-        {ehAdmin && !mostrarFilial ? (
-          <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
-            {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
+      <div className="acoes-tabela" style={{ justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div className="campo" style={{ marginBottom: 0, minWidth: "220px", flex: "1 1 260px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "var(--esp-1)" }}>
+            <label htmlFor="descontos-busca" style={{ marginBottom: 0 }}>
+              Buscar colaborador
+            </label>
+            <AjudaPopover texto="Esta busca serve só para facilitar encontrar um colaborador na lista e preencher os lançamentos dele — ela não altera o total por tipo nem a exportação para Excel da filial, que sempre consideram todos os colaboradores, buscados ou não." />
+          </div>
+          <input
+            id="descontos-busca"
+            type="text"
+            placeholder="Nome ou código"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        <div style={{ display: "flex", gap: "var(--esp-3)", flexWrap: "wrap" }}>
+          {ehAdmin && !mostrarFilial ? (
+            <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
+              {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
+            </Button>
+          ) : null}
+          <Button variant="secundario" onClick={() => setModalTotaisAberta(true)}>
+            📊 Totais por tipo
           </Button>
-        ) : null}
-        <Button variant="secundario" onClick={() => setModalTotaisAberta(true)}>
-          📊 Totais por tipo
-        </Button>
-        <Button variant="secundario" onClick={exportarExcel}>
-          ⭳ Exportar Excel da filial
-        </Button>
+          <Button variant="secundario" onClick={exportarExcel}>
+            ⭳ Exportar Excel da filial
+          </Button>
+        </div>
       </div>
 
       {carregando ? (
@@ -256,14 +279,20 @@ export function Descontos() {
               </tr>
             </thead>
             <tbody>
-              {colaboradores.length === 0 ? (
+              {colaboradoresFiltrados.length === 0 ? (
                 <tr className="linha-vazia">
                   <td colSpan={6}>
-                    <MensagemVazia mensagem="Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)." />
+                    <MensagemVazia
+                      mensagem={
+                        buscaNormalizada
+                          ? `Nenhum colaborador encontrado para "${busca.trim()}".`
+                          : "Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)."
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                colaboradores.map((colaborador) => {
+                colaboradoresFiltrados.map((colaborador) => {
                   const linhasColaborador = linhas.filter((l) => l.vendedorId === colaborador.id);
                   const botaoAdicionar = !bloqueadoParaEdicao ? (
                     <Button variant="secundario" onClick={() => adicionarLinha(colaborador.id)}>

@@ -189,6 +189,37 @@ describe("LancamentoPlanoSaude — Plano de Saúde (F5.PS-LAN)", () => {
     expect(screen.queryByText("Maria Silva")).not.toBeInTheDocument();
   });
 
+  it("barra de busca filtra as linhas exibidas sem afetar o Total ativos", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+
+    const linhaAtivosAntes = screen.getByText("Total ativos").closest("tr")!;
+    const totalAntes = within(linhaAtivosAntes).getAllByRole("cell").at(-1)!.textContent;
+
+    await user.type(screen.getByLabelText("Buscar titular/dependente"), "carlos");
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Fernanda Lima")).not.toBeInTheDocument();
+
+    const linhaAtivosDepois = screen.getByText("Total ativos").closest("tr")!;
+    expect(within(linhaAtivosDepois).getAllByRole("cell").at(-1)!.textContent).toBe(totalAntes);
+
+    await user.clear(screen.getByLabelText("Buscar titular/dependente"));
+    await user.type(screen.getByLabelText("Buscar titular/dependente"), "zzz");
+    expect(screen.getByText('Nenhum titular/dependente encontrado para "zzz".')).toBeInTheDocument();
+  });
+
+  it("o ícone de ajuda ao lado da busca explica que ela não afeta os totais nem a exportação", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva");
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ajuda" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/não altera os totais/);
+  });
+
   it("Admin em 'Todas as filiais' vê a coluna Filial e não vê o botão de bloqueio", async () => {
     render(
       <SessaoProvider>

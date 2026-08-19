@@ -12,3 +12,4 @@ export { Modal } from "./Modal";
 export { MenuAcoes } from "./MenuAcoes";
 export type { ItemMenuAcoes } from "./MenuAcoes";
 export { IconeOlho } from "./IconeOlho";
+export { AjudaPopover } from "./AjudaPopover";

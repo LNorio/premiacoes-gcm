@@ -27,6 +27,9 @@ export const FILIAIS = [
 
 /** Navegação por perfil (documento técnico, Seção 2.1) */
 export const NAV_POR_PAPEL: Record<Papel, Tela[]> = {
+  // Perfil sem acesso ao sistema — não faz login de fato, só existe para aparecer nas
+  // tabelas de colaboradores (ex.: cargos que ainda não usam o app).
+  padrao: [],
   admin: [
     "inicio",
     "vendedores",
@@ -86,10 +89,15 @@ export const ROTULOS_PAPEL: Record<Papel, string> = {
   coordenador: "Coordenador",
   gerente: "Gerente",
   admin: "Administrador",
+  padrao: "Padrão",
 };
 
-/** Opções do dropdown de Perfil, na ordem pedida (Vendedor, Coordenador, Gerente, Administrador) */
-export const PAPEIS_COLABORADOR: Papel[] = ["vendedor", "coordenador", "gerente", "admin"];
+/**
+ * Opções do dropdown de Perfil, na ordem pedida (Vendedor, Coordenador, Gerente, Administrador).
+ * "Padrão" foi adicionado no fim — perfil sem acesso ao sistema (fora de `NAV_POR_PAPEL`), usado
+ * só para colaboradores que precisam existir no cadastro sem fazer login.
+ */
+export const PAPEIS_COLABORADOR: Papel[] = ["vendedor", "coordenador", "gerente", "admin", "padrao"];
 
 /** Rótulos das telas habilitáveis por colaborador (checklist do Cadastro) */
 export const ROTULOS_TELAS_COLABORADOR = {

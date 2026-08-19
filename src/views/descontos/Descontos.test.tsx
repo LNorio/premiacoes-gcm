@@ -185,6 +185,34 @@ describe("Descontos — modal Totais por tipo: todos os tipos somam positivo, j�
   });
 });
 
+describe("Descontos — barra de busca", () => {
+  it("filtra por nome sem diferenciar maiúscula/acento, e mostra mensagem específica sem resultado", async () => {
+    const user = userEvent.setup();
+    renderComoCoordenador();
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Buscar colaborador"), "CARLOS");
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Fernanda Lima")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar colaborador"));
+    await user.type(screen.getByLabelText("Buscar colaborador"), "zzz");
+    expect(screen.getByText('Nenhum colaborador encontrado para "zzz".')).toBeInTheDocument();
+    expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument();
+  });
+
+  it("o ícone de ajuda ao lado da busca explica que ela não afeta totalizadores nem exportação", async () => {
+    const user = userEvent.setup();
+    renderComoCoordenador();
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ajuda" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/não altera o total por tipo nem a exportação/);
+  });
+});
+
 describe("Descontos — exportação (F4.DESC-09)", () => {
   it("mostra o botão de exportar Excel da filial", async () => {
     renderComoCoordenador();

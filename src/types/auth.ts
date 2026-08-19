@@ -1,4 +1,4 @@
-export type Papel = "admin" | "gerente" | "coordenador" | "vendedor";
+export type Papel = "admin" | "gerente" | "coordenador" | "vendedor" | "padrao";
 
 export type Tela =
   | "inicio"

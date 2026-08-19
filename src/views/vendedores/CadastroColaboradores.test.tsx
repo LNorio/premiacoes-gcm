@@ -189,7 +189,7 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
     expect(await screen.findByText("Novo Colaborador")).toBeInTheDocument();
   });
 
-  it("o campo Perfil vem com 'Vendedor' selecionado por padrão e aceita as 4 opções", async () => {
+  it("o campo Perfil vem com 'Vendedor' selecionado por padrão e aceita as 5 opções", async () => {
     const user = userEvent.setup();
     renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
@@ -202,6 +202,7 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
       "Coordenador",
       "Gerente",
       "Administrador",
+      "Padrão",
     ]);
 
     await user.selectOptions(campoPerfil, "gerente");

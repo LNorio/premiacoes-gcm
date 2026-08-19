@@ -1,0 +1,38 @@
+.ajuda-popover-botao {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--cor-divider);
+  color: var(--cor-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background var(--transicao),
+    color var(--transicao),
+    border-color var(--transicao);
+}
+.ajuda-popover-botao:hover,
+.ajuda-popover-botao[aria-expanded="true"] {
+  background: var(--cor-primary-subtle);
+  color: var(--cor-primary);
+  border-color: var(--cor-primary);
+}
+.ajuda-popover-painel {
+  position: fixed;
+  z-index: 150;
+  width: 260px;
+  padding: var(--esp-3);
+  background: var(--cor-surface);
+  border: 1px solid var(--cor-divider);
+  border-radius: var(--raio-sm);
+  box-shadow: var(--sombra-md);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--cor-text-secondary);
+  animation: surgir 140ms ease both;
+}

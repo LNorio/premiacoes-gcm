@@ -4,6 +4,7 @@ import { Button, Carregando, LinhaVazia, MensagemErro, Modal, Table } from "../.
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type PlanoSaudeDependente } from "../../types";
 import { mascararCpf } from "../../utils/formatadores";
+import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
 
@@ -18,6 +19,7 @@ export function CadastroTitulares() {
   const [salvandoDependente, setSalvandoDependente] = useState(false);
   const [removendoId, setRemovendoId] = useState<string | null>(null);
   const [alternandoAdesao, setAlternandoAdesao] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -132,6 +134,18 @@ export function CadastroTitulares() {
   }
 
   const totalColunas = 6 + (mostrarFilial ? 1 : 0);
+  const buscaNormalizada = normalizarBusca(busca);
+  // Mostra o titular (com a família inteira) se o próprio titular ou algum dependente dele bater
+  // com a busca — assim procurar por um dependente também acha o grupo, mantendo o contexto de quem é o titular.
+  const titularesFiltrados = buscaNormalizada
+    ? titulares.filter((titular) => {
+        const bateNoTitular = [titular.nome, titular.cpf].some((campo) => normalizarBusca(campo).includes(buscaNormalizada));
+        const bateNumDependente = dependentes
+          .filter((d) => d.vendedorId === titular.id)
+          .some((d) => [d.nome, d.cpf].some((campo) => normalizarBusca(campo).includes(buscaNormalizada)));
+        return bateNoTitular || bateNumDependente;
+      })
+    : titulares;
 
   return (
     <div>
@@ -141,6 +155,19 @@ export function CadastroTitulares() {
         cada colaborador. Marque, para cada titular ou dependente, se tem Plano de Saúde, Plano Odontológico ou os dois —
         isso decide quem aparece em cada aba do Lançamento; um dependente pode ter adesão diferente do titular da família.
       </p>
+
+      <div className="acoes-tabela" style={{ justifyContent: "flex-start", marginBottom: "var(--esp-4)" }}>
+        <div className="campo" style={{ marginBottom: 0, minWidth: "220px", flex: "1 1 260px" }}>
+          <label htmlFor="plano-saude-titulares-busca">Buscar titular/dependente</label>
+          <input
+            id="plano-saude-titulares-busca"
+            type="text"
+            placeholder="Nome ou CPF"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+      </div>
 
       {carregando ? (
         <Carregando />
@@ -160,13 +187,17 @@ export function CadastroTitulares() {
             </tr>
           </thead>
           <tbody>
-            {titulares.length === 0 ? (
+            {titularesFiltrados.length === 0 ? (
               <LinhaVazia
                 colSpan={totalColunas}
-                mensagem="Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)."
+                mensagem={
+                  buscaNormalizada
+                    ? `Nenhum titular/dependente encontrado para "${busca.trim()}".`
+                    : "Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)."
+                }
               />
             ) : (
-              titulares.flatMap((titular) => {
+              titularesFiltrados.flatMap((titular) => {
                 const temSaude = titular.adesaoSaude !== false;
                 const temOdonto = titular.adesaoOdontologico !== false;
                 const dependentesDoTitular = dependentes.filter((d) => d.vendedorId === titular.id);
