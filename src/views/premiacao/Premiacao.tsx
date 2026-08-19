@@ -186,7 +186,7 @@ export function Premiacao() {
         </p>
       </form>
 
-      <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
+      <div className="acoes-tabela" style={{ justifyContent: "flex-start", marginBottom: "10px" }}>
         {ehAdmin && !mostrarFilial ? (
           <Button variant="secundario" onClick={alternarBloqueio} carregando={alternandoBloqueio}>
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}

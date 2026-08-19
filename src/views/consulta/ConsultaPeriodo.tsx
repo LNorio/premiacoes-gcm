@@ -110,7 +110,7 @@ export function ConsultaPeriodo() {
       </form>
 
       {!ehVendedor ? (
-        <div className="acoes-tabela" style={{ justifyContent: "flex-start" }}>
+        <div className="acoes-tabela" style={{ justifyContent: "flex-start", marginBottom: "10px" }}>
           <Button variant="secundario" onClick={exportarCSV}>
             ⭳ Exportar CSV
           </Button>

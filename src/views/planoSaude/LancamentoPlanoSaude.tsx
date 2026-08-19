@@ -253,7 +253,7 @@ export function LancamentoPlanoSaude() {
         </div>
       </form>
 
-      <div className="acoes-tabela" style={{ justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap" }}>
+      <div className="acoes-tabela" style={{ justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", marginBottom: "10px" }}>
         <div className="campo" style={{ marginBottom: 0, minWidth: "220px", flex: "1 1 260px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "var(--esp-1)" }}>
             <label htmlFor="plano-saude-lancamento-busca" style={{ marginBottom: 0 }}>
