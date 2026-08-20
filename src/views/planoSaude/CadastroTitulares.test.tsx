@@ -151,6 +151,22 @@ describe("CadastroTitulares — titulares e dependentes (F5.PS-CAD)", () => {
     expect(screen.getByText('Nenhum titular/dependente encontrado para "zzz".')).toBeInTheDocument();
   });
 
+  it("mostra a paginação por titular (contando titulares, não linhas de dependente)", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva"); // Carlos, Fernanda, Patricia — 3 titulares na filial 100
+    expect(screen.getByText("1–3 de 3")).toBeInTheDocument();
+
+    const linhaCarlos = screen.getByText("Carlos Silva").closest("tr")!;
+    await user.click(within(linhaCarlos).getByRole("button", { name: "+ Dependente" }));
+    await user.type(await screen.findByLabelText("Nome completo"), "Maria Silva");
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await screen.findByText("Maria Silva");
+
+    // um dependente a mais não muda a contagem de "unidades" da paginação (ainda 3 titulares)
+    expect(screen.getByText("1–3 de 3")).toBeInTheDocument();
+  });
+
   it("Admin em 'Todas as filiais' vê a coluna Filial", async () => {
     render(
       <SessaoProvider>

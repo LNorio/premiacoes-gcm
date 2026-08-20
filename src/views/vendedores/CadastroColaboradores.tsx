@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { colaboradoresService } from "../../adapters";
-import { Button, Carregando, MenuAcoes, MensagemErro, MensagemVazia, Modal, Selo } from "../../components/ui";
+import { Button, Carregando, MenuAcoes, MensagemErro, MensagemVazia, Modal, Paginacao, Selo } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type Papel, type Resultado, type TelasHabilitadas } from "../../types";
 import { CARGOS_COLABORADOR, FILIAIS, PAPEIS_COLABORADOR, ROTULOS_PAPEL, ROTULOS_TELAS_COLABORADOR } from "../../utils/constantes";
@@ -8,6 +8,7 @@ import { mascararCpf } from "../../utils/formatadores";
 import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
+import { usePaginacao } from "../../utils/usePaginacao";
 
 const TELAS_COLABORADOR = Object.keys(ROTULOS_TELAS_COLABORADOR) as (keyof TelasHabilitadas)[];
 
@@ -232,6 +233,8 @@ export function CadastroColaboradores() {
         : 'Nenhum colaborador cadastrado ainda nesta filial. Clique em "+ Adicionar colaborador".'
       : "Nenhum colaborador cadastrado ainda nesta filial.";
 
+  const paginacao = usePaginacao(listaFiltrada);
+
   return (
     <section className="view">
       <div className="view-cabecalho">
@@ -297,7 +300,7 @@ export function CadastroColaboradores() {
                 </td>
               </tr>
             ) : (
-              listaFiltrada.map((colaborador) => {
+              paginacao.itensDaPagina.map((colaborador) => {
                 const telasAtivas = TELAS_COLABORADOR.filter((chave) => colaborador.telas[chave]);
                 return (
                   <tr key={colaborador.id}>
@@ -357,6 +360,15 @@ export function CadastroColaboradores() {
           </tbody>
         </table>
       </div>
+
+      <Paginacao
+        paginaAtual={paginacao.paginaAtual}
+        totalPaginas={paginacao.totalPaginas}
+        tamanhoPagina={paginacao.tamanhoPagina}
+        totalItens={paginacao.totalItens}
+        onIrParaPagina={paginacao.irParaPagina}
+        onMudarTamanho={paginacao.definirTamanhoPagina}
+      />
 
       <Modal aberto={modalAberto} titulo={idEmEdicao ? "Editar colaborador" : "Adicionar colaborador"} onFechar={fecharModal}>
         <form onSubmit={tratarSubmit}>

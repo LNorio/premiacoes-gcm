@@ -1,5 +1,6 @@
 import type { DescontosService, NovoLancamentoDesconto } from "../../services/descontosService";
 import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type DescontoBonificacao, type Resultado } from "../../types";
+import { baixarCSVPronto, decodificarCsvBase64 } from "../../utils/exportar";
 import { httpClient } from "./cliente";
 import { ErroHttp } from "./httpClient";
 
@@ -117,6 +118,22 @@ export const descontosServiceHttp: DescontosService = {
     try {
       const { idColaborador, idDesconto } = separarIdComposto(id);
       await httpClient.delete("/api/descontos-bonificacoes", { id_do_desconto: idDesconto, id_do_colaborador: idColaborador });
+      return resultadoSucesso(undefined);
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
+  },
+
+  async exportarCSV(filial, mesReferencia): Promise<Resultado<void>> {
+    try {
+      const resposta = await httpClient.get<{ "arquivo csv": string; mensagem: string }>(
+        `/api/descontos-bonificacoes/exportar-csv?mes_de_referencia=${mesReferencia}-01${queryFilial(filial)}`,
+      );
+      const conteudo = decodificarCsvBase64(resposta["arquivo csv"]);
+      if (conteudo.trim().split("\n").length <= 1) {
+        return resultadoErro("Não há descontos ou bonificações salvos para exportar.");
+      }
+      baixarCSVPronto(conteudo, "descontos-bonificacoes", filial);
       return resultadoSucesso(undefined);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));

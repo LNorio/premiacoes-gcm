@@ -7,6 +7,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("planoSaudeServiceHttp.listarDependentes", () => {
@@ -506,5 +507,37 @@ describe("planoSaudeServiceHttp.encerrarPeriodoPlanoSaude", () => {
     expect(JSON.parse((putCall[1] as RequestInit).body as string)).toEqual({ "data validade": "2026-12-31" });
     expect(resultado.status).toBe("sucesso");
     if (resultado.status === "sucesso") expect(resultado.dados.dataValidade).toBe("2026-12-31");
+  });
+});
+
+describe("planoSaudeServiceHttp.exportarCSV", () => {
+  it("busca o CSV pronto do backend (GET /api/lancamentos/exportar-csv) e dispara o download", async () => {
+    const base64 = btoa(
+      'codigo;nome;"tipo pessoa";"valor titular";"valor dependente";"valor adicional";"valor coparticipacao";total\n306;"Carlos";titular;185.27;0;0;0;185.27',
+    );
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const resultado = await planoSaudeServiceHttp.exportarCSV("100", "2026-08", "saude");
+    expect(resultado.status).toBe("sucesso");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("/api/lancamentos/exportar-csv");
+    expect(url).toContain("mes_de_referencia=2026-08-01");
+    expect(url).toContain("tipo_plano=saude");
+    expect(url).toContain("filial=100");
+  });
+
+  it("sem titular/dependente nenhum, devolve erro em vez de baixar um arquivo vazio", async () => {
+    const base64 = btoa('codigo;nome;"tipo pessoa";"valor titular";"valor dependente";"valor adicional";"valor coparticipacao";total');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await planoSaudeServiceHttp.exportarCSV("100", "2026-08", "saude");
+    expect(resultado.status).toBe("erro");
   });
 });

@@ -1,3 +1,4 @@
+import { encontrarPeriodoPlano, listarPessoasPlanoSaude } from "../../services/planoSaudeService";
 import type { PlanoSaudeService } from "../../services/planoSaudeService";
 import {
   FILIAL_TODAS,
@@ -10,6 +11,7 @@ import {
   type TipoPlanoSaude,
   type TotaisDesligadosPlano,
 } from "../../types";
+import { baixarCSV } from "../../utils/exportar";
 import { gravarColecao, lerColecao, removerPorId, upsertPorId } from "./db";
 import { garantirSeed } from "./seed";
 
@@ -180,5 +182,52 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
       periodos.map((p) => (p.id === periodo.id ? encerrado : p)),
     );
     return resultadoSucesso(encerrado);
+  },
+
+  async exportarCSV(filial, mesReferencia, tipoPlano) {
+    garantirSeed();
+    const colaboradores = lerColecao<Colaborador>("colaboradores").filter(
+      (c) => (filial === FILIAL_TODAS || c.filial === filial) && c.telas.planoSaude,
+    );
+    const dependentes = lerColecao<PlanoSaudeDependente>(CHAVE_DEPENDENTES).filter((d) =>
+      colaboradores.some((c) => c.id === d.vendedorId),
+    );
+    const pessoas = listarPessoasPlanoSaude(colaboradores, dependentes, tipoPlano);
+    if (pessoas.length === 0) {
+      return resultadoErro("Não há titulares/dependentes com adesão a este plano para exportar.");
+    }
+
+    const lancamentos = lerColecao<PlanoSaudeLancamento>(CHAVE_LANCAMENTOS).filter(
+      (l) => l.mesReferencia === mesReferencia && l.tipoPlano === tipoPlano,
+    );
+    const periodos = lerColecao<PlanoSaudePeriodo>(CHAVE_PERIODOS).filter((p) => p.tipoPlano === tipoPlano);
+
+    // Mesmas colunas do CSV gerado pelo backend real (`GET /api/lancamentos/exportar-csv`) —
+    // sempre as 8 colunas de Saúde, mesmo pro Odontológico (adicional/coparticipação vêm zeradas ali).
+    const linhas = pessoas.map((pessoa) => {
+      const lancamento = lancamentos.find((l) => l.pessoaId === pessoa.id);
+      const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
+      const valorFixo = periodo?.valor ?? 0;
+      const valorAdicional = tipoPlano === "saude" ? (lancamento?.valorAdicional ?? 0) : 0;
+      const valorCoparticipacao = tipoPlano === "saude" ? (lancamento?.valorCoparticipacao ?? 0) : 0;
+      const total = valorFixo + valorAdicional + valorCoparticipacao;
+      return [
+        pessoa.codigo || "",
+        pessoa.nome,
+        pessoa.tipo === "titular" ? "titular" : "dependente",
+        pessoa.tipo === "titular" ? valorFixo.toFixed(2) : "0.00",
+        pessoa.tipo === "dependente" ? valorFixo.toFixed(2) : "0.00",
+        valorAdicional.toFixed(2),
+        valorCoparticipacao.toFixed(2),
+        total.toFixed(2),
+      ];
+    });
+    baixarCSV(
+      ["codigo", "nome", "tipo pessoa", "valor titular", "valor dependente", "valor adicional", "valor coparticipacao", "total"],
+      linhas,
+      `plano-saude-${tipoPlano}`,
+      filial,
+    );
+    return resultadoSucesso(undefined);
   },
 };

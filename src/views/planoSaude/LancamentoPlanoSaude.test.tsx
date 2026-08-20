@@ -6,7 +6,7 @@ import { SessaoProvider } from "../../state/SessaoContext";
 import { ComoAdminNaFilial } from "../../testUtils/ComoAdminNaFilial";
 import { ComSessao } from "../../testUtils/ComSessao";
 import { formatarMoeda } from "../../utils/formatadores";
-import { LancamentoPlanoSaude } from "./LancamentoPlanoSaude";
+import { agruparPorTitular, LancamentoPlanoSaude } from "./LancamentoPlanoSaude";
 
 beforeEach(() => {
   localStorage.clear();
@@ -31,6 +31,43 @@ function renderComoGerente() {
     </SessaoProvider>,
   );
 }
+
+describe("agruparPorTitular (paginação agrupa titular+dependentes, sem separar entre páginas)", () => {
+  function pessoa(id: string, tipo: "titular" | "dependente", titularId: string) {
+    return { id, codigo: id, nome: id, tipo, titularId, filial: "100" };
+  }
+
+  it("agrupa titular com seus dependentes num único grupo, na ordem em que aparecem", () => {
+    const grupos = agruparPorTitular([pessoa("t1", "titular", "t1"), pessoa("d1", "dependente", "t1"), pessoa("d2", "dependente", "t1")]);
+    expect(grupos).toEqual([[pessoa("t1", "titular", "t1"), pessoa("d1", "dependente", "t1"), pessoa("d2", "dependente", "t1")]]);
+  });
+
+  it("separa titulares diferentes em grupos diferentes, preservando a ordem geral", () => {
+    const grupos = agruparPorTitular([
+      pessoa("t1", "titular", "t1"),
+      pessoa("d1", "dependente", "t1"),
+      pessoa("t2", "titular", "t2"),
+      pessoa("d2", "dependente", "t2"),
+    ]);
+    expect(grupos).toHaveLength(2);
+    expect(grupos[0].map((p) => p.id)).toEqual(["t1", "d1"]);
+    expect(grupos[1].map((p) => p.id)).toEqual(["t2", "d2"]);
+  });
+
+  it("titular sem dependente vira um grupo de 1", () => {
+    const grupos = agruparPorTitular([pessoa("t1", "titular", "t1")]);
+    expect(grupos).toEqual([[pessoa("t1", "titular", "t1")]]);
+  });
+
+  it("dependente sem o titular correspondente na lista (busca bateu só nele) vira seu próprio grupo, sem quebrar", () => {
+    const grupos = agruparPorTitular([pessoa("d1", "dependente", "t-inexistente")]);
+    expect(grupos).toEqual([[pessoa("d1", "dependente", "t-inexistente")]]);
+  });
+
+  it("lista vazia vira lista de grupos vazia", () => {
+    expect(agruparPorTitular([])).toEqual([]);
+  });
+});
 
 describe("LancamentoPlanoSaude — Plano de Saúde (F5.PS-LAN)", () => {
   it("mostra o valor fixo padrão (R$ 185,27) na coluna Titular para a filial 100", async () => {
@@ -218,6 +255,16 @@ describe("LancamentoPlanoSaude — Plano de Saúde (F5.PS-LAN)", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ajuda" }));
     expect(screen.getByRole("tooltip")).toHaveTextContent(/não altera os totais/);
+  });
+
+  it("mostra a paginação contando titulares (não linhas de pessoa) e o Total ativos independe da página", async () => {
+    renderComoAdminNaFilial("100");
+    await screen.findByText("Carlos Silva"); // Carlos, Fernanda, Patricia — 3 titulares, sem dependentes por padrão
+    expect(screen.getByText("1–3 de 3")).toBeInTheDocument();
+
+    const linhaAtivos = screen.getByText("Total ativos").closest("tr")!;
+    const totalAtivos = within(linhaAtivos).getAllByRole("cell").at(-1)!.textContent;
+    expect(totalAtivos).toBe(formatarMoeda(185.27 * 3)); // 3 titulares na filial 100, valor fixo padrão
   });
 
   it("Admin em 'Todas as filiais' vê a coluna Filial e não vê o botão de bloqueio", async () => {

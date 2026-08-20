@@ -4,9 +4,33 @@ import {
   type ConsolidadoPevService,
   type LinhaConsolidadoPev,
 } from "../../services/consolidadoPevService";
-import { FILIAL_TODAS, resultadoSucesso, type AdiantamentoFerias, type Colaborador, type Premiacao } from "../../types";
+import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type AdiantamentoFerias, type Colaborador, type Premiacao } from "../../types";
+import { baixarCSV } from "../../utils/exportar";
+import { obterMesesCicloPEV } from "../../utils/periodo";
 import { lerColecao, upsertPorId } from "./db";
 import { garantirSeed } from "./seed";
+
+/** Mesma ordem de `obterMesesCicloPEV` — cabeçalho do CSV gerado pelo backend real (`GET /api/consolidado/exportar-csv`). */
+const CABECALHO_CSV = [
+  "cpf",
+  "nome",
+  "valor dezembro",
+  "valor janeiro",
+  "valor fevereiro",
+  "valor marco",
+  "valor abril",
+  "valor maio",
+  "valor junho",
+  "valor julho",
+  "valor agosto",
+  "valor setembro",
+  "valor outubro",
+  "valor novembro",
+  "total acumulado",
+  "base de calculo",
+  "valor adiantamento",
+  "premiacao total a receber",
+];
 
 export const consolidadoPevServiceMock: ConsolidadoPevService = {
   async listarConsolidadoPev(filial, anoCiclo, meses) {
@@ -51,6 +75,25 @@ export const consolidadoPevServiceMock: ConsolidadoPevService = {
       (a) => a.vendedorId === vendedorId && a.anoCiclo === anoCiclo,
     );
     upsertPorId<AdiantamentoFerias>("adiantamentosFerias", { id: existente?.id ?? "", vendedorId, anoCiclo, valor }, "adto");
+    return resultadoSucesso(undefined);
+  },
+
+  async exportarCSV(filial, anoCiclo) {
+    const meses = obterMesesCicloPEV(anoCiclo);
+    const resultado = await consolidadoPevServiceMock.listarConsolidadoPev(filial, anoCiclo, meses);
+    const dados = resultado.status === "sucesso" ? resultado.dados : [];
+    if (dados.length === 0) return resultadoErro("Não há dados do Consolidado PEV para exportar.");
+
+    const linhas = dados.map((l) => [
+      l.cpf,
+      l.vendedorNome,
+      ...meses.map((mes) => (l.porMes[mes] ?? 0).toFixed(2)),
+      l.totalAcumulado.toFixed(2),
+      l.baseCalculo.toFixed(2),
+      l.adiantamento.toFixed(2),
+      l.premiacaoAdicionalReceber.toFixed(2),
+    ]);
+    baixarCSV(CABECALHO_CSV, linhas, "consolidado-pev", filial);
     return resultadoSucesso(undefined);
   },
 };

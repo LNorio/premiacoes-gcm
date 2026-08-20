@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { bloqueioService, colaboradoresService, descontosService } from "../../adapters";
-import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, MensagemVazia, Modal, Table } from "../../components/ui";
+import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, MensagemVazia, Modal, Paginacao, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { exportarDescontosExcel, totaisPorTipo } from "../../services/descontosService";
+import { totaisPorTipo } from "../../services/descontosService";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type TipoDescontoBonificacao } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
@@ -10,6 +10,7 @@ import { obterMesAtualISO } from "../../utils/periodo";
 import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
+import { usePaginacao } from "../../utils/usePaginacao";
 
 interface LinhaDesconto {
   id: string;
@@ -40,6 +41,7 @@ export function Descontos() {
   const [removendoId, setRemovendoId] = useState<string | null>(null);
   const [modalTotaisAberta, setModalTotaisAberta] = useState(false);
   const [busca, setBusca] = useState("");
+  const [exportando, setExportando] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -190,19 +192,16 @@ export function Descontos() {
     }
   }
 
-  function exportarExcel() {
-    const paraExportar = linhas
-      .filter((l) => !l.novo)
-      .map((l) => ({
-        id: l.id,
-        vendedorId: l.vendedorId,
-        mesReferencia,
-        tipo: l.tipo as TipoDescontoBonificacao,
-        valor: l.valor,
-        observacoes: l.observacoes,
-      }));
-    const exportou = exportarDescontosExcel(paraExportar, colaboradores, filialAtiva);
-    if (!exportou) mostrarToast("Não há descontos ou bonificações salvos para exportar.", "erro");
+  async function exportarCSV() {
+    setExportando(true);
+    try {
+      const resultado = await descontosService.exportarCSV(filialAtiva, mesReferencia);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao exportar.", "erro");
+      }
+    } finally {
+      setExportando(false);
+    }
   }
 
   const totais = totaisPorTipo(linhas);
@@ -210,6 +209,9 @@ export function Descontos() {
   const colaboradoresFiltrados = buscaNormalizada
     ? colaboradores.filter((c) => [c.codigo, c.nome].some((campo) => normalizarBusca(campo).includes(buscaNormalizada)))
     : colaboradores;
+  // Pagina por colaborador (não por <tr>) — um colaborador com vários lançamentos no mês
+  // fica inteiro na mesma página.
+  const paginacao = usePaginacao(colaboradoresFiltrados);
 
   return (
     <section className="view">
@@ -236,7 +238,7 @@ export function Descontos() {
             <label htmlFor="descontos-busca" style={{ marginBottom: 0 }}>
               Buscar colaborador
             </label>
-            <AjudaPopover texto="Esta busca serve só para facilitar encontrar um colaborador na lista e preencher os lançamentos dele — ela não altera o total por tipo nem a exportação para Excel da filial, que sempre consideram todos os colaboradores, buscados ou não." />
+            <AjudaPopover texto="Esta busca serve só para facilitar encontrar um colaborador na lista e preencher os lançamentos dele — ela não altera o total por tipo nem a exportação CSV da filial, que sempre consideram todos os colaboradores, buscados ou não." />
           </div>
           <input
             id="descontos-busca"
@@ -255,8 +257,8 @@ export function Descontos() {
           <Button variant="secundario" onClick={() => setModalTotaisAberta(true)}>
             📊 Totais por tipo
           </Button>
-          <Button variant="secundario" onClick={exportarExcel}>
-            ⭳ Exportar Excel da filial
+          <Button variant="secundario" onClick={exportarCSV} carregando={exportando}>
+            ⭳ Exportar CSV da filial
           </Button>
         </div>
       </div>
@@ -292,7 +294,7 @@ export function Descontos() {
                   </td>
                 </tr>
               ) : (
-                colaboradoresFiltrados.map((colaborador) => {
+                paginacao.itensDaPagina.map((colaborador) => {
                   const linhasColaborador = linhas.filter((l) => l.vendedorId === colaborador.id);
                   const botaoAdicionar = !bloqueadoParaEdicao ? (
                     <Button variant="secundario" onClick={() => adicionarLinha(colaborador.id)}>
@@ -369,6 +371,15 @@ export function Descontos() {
               )}
             </tbody>
           </Table>
+
+          <Paginacao
+            paginaAtual={paginacao.paginaAtual}
+            totalPaginas={paginacao.totalPaginas}
+            tamanhoPagina={paginacao.tamanhoPagina}
+            totalItens={paginacao.totalItens}
+            onIrParaPagina={paginacao.irParaPagina}
+            onMudarTamanho={paginacao.definirTamanhoPagina}
+          />
 
           <Modal aberto={modalTotaisAberta} titulo="Totais por tipo de lançamento" onFechar={() => setModalTotaisAberta(false)}>
             <Table compacta>

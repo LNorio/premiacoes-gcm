@@ -1,51 +1,45 @@
-import { somarCategoriasPremiacao, type LancamentoPremiacao, type PremiacaoService } from "../../services/premiacaoService";
-import { resultadoErro, resultadoSucesso, type Colaborador, type Premiacao, type Resultado } from "../../types";
+import type { LancamentoPremiacao, PremiacaoService } from "../../services/premiacaoService";
+import { resultadoErro, resultadoSucesso, type Premiacao, type Resultado } from "../../types";
+import { baixarCSVPronto } from "../../utils/exportar";
 import { ultimoDiaDoMes } from "../../utils/periodo";
-import { colaboradoresServiceHttp } from "./colaboradoresService.http";
 import { httpClient } from "./cliente";
 import { ErroHttp } from "./httpClient";
-import { buscarPremiacoesAgrupadas } from "./respostaPremiacoesAgrupadas";
+import { buscarCsvPremiacoes, buscarPremiacoesAgrupadas } from "./respostaPremiacoesAgrupadas";
 
 function paraMensagemErro(erro: unknown): string {
   return erro instanceof ErroHttp ? erro.message : "Não foi possível conectar ao servidor. Tente novamente.";
 }
 
-async function buscarPremiacaoDoColaborador(colaborador: Colaborador, mesReferencia: string): Promise<Premiacao> {
-  const resposta = await buscarPremiacoesAgrupadas(
-    colaborador.id,
-    colaborador.filial,
-    `${mesReferencia}-01`,
-    ultimoDiaDoMes(mesReferencia),
-  );
-  const linha = resposta.meses[0]?.dados[0];
-  const valores = {
-    pev: Number(linha?.pev ?? 0),
-    iconic: Number(linha?.iconic ?? 0),
-    filtros: Number(linha?.filtros ?? 0),
-    campanhasFornecedores: Number(linha?.fornecedores ?? 0),
-    inadimplencia: Number(linha?.inadimplencia ?? 0),
-  };
-  return {
+/**
+ * Uma única requisição pra filial inteira (`Claude/API (16).md`): pedindo `data_inicio`/
+ * `data_fim` do mesmo mês, a própria API já devolve o "roster do mês" — todo colaborador
+ * com a tela Premiações aparece, com zero pra quem ainda não tem lançamento. Não precisa
+ * mais buscar a lista de colaboradores nem filtrar por `telas.premiacoes` no cliente — a
+ * API já filtra por acesso à tela sozinha (ver "Controle de acesso por tela" no documento).
+ */
+async function buscarPremiacoesDaFilial(filial: string, mesReferencia: string): Promise<Premiacao[]> {
+  const resposta = await buscarPremiacoesAgrupadas(undefined, filial, `${mesReferencia}-01`, ultimoDiaDoMes(mesReferencia));
+  return (resposta.meses[0]?.dados ?? []).map((linha) => ({
     // Não existe id de registro de premiação nesta API — chave estável derivada de colaborador+mês.
-    id: `${colaborador.id}-${mesReferencia}`,
-    vendedorId: colaborador.id,
-    vendedorNome: colaborador.nome,
-    filial: colaborador.filial,
+    id: `${linha["id colaborador"]}-${mesReferencia}`,
+    vendedorId: String(linha["id colaborador"]),
+    vendedorNome: linha["nome colaborador"],
+    codigo: linha.codigo,
+    filial: linha.filial,
     mesReferencia,
-    ...valores,
-    total: linha ? Number(linha.total) : somarCategoriasPremiacao(valores),
-  };
+    pev: Number(linha.pev),
+    iconic: Number(linha.iconic),
+    filtros: Number(linha.filtros),
+    campanhasFornecedores: Number(linha.fornecedores),
+    inadimplencia: Number(linha.inadimplencia),
+    total: Number(linha.total),
+  }));
 }
 
 export const premiacaoServiceHttp: PremiacaoService = {
   async listarPremiacoes(filial, mesReferencia): Promise<Resultado<Premiacao[]>> {
     try {
-      const resColaboradores = await colaboradoresServiceHttp.listarColaboradores(filial);
-      if (resColaboradores.status !== "sucesso") {
-        return resultadoErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
-      }
-      const habilitados = resColaboradores.dados.filter((c) => c.telas.premiacoes);
-      const premiacoes = await Promise.all(habilitados.map((c) => buscarPremiacaoDoColaborador(c, mesReferencia)));
+      const premiacoes = await buscarPremiacoesDaFilial(filial, mesReferencia);
       return resultadoSucesso(premiacoes);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
@@ -67,6 +61,25 @@ export const premiacaoServiceHttp: PremiacaoService = {
         })),
       });
       return await premiacaoServiceHttp.listarPremiacoes(filial, mesReferencia);
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
+  },
+
+  async exportarPremiacoesCSV(filial, mesReferencia): Promise<Resultado<void>> {
+    try {
+      const conteudo = await buscarCsvPremiacoes({
+        filial,
+        dataInicio: `${mesReferencia}-01`,
+        dataFim: ultimoDiaDoMes(mesReferencia),
+      });
+      // O backend sempre devolve pelo menos a linha de cabeçalho — sem lançamento
+      // nenhum, o conteúdo é só essa linha.
+      if (conteudo.trim().split("\n").length <= 1) {
+        return resultadoErro("Não há premiações salvas para exportar.");
+      }
+      baixarCSVPronto(conteudo, "premiacoes", filial);
+      return resultadoSucesso(undefined);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }

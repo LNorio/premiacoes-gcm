@@ -7,6 +7,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("descontosServiceHttp.listarDescontos", () => {
@@ -125,5 +126,34 @@ describe("descontosServiceHttp.removerDesconto", () => {
     expect(url).toContain("/api/descontos-bonificacoes");
     expect(init.method).toBe("DELETE");
     expect(JSON.parse(init.body as string)).toEqual({ id_do_desconto: 2, id_do_colaborador: 4 });
+  });
+});
+
+describe("descontosServiceHttp.exportarCSV", () => {
+  it("busca o CSV pronto do backend (GET /api/descontos-bonificacoes/exportar-csv) e dispara o download", async () => {
+    const base64 = btoa('"nome colaborador";tipo;valor;observacao\n"Carlos";Multa;50.00;atraso');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const resultado = await descontosServiceHttp.exportarCSV("100", "2026-08");
+    expect(resultado.status).toBe("sucesso");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("/api/descontos-bonificacoes/exportar-csv");
+    expect(url).toContain("mes_de_referencia=2026-08-01");
+    expect(url).toContain("filial=100");
+  });
+
+  it("sem lançamento nenhum, devolve erro em vez de baixar um arquivo vazio", async () => {
+    const base64 = btoa('"nome colaborador";tipo;valor;observacao');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await descontosServiceHttp.exportarCSV("100", "2026-08");
+    expect(resultado.status).toBe("erro");
   });
 });

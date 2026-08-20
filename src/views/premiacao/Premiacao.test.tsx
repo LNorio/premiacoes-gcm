@@ -94,6 +94,14 @@ describe("Premiacao — edição, totais e salvar (F3.PREM-04/05)", () => {
   });
 });
 
+describe("Premiacao — paginação", () => {
+  it("mostra a paginação com a contagem certa de colaboradores habilitados", async () => {
+    renderComoGerente(); // Carlos + Fernanda (Patricia sem tela premiacoes) — 2 colaboradores
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.getByText("1–2 de 2")).toBeInTheDocument();
+  });
+});
+
 describe("Premiacao — bloqueio (F3.PREM-07)", () => {
   it("Admin numa filial específica vê o botão de bloqueio; em Todas as filiais, não", async () => {
     renderComoAdminNaFilial("100");

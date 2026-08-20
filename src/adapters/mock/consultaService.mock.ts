@@ -1,7 +1,14 @@
 import type { CartaoMesConsulta, ConsultaService } from "../../services/consultaService";
-import { CATEGORIAS_PREMIACAO, FILIAL_TODAS, resultadoSucesso, type Colaborador, type Premiacao } from "../../types";
+import { CATEGORIAS_PREMIACAO, FILIAL_TODAS, resultadoErro, resultadoSucesso, type Colaborador, type Premiacao } from "../../types";
+import { baixarCSV } from "../../utils/exportar";
 import { lerColecao } from "./db";
 import { garantirSeed } from "./seed";
+
+function buscarPremiacoes(filial: string, escopo?: { vendedorId: string }): Premiacao[] {
+  return lerColecao<Premiacao>("premiacoes").filter(
+    (p) => (filial === FILIAL_TODAS || p.filial === filial) && (!escopo || p.vendedorId === escopo.vendedorId),
+  );
+}
 
 export const consultaServiceMock: ConsultaService = {
   async listarConsulta(filial, filtro, escopo) {
@@ -31,5 +38,25 @@ export const consultaServiceMock: ConsultaService = {
     }));
 
     return resultadoSucesso(cartoes);
+  },
+
+  async exportarCSV(filial, _filtro, escopo) {
+    garantirSeed();
+    const premiacoes = buscarPremiacoes(filial, escopo);
+    if (premiacoes.length === 0) return resultadoErro("Não há premiações salvas para exportar.");
+
+    // Mesmas colunas do CSV gerado pelo backend real (Claude/API (15).md), pra manter o
+    // adapter mock representativo do que a tela realmente recebe.
+    const linhas = premiacoes.map((p) => [
+      p.vendedorNome,
+      p.pev.toFixed(2),
+      p.iconic.toFixed(2),
+      p.filtros.toFixed(2),
+      p.campanhasFornecedores.toFixed(2),
+      p.inadimplencia.toFixed(2),
+      p.total.toFixed(2),
+    ]);
+    baixarCSV(["nome colaborador", "pev", "iconic", "filtros", "fornecedores", "inadimplencia", "total"], linhas, "premiacoes", filial);
+    return resultadoSucesso(undefined);
   },
 };

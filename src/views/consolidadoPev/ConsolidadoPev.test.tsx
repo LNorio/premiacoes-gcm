@@ -101,6 +101,14 @@ describe("ConsolidadoPev — adiantamento de férias (F3.PEV-04/05/06)", () => {
   });
 });
 
+describe("ConsolidadoPev — paginação", () => {
+  it("mostra a paginação com a contagem certa de colaboradores habilitados", async () => {
+    renderComoGerente(); // Carlos + Fernanda (Patricia tem premiacoes=false) — 2 colaboradores
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.getByText("1–2 de 2")).toBeInTheDocument();
+  });
+});
+
 describe("ConsolidadoPev — filtros (F3.PEV-08)", () => {
   it("traz o ciclo do ano atual por padrão, com os campos De/Até somente-leitura", async () => {
     renderComoGerente();

@@ -1,6 +1,4 @@
-import { formatarMesReferencia } from "../utils/formatadores";
-import { baixarExcel } from "../utils/exportar";
-import { TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type DescontoBonificacao, type Resultado, type TipoDescontoBonificacao } from "../types";
+import { TIPOS_DESCONTO_BONIFICACAO, type DescontoBonificacao, type Resultado, type TipoDescontoBonificacao } from "../types";
 
 export interface NovoLancamentoDesconto {
   vendedorId: string;
@@ -14,6 +12,8 @@ export interface DescontosService {
   listarDescontos(filial: string, mesReferencia: string): Promise<Resultado<DescontoBonificacao[]>>;
   salvarDescontos(lancamentos: (NovoLancamentoDesconto & { id?: string })[]): Promise<Resultado<DescontoBonificacao[]>>;
   removerDesconto(id: string): Promise<Resultado<void>>;
+  /** CSV gerado pelo backend (`GET /api/descontos-bonificacoes/exportar-csv`) — colunas fixas do próprio backend, não as exibidas em tela. */
+  exportarCSV(filial: string, mesReferencia: string): Promise<Resultado<void>>;
 }
 
 export interface TotalPorTipo {
@@ -35,26 +35,4 @@ export function totaisPorTipo(linhas: { tipo: TipoDescontoBonificacao | ""; valo
     totais.push({ tipo, total: linhasDoTipo.reduce((soma, l) => soma + l.valor, 0) });
   }
   return totais;
-}
-
-/** Documento técnico, Seção 4 — CPF, Nome, Mês Referência, Tipo, Valor, Observações (1 linha por lançamento). */
-export function exportarDescontosExcel(
-  descontos: DescontoBonificacao[],
-  colaboradores: Colaborador[],
-  filial: string,
-): boolean {
-  if (descontos.length === 0) return false;
-  const linhas = descontos.map((d) => {
-    const colaborador = colaboradores.find((c) => c.id === d.vendedorId);
-    return [
-      colaborador?.cpf ?? "",
-      colaborador?.nome ?? "",
-      formatarMesReferencia(d.mesReferencia),
-      d.tipo,
-      d.valor.toFixed(2),
-      d.observacoes || "",
-    ];
-  });
-  void baixarExcel(["CPF", "Nome", "Mês Referência", "Tipo", "Valor", "Observações"], linhas, "descontos-bonificacoes", filial);
-  return true;
 }

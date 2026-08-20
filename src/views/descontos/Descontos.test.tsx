@@ -213,11 +213,28 @@ describe("Descontos — barra de busca", () => {
   });
 });
 
+describe("Descontos — paginação", () => {
+  it("mostra a paginação por colaborador e os totais por tipo continuam somando todo mundo, independente da página", async () => {
+    const user = userEvent.setup();
+    renderComoCoordenador(); // Carlos, Fernanda, Patricia — 3 colaboradores com descontos=true
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+    expect(screen.getByText("1–3 de 3")).toBeInTheDocument();
+
+    await user.click(within(screen.getByText("Carlos Silva").closest("tr")!).getByRole("button", { name: "+ Adicionar" }));
+    await user.selectOptions(screen.getByLabelText("Tipo do lançamento 1 de Carlos Silva"), "Bonificação");
+    await user.type(screen.getByLabelText("Valor do lançamento 1 de Carlos Silva"), "150");
+
+    await user.click(screen.getByRole("button", { name: "📊 Totais por tipo" }));
+    const linhaBonificacao = within(screen.getByRole("dialog")).getByText("Bonificação").closest("tr")!;
+    expect(within(linhaBonificacao).getByText("R$ 150,00")).toBeInTheDocument();
+  });
+});
+
 describe("Descontos — exportação (F4.DESC-09)", () => {
-  it("mostra o botão de exportar Excel da filial", async () => {
+  it("mostra o botão de exportar CSV da filial", async () => {
     renderComoCoordenador();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: /Exportar Excel da filial/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Exportar CSV da filial/ })).toBeInTheDocument();
   });
 });
 

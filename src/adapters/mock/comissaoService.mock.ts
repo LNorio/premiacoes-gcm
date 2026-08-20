@@ -1,6 +1,7 @@
 import { obterPevDaPremiacao } from "../../services/consolidadoPevService";
 import type { ComissaoService } from "../../services/comissaoService";
-import { FILIAL_TODAS, resultadoSucesso, type Colaborador, type Comissao, type Premiacao } from "../../types";
+import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type Colaborador, type Comissao, type Premiacao } from "../../types";
+import { baixarCSV } from "../../utils/exportar";
 import { lerColecao, upsertPorId } from "./db";
 import { garantirSeed } from "./seed";
 
@@ -40,5 +41,21 @@ export const comissaoServiceMock: ComissaoService = {
     };
     const salvo = upsertPorId(CHAVE, registro, "com");
     return resultadoSucesso(salvo);
+  },
+
+  async exportarCSV(filial, mesReferencia) {
+    garantirSeed();
+    const comissoes = buscar(filial, mesReferencia);
+    if (comissoes.length === 0) return resultadoErro("Não há comissões salvas para exportar.");
+
+    const colaboradores = lerColecao<Colaborador>("colaboradores");
+    // Mesmas colunas do CSV gerado pelo backend real (`GET /api/comissoes/exportar-csv`) —
+    // não tem PEV (só existe na tela, lida ao vivo de Premiação), mas tem CPF e Função.
+    const linhas = comissoes.map((c) => {
+      const colaborador = colaboradores.find((col) => col.id === c.vendedorId);
+      return [c.vendedorNome, colaborador?.cpf ?? "", colaborador?.cargo ?? "", c.valor.toFixed(2), c.garantido.toFixed(2)];
+    });
+    baixarCSV(["nome colaborador", "cpf", "funcao", "comissao", "garantido"], linhas, "comissoes", filial);
+    return resultadoSucesso(undefined);
   },
 };

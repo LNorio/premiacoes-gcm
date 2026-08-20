@@ -91,7 +91,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F3.PEV-05** Derivados: Base = Total × 0,28; A Receber = Base − Adiantamento; rodapé soma meses + 4 colunas.
 - [x] **F3.PEV-06** Visibilidade da coluna Adiantamento conforme perfil.
 - [x] **F3.PEV-08** Filtros de ciclo e intervalo de meses. **Alterado em 2026-08-12:** campos "De"/"Até" passaram a ser somente-leitura, sempre refletindo o ciclo do ano informado em "Ciclo" (ver `Claude/eventos-roadmap.md`).
-- [x] **F3.PEV-09** Exportação CSV (CPF, Nome, Premiação Adicional a Receber).
+- [x] **F3.PEV-09** Exportação CSV. **Alterado em 2026-08-20:** era gerada no front (CPF, Nome, Premiação Adicional a Receber); passou a vir pronta do backend (`GET /api/consolidado/exportar-csv`) — colunas mais ricas (CPF, Nome, valor mês a mês do ciclo, Total Acumulado, Base de Cálculo, Adiantamento, Premiação Total a Receber). Ver `Claude/eventos-roadmap.md`.
 - [x] **F3.PEV-10** Testes da tela. → `Claude/testes/f3-nucleo-premiacao.md`.
 
 **Tela: Consulta por Período** — código `F3.CONS` *(somente leitura)*
@@ -114,7 +114,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F4.COM-06** Coluna **PEV só para Admin** (cabeçalho/linhas/rodapé); Coordenador não acessa a tela (fora do `NAV_POR_PAPEL` dele, guarda de rota do Shell).
 - [x] **F4.COM-07** Bloqueio `comissao` (editor Gerente); botão de bloqueio só para Admin numa filial específica.
 - [x] **F4.COM-08** Filtro de mês + filial.
-- [x] **F4.COM-09** Exportação Excel (Código, Nome, PEV, Comissão, Garantido). → `exportarComissoesExcel` (`src/services/comissaoService.ts`) + `baixarExcel` (SheetJS via CDN, `src/utils/exportar.ts`).
+- [x] **F4.COM-09** Exportação. **Alterado em 2026-08-20:** era Excel client-side (Código, Nome, PEV, Comissão, Garantido, via `exportarComissoesExcel` + SheetJS); passou a ser CSV gerado pelo backend (`GET /api/comissoes/exportar-csv`) — colunas do próprio backend (nome colaborador, CPF, Função, Comissão, Garantido; **sem PEV**, que só existe ao vivo na tela). Ver `Claude/eventos-roadmap.md`.
 - [x] **F4.COM-10** Testes da tela. → `Claude/testes/f4-comissao-descontos.md`.
 
 **Tela: Descontos e Bonificações** — código `F4.DESC`
@@ -125,7 +125,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F4.DESC-05** Botão **"📊 Totais por tipo"** abre uma modal com um total por tipo de lançamento presente no mês (só entram tipos com pelo menos 1 lançamento) — soma simples e sempre positiva do valor de cada tipo, já que agora cada um aparece separado (não faz mais sentido a regra de sinal usada quando era um total só). A tabela da modal usa `<Table compacta>` (sem o min-width de 640px das tabelas normais) para não gerar rolagem horizontal. **Histórico:** até 2026-08-17 a tela tinha uma coluna "Total" por colaborador + rodapé "Total geral" únicos, com Bonificação/Ajuda de Custo somando e os demais tipos subtraindo (regra introduzida em 2026-08-13); foram retirados e viraram a modal atual — que por sua vez começou também com essa regra de sinal (só tipos "que descontam" apareciam negativos) e depois voltou a ser soma simples e positiva, a pedido do usuário. Ver `Claude/eventos-roadmap.md`.
 - [x] **F4.DESC-07** Bloqueio `descontos` (editor Coordenador); botão de bloqueio só para Admin numa filial específica.
 - [x] **F4.DESC-08** Filtro de mês + filial.
-- [x] **F4.DESC-09** Exportação Excel (CPF, Nome, Mês Referência, Tipo, Valor, Observações — 1 linha por lançamento). → `exportarDescontosExcel` (`src/services/descontosService.ts`).
+- [x] **F4.DESC-09** Exportação. **Alterado em 2026-08-20:** era Excel client-side (CPF, Nome, Mês Referência, Tipo, Valor, Observações — 1 linha por lançamento, via `exportarDescontosExcel`); passou a ser CSV gerado pelo backend (`GET /api/descontos-bonificacoes/exportar-csv`) — colunas do próprio backend (nome colaborador, Tipo, Valor, Observação; **sem CPF nem Mês Referência**). Ver `Claude/eventos-roadmap.md`.
 - [x] **F4.DESC-10** Testes da tela. → `Claude/testes/f4-comissao-descontos.md`.
 
 ## F5 — Plano de Saúde
@@ -147,7 +147,7 @@ Toda tela é construída com esta mesma sequência de subtarefas. Nas seções d
 - [x] **F5.PS-LAN-06** Alternância de sub-aba (cadastro/lançamento/período) e de tipo (saúde/odonto).
 - [x] **F5.PS-LAN-07** Bloqueio `planoSaude` (editor Coordenador). **Alterado em 2026-08-18:** passou a existir (botão/checagem) nas duas sub-abas — antes só existia em Saúde ("Odontológico não tem nada editável para bloquear"), mas agora o Total desligados de Odontológico também é editável e precisa do mesmo bloqueio (que já é por tela `planoSaude`, não por tipo de plano).
 - [x] **F5.PS-LAN-08** Filtro de mês + filial.
-- [x] **F5.PS-LAN-09** Exportação Excel respeitando sub-aba e filial. → `exportarPlanoSaudeExcel` (`src/services/planoSaudeService.ts`).
+- [x] **F5.PS-LAN-09** Exportação respeitando sub-aba e filial. **Alterado em 2026-08-20:** era Excel client-side com colunas variando por sub-aba (via `exportarPlanoSaudeExcel`); passou a ser CSV gerado pelo backend (`GET /api/lancamentos/exportar-csv`) — sempre as 8 colunas de Saúde (código, nome, tipo pessoa, valor titular/dependente/adicional/coparticipação, total), mesmo no Odontológico (adicional/coparticipação vêm zeradas ali). Ver `Claude/eventos-roadmap.md`.
 - [x] **F5.PS-LAN-10** Testes da tela. → `Claude/testes/f5-plano-saude.md`.
 
 **Tela: Período do Plano** — código `F5.PS-PER` *(adicionado em 2026-08-14, fora do escopo original — ver `Claude/eventos-roadmap.md`)*

@@ -1,5 +1,6 @@
 import type { ConsolidadoPevService, LinhaConsolidadoPev } from "../../services/consolidadoPevService";
 import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type Resultado } from "../../types";
+import { baixarCSVPronto, decodificarCsvBase64 } from "../../utils/exportar";
 import { obterMesesCicloPEV } from "../../utils/periodo";
 import { colaboradoresServiceHttp } from "./colaboradoresService.http";
 import { httpClient } from "./cliente";
@@ -98,6 +99,21 @@ export const consolidadoPevServiceHttp: ConsolidadoPevService = {
       await httpClient.put("/api/consolidado/adiantamento", [
         { "id colaborador": Number(vendedorId), "ano referencia": anoCiclo, adiantamento: valor },
       ]);
+      return resultadoSucesso(undefined);
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
+  },
+
+  async exportarCSV(filial, anoCiclo): Promise<Resultado<void>> {
+    try {
+      const query = `?ano=${anoCiclo}${filial === FILIAL_TODAS ? "" : `&filial=${encodeURIComponent(filial)}`}`;
+      const resposta = await httpClient.get<{ "arquivo csv": string; mensagem: string }>(`/api/consolidado/exportar-csv${query}`);
+      const conteudo = decodificarCsvBase64(resposta["arquivo csv"]);
+      if (conteudo.trim().split("\n").length <= 1) {
+        return resultadoErro("Não há dados do Consolidado PEV para exportar.");
+      }
+      baixarCSVPronto(conteudo, "consolidado-pev", filial);
       return resultadoSucesso(undefined);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));

@@ -31,7 +31,7 @@ interface RespostaUsuario {
   nome: string;
   cpf: string;
   funcao: string;
-  email: string;
+  email: string | null;
   usuario: string;
   role: Papel;
   filial: string;
@@ -55,7 +55,7 @@ function paraColaborador(resposta: RespostaUsuario): Colaborador {
     filial: resposta.filial,
     cargo: resposta.funcao,
     role: resposta.role,
-    email: resposta.email,
+    email: resposta.email ?? "",
     usuarioAcesso: resposta.usuario,
     // a API nunca devolve a senha (write-only) — ver ajuste em CadastroColaboradores.tsx.
     senhaAcesso: "",

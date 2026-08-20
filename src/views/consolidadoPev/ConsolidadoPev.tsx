@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { consolidadoPevService } from "../../adapters";
-import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
+import { Button, Carregando, MensagemErro, MensagemVazia, Paginacao, Table } from "../../components/ui";
 import { calcularPremiacaoAdicionalReceber, type LinhaConsolidadoPev } from "../../services/consolidadoPevService";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS } from "../../types";
-import { baixarCSV } from "../../utils/exportar";
 import { formatarMoeda } from "../../utils/formatadores";
 import { gerarIntervaloMeses, nomeCurtoMes, obterAnoCicloAtual, obterMesesCicloPEV } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
+import { usePaginacao } from "../../utils/usePaginacao";
 
 export function ConsolidadoPev() {
   const { sessao } = useSessao();
@@ -21,6 +21,7 @@ export function ConsolidadoPev() {
   const [linhas, setLinhas] = useState<LinhaConsolidadoPev[]>([]);
   const [adiantamentosEditados, setAdiantamentosEditados] = useState<Record<string, number>>({});
   const [salvando, setSalvando] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? "";
   const podeEditarAdiantamento = sessao?.role === "admin";
@@ -76,13 +77,16 @@ export function ConsolidadoPev() {
     }
   }
 
-  function exportarCSV() {
-    if (de > ate || linhas.length === 0) {
-      mostrarToast("Não há dados do Consolidado PEV para exportar.", "erro");
-      return;
+  async function exportarCSV() {
+    setExportando(true);
+    try {
+      const resultado = await consolidadoPevService.exportarCSV(filialAtiva, anoCiclo);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao exportar.", "erro");
+      }
+    } finally {
+      setExportando(false);
     }
-    const dados = linhas.map((l) => [l.cpf, l.vendedorNome, l.premiacaoAdicionalReceber.toFixed(2)]);
-    baixarCSV(["CPF", "Nome", "Premiação Adicional a Receber"], dados, "consolidado-pev", filialAtiva);
   }
 
   const totaisPorMes = mesesExibidos.map((mes) => linhas.reduce((soma, l) => soma + (l.porMes[mes] ?? 0), 0));
@@ -93,6 +97,7 @@ export function ConsolidadoPev() {
     const adiantamento = adiantamentosEditados[l.vendedorId] ?? 0;
     return soma + calcularPremiacaoAdicionalReceber(l.baseCalculo, adiantamento);
   }, 0);
+  const paginacao = usePaginacao(linhas);
 
   return (
     <section className="view">
@@ -124,7 +129,7 @@ export function ConsolidadoPev() {
       </form>
 
       <div className="acoes-tabela" style={{ justifyContent: "flex-start", marginBottom: "10px" }}>
-        <Button variant="secundario" onClick={exportarCSV}>
+        <Button variant="secundario" onClick={exportarCSV} carregando={exportando}>
           ⭳ Exportar CSV
         </Button>
       </div>
@@ -160,7 +165,7 @@ export function ConsolidadoPev() {
                   </td>
                 </tr>
               ) : (
-                linhas.map((linha) => {
+                paginacao.itensDaPagina.map((linha) => {
                   const adiantamento = adiantamentosEditados[linha.vendedorId] ?? 0;
                   const adicional = calcularPremiacaoAdicionalReceber(linha.baseCalculo, adiantamento);
                   return (
@@ -217,6 +222,15 @@ export function ConsolidadoPev() {
               </tfoot>
             ) : null}
           </Table>
+
+          <Paginacao
+            paginaAtual={paginacao.paginaAtual}
+            totalPaginas={paginacao.totalPaginas}
+            tamanhoPagina={paginacao.tamanhoPagina}
+            totalItens={paginacao.totalItens}
+            onIrParaPagina={paginacao.irParaPagina}
+            onMudarTamanho={paginacao.definirTamanhoPagina}
+          />
 
           {podeEditarAdiantamento && linhas.length > 0 ? (
             <div className="acoes-tabela">

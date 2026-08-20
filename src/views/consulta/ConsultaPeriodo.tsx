@@ -4,7 +4,6 @@ import { Button, Carregando, MensagemErro } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { CATEGORIAS_PREMIACAO, FILIAL_TODAS, type CategoriaPremiacao } from "../../types";
 import type { CartaoMesConsulta } from "../../services/consultaService";
-import { baixarCSV } from "../../utils/exportar";
 import { formatarMesReferencia, formatarMoeda } from "../../utils/formatadores";
 import { obterMesPassadoISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
@@ -26,6 +25,7 @@ export function ConsultaPeriodo() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [cartoes, setCartoes] = useState<CartaoMesConsulta[]>([]);
+  const [exportando, setExportando] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehVendedor = sessao?.role === "vendedor";
@@ -52,15 +52,15 @@ export function ConsultaPeriodo() {
   );
 
   async function exportarCSV() {
-    // A exportação usa todo o escopo da filial/vendedor, não só o período filtrado na
-    // tela (mesmo comportamento do protótipo: mesmas colunas da Planilha de Premiação).
-    const resultado = await consultaService.listarConsulta(filialAtiva, { de: "", ate: "" }, escopo);
-    if (resultado.status !== "sucesso" || resultado.dados.every((c) => c.linhas.length === 0)) {
-      mostrarToast("Não há premiações salvas para exportar.", "erro");
-      return;
+    setExportando(true);
+    try {
+      const resultado = await consultaService.exportarCSV(filialAtiva, { de, ate }, escopo);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao exportar.", "erro");
+      }
+    } finally {
+      setExportando(false);
     }
-    const linhas = resultado.dados.flatMap((cartao) => cartao.linhas.map((l) => [l.cpf, l.vendedorNome, l.total.toFixed(2), ""]));
-    baixarCSV(["CPF", "Nome", "Valor Total", "Observações"], linhas, "premiacoes", filialAtiva);
   }
 
   const titulo = ehVendedor ? "Minhas Premiações por Período" : "Consulta de Premiações por Período";
@@ -111,7 +111,7 @@ export function ConsultaPeriodo() {
 
       {!ehVendedor ? (
         <div className="acoes-tabela" style={{ justifyContent: "flex-start", marginBottom: "10px" }}>
-          <Button variant="secundario" onClick={exportarCSV}>
+          <Button variant="secundario" onClick={exportarCSV} carregando={exportando}>
             ⭳ Exportar CSV
           </Button>
         </div>

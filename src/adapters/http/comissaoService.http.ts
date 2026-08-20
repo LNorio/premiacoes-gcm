@@ -1,5 +1,6 @@
 import type { ComissaoService } from "../../services/comissaoService";
 import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type Comissao, type Resultado } from "../../types";
+import { baixarCSVPronto, decodificarCsvBase64 } from "../../utils/exportar";
 import { colaboradoresServiceHttp } from "./colaboradoresService.http";
 import { httpClient } from "./cliente";
 import { ErroHttp } from "./httpClient";
@@ -91,6 +92,22 @@ export const comissaoServiceHttp: ComissaoService = {
           garantido: linha.garantido,
         },
       );
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
+  },
+
+  async exportarCSV(filial, mesReferencia): Promise<Resultado<void>> {
+    try {
+      const resposta = await httpClient.get<{ "arquivo csv": string; mensagem: string }>(
+        `/api/comissoes/exportar-csv?mes_de_referencia=${mesReferencia}-01${queryFilial(filial)}`,
+      );
+      const conteudo = decodificarCsvBase64(resposta["arquivo csv"]);
+      if (conteudo.trim().split("\n").length <= 1) {
+        return resultadoErro("Não há comissões salvas para exportar.");
+      }
+      baixarCSVPronto(conteudo, "comissoes", filial);
+      return resultadoSucesso(undefined);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }

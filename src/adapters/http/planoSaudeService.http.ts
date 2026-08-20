@@ -8,6 +8,7 @@ import {
   type PlanoSaudePeriodo,
   type TipoPlanoSaude,
 } from "../../types";
+import { baixarCSVPronto, decodificarCsvBase64 } from "../../utils/exportar";
 import { httpClient } from "./cliente";
 import { ErroHttp } from "./httpClient";
 
@@ -272,6 +273,22 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
       if (resLista.status !== "sucesso") return resultadoErro(resLista.status === "erro" ? resLista.mensagem : "Falha ao encerrar.");
       const encerrado = resLista.dados.find((p) => p.id === periodo.id);
       return encerrado ? resultadoSucesso(encerrado) : resultadoErro("Período encerrado, mas não encontrado ao relistar.");
+    } catch (erro) {
+      return resultadoErro(paraMensagemErro(erro));
+    }
+  },
+
+  async exportarCSV(filial, mesReferencia, tipoPlano) {
+    try {
+      const resposta = await httpClient.get<{ "arquivo csv": string; mensagem: string }>(
+        `/api/lancamentos/exportar-csv?mes_de_referencia=${mesReferencia}-01&tipo_plano=${tipoPlano}${queryFilial(filial)}`,
+      );
+      const conteudo = decodificarCsvBase64(resposta["arquivo csv"]);
+      if (conteudo.trim().split("\n").length <= 1) {
+        return resultadoErro("Não há titulares/dependentes com adesão a este plano para exportar.");
+      }
+      baixarCSVPronto(conteudo, `plano-saude-${tipoPlano}`, filial);
+      return resultadoSucesso(undefined);
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }

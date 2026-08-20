@@ -101,10 +101,25 @@ describe("Comissao — edição, rodapé e salvar (F4.COM-04/05)", () => {
 });
 
 describe("Comissao — exportação (F4.COM-09)", () => {
-  it("mostra o botão de exportar Excel da filial", async () => {
+  it("mostra o botão de exportar CSV da filial", async () => {
     renderComoGerente();
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: /Exportar Excel da filial/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Exportar CSV da filial/ })).toBeInTheDocument();
+  });
+});
+
+describe("Comissao — paginação", () => {
+  it("mostra a paginação com a contagem certa e os totais do rodapé continuam somando todo mundo", async () => {
+    const user = userEvent.setup();
+    renderComoGerente(); // Carlos + Fernanda (Patricia tem comissao=false) — 2 colaboradores
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    expect(screen.getByText("1–2 de 2")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Comissão de Carlos Silva"), "500");
+    await user.type(screen.getByLabelText("Comissão de Fernanda Lima"), "300");
+    const rodape = screen.getByText("Total geral").closest("tr")!;
+    await waitFor(() => expect(rodape.textContent).toContain("800,00")); // 500 + 300, mesmo com só 1 página
   });
 });
 

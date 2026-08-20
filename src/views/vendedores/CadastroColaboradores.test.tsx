@@ -128,6 +128,33 @@ describe("CadastroColaboradores — barra de busca", () => {
   });
 });
 
+describe("CadastroColaboradores — paginação", () => {
+  it("mostra a paginação com a contagem certa e reflete a busca (sem afetar a mensagem de vazio)", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    expect(screen.getByText("1–3 de 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Próxima página" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Buscar colaborador"), "fernanda");
+    expect(screen.getByText("1–1 de 1")).toBeInTheDocument();
+  });
+
+  it("trocar 'Linhas por página' pra 50 continua mostrando tudo numa página só", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await user.selectOptions(screen.getByLabelText("Linhas por página"), "50");
+    expect(screen.getByText("1–3 de 3")).toBeInTheDocument();
+    expect(screen.getByText("Carlos Silva")).toBeInTheDocument();
+    expect(screen.getByText("Fernanda Lima")).toBeInTheDocument();
+    expect(screen.getByText("Patricia Ferreira")).toBeInTheDocument();
+  });
+});
+
 describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial específica)", () => {
   it("o botão '+ Adicionar colaborador' abre a modal vazia", async () => {
     const user = userEvent.setup();
@@ -168,6 +195,11 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(await screen.findByText("Colaborador Sem Email")).toBeInTheDocument();
+
+    // regressão: buscar com um colaborador sem e-mail cadastrado não pode derrubar a tela
+    // (normalizarBusca precisa tratar e-mail null/vazio sem estourar)
+    await user.type(screen.getByLabelText("Buscar colaborador"), "colaborador sem email");
+    expect(screen.getByText("Colaborador Sem Email")).toBeInTheDocument();
   });
 
   it("cadastra sem preencher Código (a API só exige código para gerar V001-style, é opcional)", async () => {

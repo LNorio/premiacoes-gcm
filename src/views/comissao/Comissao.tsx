@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { bloqueioService, colaboradoresService, comissaoService, premiacaoService } from "../../adapters";
-import { Button, Carregando, MensagemErro, MensagemVazia, Table } from "../../components/ui";
-import { exportarComissoesExcel } from "../../services/comissaoService";
+import { Button, Carregando, MensagemErro, MensagemVazia, Paginacao, Table } from "../../components/ui";
 import { obterPevDaPremiacao } from "../../services/consolidadoPevService";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
 import { useSessao } from "../../state/SessaoContext";
-import { FILIAL_TODAS, type Colaborador, type Comissao as ComissaoEntidade } from "../../types";
+import { FILIAL_TODAS, type Colaborador } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
+import { usePaginacao } from "../../utils/usePaginacao";
 
 interface ValoresLinha {
   valor: number;
@@ -24,11 +24,11 @@ export function Comissao() {
   const [erro, setErro] = useState<string | null>(null);
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [premiacoesDoMes, setPremiacoesDoMes] = useState<{ vendedorId: string; pev: number }[]>([]);
-  const [comissoesSalvas, setComissoesSalvas] = useState<ComissaoEntidade[]>([]);
   const [valores, setValores] = useState<Record<string, ValoresLinha>>({});
   const [bloqueado, setBloqueado] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -67,7 +67,6 @@ export function Comissao() {
 
     const habilitados = resColaboradores.dados.filter((c) => c.telas.comissao);
     setColaboradores(habilitados);
-    setComissoesSalvas(resComissoes.dados);
     setPremiacoesDoMes(resPremiacoes.dados);
 
     const proximosValores: Record<string, ValoresLinha> = {};
@@ -114,7 +113,6 @@ export function Comissao() {
 
     setSalvando(true);
     try {
-      const salvos: ComissaoEntidade[] = [];
       for (const colaborador of colaboradores) {
         const linha = valores[colaborador.id] ?? LINHA_ZERADA;
         const resultado = await comissaoService.salvarComissao(filialAtiva, mesReferencia, {
@@ -126,9 +124,7 @@ export function Comissao() {
           mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
           return;
         }
-        salvos.push(resultado.dados);
       }
-      setComissoesSalvas(salvos);
       mostrarToast(`Comissões de ${mesReferencia} salvas com sucesso.`, "sucesso");
     } finally {
       setSalvando(false);
@@ -153,9 +149,16 @@ export function Comissao() {
     }
   }
 
-  function exportarExcel() {
-    const exportou = exportarComissoesExcel(comissoesSalvas, colaboradores, filialAtiva);
-    if (!exportou) mostrarToast("Não há comissões salvas para exportar.", "erro");
+  async function exportarCSV() {
+    setExportando(true);
+    try {
+      const resultado = await comissaoService.exportarCSV(filialAtiva, mesReferencia);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao exportar.", "erro");
+      }
+    } finally {
+      setExportando(false);
+    }
   }
 
   const totalColunas = 6 + (mostrarPev ? 1 : 0);
@@ -164,6 +167,7 @@ export function Comissao() {
     : 0;
   const totalValor = colaboradores.reduce((soma, c) => soma + (valores[c.id]?.valor ?? 0), 0);
   const totalGarantido = colaboradores.reduce((soma, c) => soma + (valores[c.id]?.garantido ?? 0), 0);
+  const paginacao = usePaginacao(colaboradores);
 
   return (
     <section className="view">
@@ -190,8 +194,8 @@ export function Comissao() {
             {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
           </Button>
         ) : null}
-        <Button variant="secundario" onClick={exportarExcel}>
-          ⭳ Exportar Excel da filial
+        <Button variant="secundario" onClick={exportarCSV} carregando={exportando}>
+          ⭳ Exportar CSV da filial
         </Button>
       </div>
 
@@ -221,7 +225,7 @@ export function Comissao() {
                   </td>
                 </tr>
               ) : (
-                colaboradores.map((colaborador) => {
+                paginacao.itensDaPagina.map((colaborador) => {
                   const valoresLinha = valores[colaborador.id] ?? LINHA_ZERADA;
                   const pev = obterPevDaPremiacao(premiacoesDoMes, colaborador.id);
                   return (
@@ -267,6 +271,15 @@ export function Comissao() {
               </tr>
             </tfoot>
           </Table>
+
+          <Paginacao
+            paginaAtual={paginacao.paginaAtual}
+            totalPaginas={paginacao.totalPaginas}
+            tamanhoPagina={paginacao.tamanhoPagina}
+            totalItens={paginacao.totalItens}
+            onIrParaPagina={paginacao.irParaPagina}
+            onMudarTamanho={paginacao.definirTamanhoPagina}
+          />
 
           <div className="acoes-tabela">
             <Button variant="dourado" onClick={salvar} disabled={bloqueadoParaEdicao} carregando={salvando}>

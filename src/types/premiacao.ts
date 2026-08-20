@@ -5,6 +5,8 @@ export interface Premiacao {
   id: string;
   vendedorId: string;
   vendedorNome: string;
+  /** Código do colaborador na filial (`Claude/API (15).md`) — único por filial, não mais globalmente. */
+  codigo: string;
   filial: string;
   mesReferencia: string;
   pev: number;

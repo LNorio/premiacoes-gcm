@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { colaboradoresService, planoSaudeService } from "../../adapters";
-import { Button, Carregando, LinhaVazia, MensagemErro, Modal, Table } from "../../components/ui";
+import { Button, Carregando, LinhaVazia, MensagemErro, Modal, Paginacao, Table } from "../../components/ui";
 import { useSessao } from "../../state/SessaoContext";
 import { FILIAL_TODAS, type Colaborador, type PlanoSaudeDependente } from "../../types";
 import { mascararCpf } from "../../utils/formatadores";
 import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
+import { usePaginacao } from "../../utils/usePaginacao";
 
 export function CadastroTitulares() {
   const { sessao } = useSessao();
@@ -146,6 +147,8 @@ export function CadastroTitulares() {
         return bateNoTitular || bateNumDependente;
       })
     : titulares;
+  // Pagina por titular (não por <tr>) — titular e dependentes ficam sempre na mesma página.
+  const paginacao = usePaginacao(titularesFiltrados);
 
   return (
     <div>
@@ -174,7 +177,8 @@ export function CadastroTitulares() {
       ) : erro ? (
         <MensagemErro mensagem={erro} />
       ) : (
-        <Table>
+        <>
+          <Table>
           <thead>
             <tr>
               <th>Nome</th>
@@ -197,7 +201,7 @@ export function CadastroTitulares() {
                 }
               />
             ) : (
-              titularesFiltrados.flatMap((titular) => {
+              paginacao.itensDaPagina.flatMap((titular) => {
                 const temSaude = titular.adesaoSaude !== false;
                 const temOdonto = titular.adesaoOdontologico !== false;
                 const dependentesDoTitular = dependentes.filter((d) => d.vendedorId === titular.id);
@@ -314,7 +318,17 @@ export function CadastroTitulares() {
               })
             )}
           </tbody>
-        </Table>
+          </Table>
+
+          <Paginacao
+            paginaAtual={paginacao.paginaAtual}
+            totalPaginas={paginacao.totalPaginas}
+            tamanhoPagina={paginacao.tamanhoPagina}
+            totalItens={paginacao.totalItens}
+            onIrParaPagina={paginacao.irParaPagina}
+            onMudarTamanho={paginacao.definirTamanhoPagina}
+          />
+        </>
       )}
 
       <Modal aberto={titularModal !== null} titulo={`Adicionar dependente de ${titularModal?.nome ?? ""}`} onFechar={fecharModal}>

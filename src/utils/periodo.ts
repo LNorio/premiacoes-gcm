@@ -70,3 +70,11 @@ export function ultimoDiaDoMes(mesReferencia: string): string {
   const ultimoDia = new Date(ano, mes, 0).getDate();
   return `${mesReferencia}-${String(ultimoDia).padStart(2, "0")}`;
 }
+
+/** Primeiro dia do mês seguinte a "YYYY-MM", como "YYYY-MM-DD". */
+export function primeiroDiaDoProximoMes(mesReferencia: string): string {
+  const [ano, mes] = mesReferencia.split("-").map(Number);
+  const proximoAno = mes === 12 ? ano + 1 : ano;
+  const proximoMes = mes === 12 ? 1 : mes + 1;
+  return `${proximoAno}-${String(proximoMes).padStart(2, "0")}-01`;
+}

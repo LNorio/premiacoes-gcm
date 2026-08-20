@@ -24,6 +24,7 @@ const USUARIOS_100 = [
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("comissaoServiceHttp.listarComissoes", () => {
@@ -120,5 +121,34 @@ describe("comissaoServiceHttp.salvarComissao", () => {
     const putCall = fetchMock.mock.calls.find((c) => (c[1] as RequestInit)?.method === "PUT")!;
     const corpo = JSON.parse((putCall[1] as RequestInit).body as string);
     expect(corpo).toEqual([{ "id colaborador": 4, "mes de referencia": "2026-08-01", comissao: 300, garantido: 50 }]);
+  });
+});
+
+describe("comissaoServiceHttp.exportarCSV", () => {
+  it("busca o CSV pronto do backend (GET /api/comissoes/exportar-csv) e dispara o download", async () => {
+    const base64 = btoa('"nome colaborador";cpf;funcao;comissao;garantido\n"Carlos";"123.456.789-01";Vendedor;500.00;100.00');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const resultado = await comissaoServiceHttp.exportarCSV("100", "2026-08");
+    expect(resultado.status).toBe("sucesso");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("/api/comissoes/exportar-csv");
+    expect(url).toContain("mes_de_referencia=2026-08-01");
+    expect(url).toContain("filial=100");
+  });
+
+  it("sem comissão salva nenhuma, devolve erro em vez de baixar um arquivo vazio", async () => {
+    const base64 = btoa('"nome colaborador";cpf;funcao;comissao;garantido');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await comissaoServiceHttp.exportarCSV("100", "2026-08");
+    expect(resultado.status).toBe("erro");
   });
 });

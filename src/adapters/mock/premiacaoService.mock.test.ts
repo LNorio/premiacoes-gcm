@@ -26,16 +26,21 @@ describe("premiacaoServiceMock", () => {
       { vendedorId: "seed-v1", pev: 200, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
     ]);
 
+    // Roster do mês (Claude/API (16).md): Carlos (seed-v1) e Fernanda são os 2 habilitados
+    // pra Premiações na filial 100 — Fernanda aparece zerada, não duplicada.
     const resultado = await premiacaoServiceMock.listarPremiacoes("100", "2026-07");
-    expect(resultado.status === "sucesso" && resultado.dados).toHaveLength(1);
-    expect(resultado.status === "sucesso" && resultado.dados[0].total).toBe(200);
+    expect(resultado.status === "sucesso" && resultado.dados).toHaveLength(2);
+    const carlos = resultado.status === "sucesso" && resultado.dados.find((p) => p.vendedorId === "seed-v1");
+    expect(carlos && carlos.total).toBe(200);
   });
 
-  it("não mistura lançamentos de meses diferentes", async () => {
+  it("não mistura lançamentos de meses diferentes (mês sem lançamento aparece zerado, não some do roster)", async () => {
     await premiacaoServiceMock.salvarPremiacoes("100", "2026-06", [
       { vendedorId: "seed-v1", pev: 10, iconic: 0, filtros: 0, campanhasFornecedores: 0, inadimplencia: 0 },
     ]);
     const resultadoJulho = await premiacaoServiceMock.listarPremiacoes("100", "2026-07");
-    expect(resultadoJulho.status === "sucesso" && resultadoJulho.dados).toHaveLength(0);
+    const carlosEmJulho =
+      resultadoJulho.status === "sucesso" && resultadoJulho.dados.find((p) => p.vendedorId === "seed-v1");
+    expect(carlosEmJulho && carlosEmJulho.total).toBe(0);
   });
 });

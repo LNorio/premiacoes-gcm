@@ -93,7 +93,7 @@ describe("colaboradoresServiceHttp.listarColaboradores", () => {
           nome: "Administrador",
           cpf: "000.000.000-00",
           funcao: "Administrador",
-          email: "admin@comercialmariano.com.br",
+          email: null,
           usuario: "admin",
           role: "admin",
           filial: "100",
@@ -123,6 +123,7 @@ describe("colaboradoresServiceHttp.listarColaboradores", () => {
     expect(resultado.status === "sucesso" && resultado.dados).toHaveLength(2);
     expect(resultado.status === "sucesso" && resultado.dados.map((c) => c.role)).toEqual(["admin", "vendedor"]);
     expect(resultado.status === "sucesso" && resultado.dados[0].codigo).toBe(""); // codigo: null vira ""
+    expect(resultado.status === "sucesso" && resultado.dados[0].email).toBe(""); // email: null vira "" (colaborador sem e-mail cadastrado)
   });
 
   it("não envia filtro de filial quando FILIAL_TODAS", async () => {

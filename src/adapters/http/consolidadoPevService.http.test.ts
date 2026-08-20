@@ -83,6 +83,7 @@ const CONSOLIDADO_100 = [
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("consolidadoPevServiceHttp.listarConsolidadoPev", () => {
@@ -137,5 +138,34 @@ describe("consolidadoPevServiceHttp.salvarAdiantamento", () => {
     expect(url).toContain("/api/consolidado/adiantamento");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body as string)).toEqual([{ "id colaborador": 4, "ano referencia": 2026, adiantamento: 10 }]);
+  });
+});
+
+describe("consolidadoPevServiceHttp.exportarCSV", () => {
+  it("busca o CSV pronto do backend (GET /api/consolidado/exportar-csv) e dispara o download", async () => {
+    const base64 = btoa('cpf;nome;"valor dezembro"\n"123.456.789-01";"Carlos";0');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const resultado = await consolidadoPevServiceHttp.exportarCSV("100", 2026);
+    expect(resultado.status).toBe("sucesso");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("/api/consolidado/exportar-csv");
+    expect(url).toContain("ano=2026");
+    expect(url).toContain("filial=100");
+  });
+
+  it("sem dados nenhum, devolve erro em vez de baixar um arquivo vazio", async () => {
+    const base64 = btoa('cpf;nome;"valor dezembro"');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ "arquivo csv": base64, mensagem: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await consolidadoPevServiceHttp.exportarCSV("100", 2026);
+    expect(resultado.status).toBe("erro");
   });
 });

@@ -1,4 +1,3 @@
-import { baixarExcel } from "../utils/exportar";
 import {
   type Colaborador,
   type PlanoSaudeDependente,
@@ -55,6 +54,9 @@ export interface PlanoSaudeService {
   ): Promise<Resultado<PlanoSaudePeriodo>>;
   /** `dataValidade` opcional (YYYY-MM-DD) — quando não informada, a API usa a data de hoje. */
   encerrarPeriodoPlanoSaude(periodo: PlanoSaudePeriodo, dataValidade?: string): Promise<Resultado<PlanoSaudePeriodo>>;
+
+  /** CSV gerado pelo backend (`GET /api/lancamentos/exportar-csv`) — colunas fixas do próprio backend, não as exibidas em tela. */
+  exportarCSV(filial: string, mesReferencia: string, tipoPlano: TipoPlanoSaude): Promise<Resultado<void>>;
 }
 
 /** Uma linha da grade de Lançamento — o titular, ou um dos seus dependentes (documento técnico, Seção 3.6.2). */
@@ -151,39 +153,3 @@ export function calcularTotalLancamentoPlanoSaude(
   return valorFixo + extras;
 }
 
-/** Documento técnico, Seção 4 — colunas variam por sub-aba (Saúde tem valores extras editáveis; Odontológico não). */
-export function exportarPlanoSaudeExcel(
-  pessoas: PessoaPlanoSaude[],
-  lancamentos: PlanoSaudeLancamento[],
-  periodos: PlanoSaudePeriodo[],
-  tipoPlano: TipoPlanoSaude,
-  mesReferencia: string,
-  filial: string,
-): boolean {
-  if (pessoas.length === 0) return false;
-
-  const cabecalho =
-    tipoPlano === "saude"
-      ? ["Código", "Nome", "Descrição", "R$ Titular", "R$ Dep.", "R$ Adicional", "R$ Coopart.", "R$ Total"]
-      : ["Código", "Nome", "Descrição", "Titular", "Dependente", "Total"];
-
-  const linhas = pessoas.map((pessoa) => {
-    const lancamento = lancamentos.find((l) => l.pessoaId === pessoa.id);
-    const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
-    const valorFixo = periodo?.valor ?? 0;
-    const total = calcularTotalLancamentoPlanoSaude(lancamento, tipoPlano, periodo);
-    const linhaBase = [
-      pessoa.codigo || "",
-      pessoa.nome,
-      pessoa.tipo === "titular" ? "TITULAR" : "DEPENDENTE",
-      pessoa.tipo === "titular" ? valorFixo.toFixed(2) : "",
-      pessoa.tipo === "dependente" ? valorFixo.toFixed(2) : "",
-    ];
-    const extras =
-      tipoPlano === "saude" ? [(lancamento?.valorAdicional ?? 0).toFixed(2), (lancamento?.valorCoparticipacao ?? 0).toFixed(2)] : [];
-    return [...linhaBase, ...extras, total.toFixed(2)];
-  });
-
-  void baixarExcel(cabecalho, linhas, `plano-saude-${tipoPlano}`, filial);
-  return true;
-}

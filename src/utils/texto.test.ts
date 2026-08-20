@@ -13,4 +13,9 @@ describe("normalizarBusca", () => {
   it("remove espaços nas pontas", () => {
     expect(normalizarBusca("  carlos  ")).toBe("carlos");
   });
+
+  it("trata null/undefined como string vazia, sem estourar (ex.: colaborador sem e-mail cadastrado)", () => {
+    expect(normalizarBusca(null)).toBe("");
+    expect(normalizarBusca(undefined)).toBe("");
+  });
 });

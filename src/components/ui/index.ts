@@ -13,3 +13,4 @@ export { MenuAcoes } from "./MenuAcoes";
 export type { ItemMenuAcoes } from "./MenuAcoes";
 export { IconeOlho } from "./IconeOlho";
 export { AjudaPopover } from "./AjudaPopover";
+export { Paginacao } from "./Paginacao";

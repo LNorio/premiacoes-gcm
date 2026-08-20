@@ -6,6 +6,7 @@ import {
   obterMesAtualISO,
   obterMesPassadoISO,
   obterMesesCicloPEV,
+  primeiroDiaDoProximoMes,
   ultimoDiaDoMes,
 } from "./periodo";
 
@@ -80,5 +81,15 @@ describe("ultimoDiaDoMes", () => {
     expect(ultimoDiaDoMes("2026-04")).toBe("2026-04-30");
     expect(ultimoDiaDoMes("2026-02")).toBe("2026-02-28");
     expect(ultimoDiaDoMes("2028-02")).toBe("2028-02-29"); // ano bissexto
+  });
+});
+
+describe("primeiroDiaDoProximoMes", () => {
+  it("retorna o dia 1 do mês seguinte", () => {
+    expect(primeiroDiaDoProximoMes("2026-08")).toBe("2026-09-01");
+  });
+
+  it("passa o ano na virada de dezembro pra janeiro", () => {
+    expect(primeiroDiaDoProximoMes("2026-12")).toBe("2027-01-01");
   });
 });

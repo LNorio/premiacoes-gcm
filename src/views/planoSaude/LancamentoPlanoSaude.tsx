@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { bloqueioService, colaboradoresService, planoSaudeService } from "../../adapters";
-import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, Table } from "../../components/ui";
+import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, Paginacao, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { encontrarPeriodoPlano, exportarPlanoSaudeExcel, listarPessoasPlanoSaude } from "../../services/planoSaudeService";
+import { encontrarPeriodoPlano, listarPessoasPlanoSaude, type PessoaPlanoSaude } from "../../services/planoSaudeService";
 import { useSessao } from "../../state/SessaoContext";
 import {
   FILIAL_TODAS,
@@ -18,6 +18,7 @@ import { obterMesAtualISO } from "../../utils/periodo";
 import { normalizarBusca } from "../../utils/texto";
 import { mostrarToast } from "../../utils/toast";
 import { useEfeitoAssincrono } from "../../utils/useEfeitoAssincrono";
+import { usePaginacao } from "../../utils/usePaginacao";
 
 interface ValoresExtras {
   valorAdicional: number;
@@ -31,6 +32,28 @@ const ROTULOS_TIPO_PLANO: Record<TipoPlanoSaude, { titulo: string; rotuloTitular
   saude: { titulo: "Plano de Saúde", rotuloTitular: "R$ Titular", rotuloDependente: "R$ Dep.", rotuloTotal: "R$ Total" },
   odontologico: { titulo: "Plano Odontológico", rotuloTitular: "Titular", rotuloDependente: "Dependente", rotuloTotal: "Total" },
 };
+
+/**
+ * Agrupa a lista plana de pessoas por titular, pra paginar sem separar um dependente
+ * do titular dele — cada grupo é "uma página inteira" pra fins de paginação. Se um
+ * dependente aparecer sem o titular correspondente no array (ex.: busca bateu só no
+ * dependente), ele vira seu próprio grupo, em vez de quebrar.
+ */
+export function agruparPorTitular(pessoas: PessoaPlanoSaude[]): PessoaPlanoSaude[][] {
+  const grupos: PessoaPlanoSaude[][] = [];
+  const indicePorTitular = new Map<string, number>();
+  for (const pessoa of pessoas) {
+    if (pessoa.tipo === "titular") {
+      indicePorTitular.set(pessoa.titularId, grupos.length);
+      grupos.push([pessoa]);
+      continue;
+    }
+    const indice = indicePorTitular.get(pessoa.titularId);
+    if (indice !== undefined) grupos[indice].push(pessoa);
+    else grupos.push([pessoa]);
+  }
+  return grupos;
+}
 
 export function LancamentoPlanoSaude() {
   const { sessao } = useSessao();
@@ -48,6 +71,7 @@ export function LancamentoPlanoSaude() {
   const [salvando, setSalvando] = useState(false);
   const [alternandoBloqueio, setAlternandoBloqueio] = useState(false);
   const [busca, setBusca] = useState("");
+  const [exportando, setExportando] = useState(false);
 
   const filialAtiva = sessao?.filialAtiva ?? FILIAL_TODAS;
   const ehAdmin = sessao?.role === "admin";
@@ -194,9 +218,16 @@ export function LancamentoPlanoSaude() {
     }
   }
 
-  function exportarExcel() {
-    const exportou = exportarPlanoSaudeExcel(pessoas, lancamentos, periodos, tipoPlano, mesReferencia, filialAtiva);
-    if (!exportou) mostrarToast("Não há titulares/dependentes com adesão a este plano para exportar.", "erro");
+  async function exportarCSV() {
+    setExportando(true);
+    try {
+      const resultado = await planoSaudeService.exportarCSV(filialAtiva, mesReferencia, tipoPlano);
+      if (resultado.status !== "sucesso") {
+        mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao exportar.", "erro");
+      }
+    } finally {
+      setExportando(false);
+    }
   }
 
   const totalColunas = 3 + (mostrarFilial ? 1 : 0) + 2 + (temCamposEditaveis ? 2 : 0) + 1;
@@ -227,6 +258,9 @@ export function LancamentoPlanoSaude() {
   const pessoasFiltradas = buscaNormalizada
     ? pessoas.filter((p) => [p.codigo, p.nome].some((campo) => normalizarBusca(campo).includes(buscaNormalizada)))
     : pessoas;
+  // Pagina por grupo titular+dependentes (não por <tr>) — ver agruparPorTitular acima.
+  const paginacao = usePaginacao(agruparPorTitular(pessoasFiltradas));
+  const pessoasDaPagina = paginacao.itensDaPagina.flat();
 
   return (
     <div style={{ marginTop: "var(--esp-6)" }}>
@@ -259,7 +293,7 @@ export function LancamentoPlanoSaude() {
             <label htmlFor="plano-saude-lancamento-busca" style={{ marginBottom: 0 }}>
               Buscar titular/dependente
             </label>
-            <AjudaPopover texto="Esta busca serve só para facilitar encontrar um titular/dependente na lista e preencher os valores dele — ela não altera os totais (Total ativos/desligados/geral) nem a exportação para Excel da filial, que sempre consideram todo mundo, buscado ou não." />
+            <AjudaPopover texto="Esta busca serve só para facilitar encontrar um titular/dependente na lista e preencher os valores dele — ela não altera os totais (Total ativos/desligados/geral) nem a exportação CSV da filial, que sempre consideram todo mundo, buscado ou não." />
           </div>
           <input
             id="plano-saude-lancamento-busca"
@@ -275,8 +309,8 @@ export function LancamentoPlanoSaude() {
               {bloqueado ? "🔓 Desbloquear lançamentos deste mês" : "🔒 Bloquear lançamentos deste mês"}
             </Button>
           ) : null}
-          <Button variant="secundario" onClick={exportarExcel}>
-            ⭳ Exportar Excel da filial
+          <Button variant="secundario" onClick={exportarCSV} carregando={exportando}>
+            ⭳ Exportar CSV da filial
           </Button>
         </div>
       </div>
@@ -316,7 +350,7 @@ export function LancamentoPlanoSaude() {
                   }
                 />
               ) : (
-                pessoasFiltradas.map((pessoa) => {
+                pessoasDaPagina.map((pessoa) => {
                   const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
                   const valorFixo = periodo?.valor ?? 0;
                   const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
@@ -455,6 +489,15 @@ export function LancamentoPlanoSaude() {
               </tr>
             </tfoot>
           </Table>
+
+          <Paginacao
+            paginaAtual={paginacao.paginaAtual}
+            totalPaginas={paginacao.totalPaginas}
+            tamanhoPagina={paginacao.tamanhoPagina}
+            totalItens={paginacao.totalItens}
+            onIrParaPagina={paginacao.irParaPagina}
+            onMudarTamanho={paginacao.definirTamanhoPagina}
+          />
 
           {!podeEditarDesligados ? (
             <p className="dica-campo" style={{ marginTop: "var(--esp-3)" }}>

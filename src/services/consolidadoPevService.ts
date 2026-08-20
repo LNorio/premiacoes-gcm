@@ -16,6 +16,8 @@ export interface LinhaConsolidadoPev {
 export interface ConsolidadoPevService {
   listarConsolidadoPev(filial: string, anoCiclo: number, meses: string[]): Promise<Resultado<LinhaConsolidadoPev[]>>;
   salvarAdiantamento(vendedorId: string, anoCiclo: number, valor: number): Promise<Resultado<void>>;
+  /** CSV gerado pelo backend (`GET /api/consolidado/exportar-csv`) — colunas fixas do próprio backend, não as exibidas em tela. */
+  exportarCSV(filial: string, anoCiclo: number): Promise<Resultado<void>>;
 }
 
 /** Ver documento técnico, Seção 3.3 — Base de Cálculo = Total Acumulado × 0,28 */
