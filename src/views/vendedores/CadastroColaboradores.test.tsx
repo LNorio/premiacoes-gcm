@@ -140,7 +140,7 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
     expect(screen.getByLabelText("Código")).toHaveValue("");
   });
 
-  it("valida nome, CPF e e-mail obrigatórios antes de salvar (código é opcional, como na API)", async () => {
+  it("valida nome e CPF obrigatórios antes de salvar (código e e-mail são opcionais, como na API)", async () => {
     const user = userEvent.setup();
     const { container } = renderComoAdminNaFilial("100");
     await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
@@ -152,6 +152,22 @@ describe("CadastroColaboradores — modal de adicionar/editar (Admin numa filial
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     const tabelaListagem = container.querySelector(".tabela-wrapper table")!;
     expect(tabelaListagem.querySelectorAll("tbody tr")).toHaveLength(3);
+  });
+
+  it("cadastra sem preencher E-mail (útil para o perfil Padrão, que não faz login)", async () => {
+    const user = userEvent.setup();
+    renderComoAdminNaFilial("100");
+    await waitFor(() => expect(screen.getByText("Carlos Silva")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /Adicionar colaborador/ }));
+    await user.type(screen.getByLabelText("Nome completo"), "Colaborador Sem Email");
+    await user.type(screen.getByLabelText("CPF"), "99988877766");
+    await user.type(screen.getByLabelText("Usuário de acesso"), "sem.email");
+    await user.type(screen.getByLabelText("Senha de acesso"), "venda123");
+    await user.click(screen.getByRole("button", { name: "Cadastrar" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(await screen.findByText("Colaborador Sem Email")).toBeInTheDocument();
   });
 
   it("cadastra sem preencher Código (a API só exige código para gerar V001-style, é opcional)", async () => {

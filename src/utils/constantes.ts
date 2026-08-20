@@ -73,6 +73,7 @@ export const PAPEL_EDITOR_POR_TELA = {
 export const CARGOS_COLABORADOR = [
   "Assistente de Estoque",
   "Auxiliar de Estoque",
+  "Consultor de Vendas Balcão",
   "Consultor de Vendas Externo",
   "Consultor de Vendas Interno",
   "Coordenador",

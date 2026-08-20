@@ -168,8 +168,8 @@ export function CadastroColaboradores() {
       mostrarToast("Selecione a filial do colaborador.", "erro");
       return;
     }
-    if (!formulario.nome || !formulario.cpf || !formulario.email) {
-      mostrarToast("Preencha ao menos nome, CPF e e-mail do colaborador.", "erro");
+    if (!formulario.nome || !formulario.cpf) {
+      mostrarToast("Preencha ao menos nome e CPF do colaborador.", "erro");
       return;
     }
     if (!formulario.usuarioAcesso || (!idEmEdicao && !formulario.senhaAcesso)) {
@@ -443,7 +443,6 @@ export function CadastroColaboradores() {
                 id="colaborador-email"
                 type="email"
                 placeholder="email@exemplo.com"
-                required
                 value={formulario.email}
                 onChange={(e) => setFormulario((f) => ({ ...f, email: e.target.value }))}
               />
