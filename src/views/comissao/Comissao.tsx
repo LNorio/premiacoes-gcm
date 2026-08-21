@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { bloqueioService, colaboradoresService, comissaoService, premiacaoService } from "../../adapters";
+import { bloqueioService, comissaoService, premiacaoService } from "../../adapters";
 import { Button, Carregando, MensagemErro, MensagemVazia, Paginacao, Table } from "../../components/ui";
 import { obterPevDaPremiacao } from "../../services/consolidadoPevService";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
 import { useSessao } from "../../state/SessaoContext";
-import { FILIAL_TODAS, type Colaborador } from "../../types";
+import { FILIAL_TODAS, type Comissao as ComissaoEntidade } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { mostrarToast } from "../../utils/toast";
@@ -22,7 +22,9 @@ export function Comissao() {
   const [mesReferencia, setMesReferencia] = useState(obterMesAtualISO());
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  // GET /api/comissoes já traz o roster inteiro do mês (Claude/API (19).md) — não precisa
+  // mais de uma chamada separada a colaboradores só pra montar quem pode lançar.
+  const [roster, setRoster] = useState<ComissaoEntidade[]>([]);
   const [premiacoesDoMes, setPremiacoesDoMes] = useState<{ vendedorId: string; pev: number }[]>([]);
   const [valores, setValores] = useState<Record<string, ValoresLinha>>({});
   const [bloqueado, setBloqueado] = useState(false);
@@ -42,18 +44,12 @@ export function Comissao() {
     setCarregando(true);
     setErro(null);
 
-    const [resColaboradores, resComissoes, resPremiacoes] = await Promise.all([
-      colaboradoresService.listarColaboradores(filialAtiva),
+    const [resComissoes, resPremiacoes] = await Promise.all([
       comissaoService.listarComissoes(filialAtiva, mesReferencia),
       premiacaoService.listarPremiacoes(filialAtiva, mesReferencia),
     ]);
     if (foiCancelado()) return;
 
-    if (resColaboradores.status !== "sucesso") {
-      setErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
-      setCarregando(false);
-      return;
-    }
     if (resComissoes.status !== "sucesso") {
       setErro(resComissoes.status === "erro" ? resComissoes.mensagem : "Falha ao carregar.");
       setCarregando(false);
@@ -65,18 +61,9 @@ export function Comissao() {
       return;
     }
 
-    const habilitados = resColaboradores.dados.filter((c) => c.telas.comissao);
-    setColaboradores(habilitados);
+    setRoster(resComissoes.dados);
     setPremiacoesDoMes(resPremiacoes.dados);
-
-    const proximosValores: Record<string, ValoresLinha> = {};
-    for (const colaborador of habilitados) {
-      const existente = resComissoes.dados.find((c) => c.vendedorId === colaborador.id);
-      proximosValores[colaborador.id] = existente
-        ? { valor: existente.valor, garantido: existente.garantido }
-        : { ...LINHA_ZERADA };
-    }
-    setValores(proximosValores);
+    setValores(Object.fromEntries(resComissoes.dados.map((c) => [c.vendedorId, { valor: c.valor, garantido: c.garantido }])));
 
     if (!mostrarFilial) {
       const resBloqueio = await bloqueioService.consultarBloqueio("comissao", filialAtiva, mesReferencia);
@@ -106,17 +93,17 @@ export function Comissao() {
       mostrarToast("Não é possível salvar: lançamentos bloqueados pelo Administrador.", "erro");
       return;
     }
-    if (colaboradores.length === 0) {
+    if (roster.length === 0) {
       mostrarToast("Cadastre ao menos um vendedor habilitado para Comissão antes de salvar.", "erro");
       return;
     }
 
     setSalvando(true);
     try {
-      for (const colaborador of colaboradores) {
-        const linha = valores[colaborador.id] ?? LINHA_ZERADA;
+      for (const item of roster) {
+        const linha = valores[item.vendedorId] ?? LINHA_ZERADA;
         const resultado = await comissaoService.salvarComissao(filialAtiva, mesReferencia, {
-          vendedorId: colaborador.id,
+          vendedorId: item.vendedorId,
           valor: linha.valor,
           garantido: linha.garantido,
         });
@@ -162,12 +149,10 @@ export function Comissao() {
   }
 
   const totalColunas = 6 + (mostrarPev ? 1 : 0);
-  const totalPev = mostrarPev
-    ? colaboradores.reduce((soma, c) => soma + obterPevDaPremiacao(premiacoesDoMes, c.id), 0)
-    : 0;
-  const totalValor = colaboradores.reduce((soma, c) => soma + (valores[c.id]?.valor ?? 0), 0);
-  const totalGarantido = colaboradores.reduce((soma, c) => soma + (valores[c.id]?.garantido ?? 0), 0);
-  const paginacao = usePaginacao(colaboradores);
+  const totalPev = mostrarPev ? roster.reduce((soma, c) => soma + obterPevDaPremiacao(premiacoesDoMes, c.vendedorId), 0) : 0;
+  const totalValor = roster.reduce((soma, c) => soma + (valores[c.vendedorId]?.valor ?? 0), 0);
+  const totalGarantido = roster.reduce((soma, c) => soma + (valores[c.vendedorId]?.garantido ?? 0), 0);
+  const paginacao = usePaginacao(roster);
 
   return (
     <section className="view">
@@ -218,32 +203,32 @@ export function Comissao() {
               </tr>
             </thead>
             <tbody>
-              {colaboradores.length === 0 ? (
+              {roster.length === 0 ? (
                 <tr className="linha-vazia">
                   <td colSpan={totalColunas}>
                     <MensagemVazia mensagem="Nenhum colaborador habilitado para esta tela ainda (marque o checklist no Cadastro de Colaboradores)." />
                   </td>
                 </tr>
               ) : (
-                paginacao.itensDaPagina.map((colaborador) => {
-                  const valoresLinha = valores[colaborador.id] ?? LINHA_ZERADA;
-                  const pev = obterPevDaPremiacao(premiacoesDoMes, colaborador.id);
+                paginacao.itensDaPagina.map((item) => {
+                  const valoresLinha = valores[item.vendedorId] ?? LINHA_ZERADA;
+                  const pev = obterPevDaPremiacao(premiacoesDoMes, item.vendedorId);
                   return (
-                    <tr key={colaborador.id}>
-                      <td>{colaborador.codigo || "—"}</td>
-                      <td>{colaborador.nome}</td>
-                      <td>{colaborador.cpf}</td>
-                      <td>{colaborador.cargo}</td>
+                    <tr key={item.vendedorId}>
+                      <td>{item.codigo || "—"}</td>
+                      <td>{item.vendedorNome}</td>
+                      <td>{item.cpf}</td>
+                      <td>{item.cargo}</td>
                       {mostrarPev ? <td className="celula-numerica">{formatarMoeda(pev)}</td> : null}
                       <td className="celula-input">
                         <input
                           type="number"
                           min={0}
                           step={0.01}
-                          aria-label={`Comissão de ${colaborador.nome}`}
+                          aria-label={`Comissão de ${item.vendedorNome}`}
                           value={valoresLinha.valor || ""}
                           disabled={bloqueadoParaEdicao}
-                          onChange={(e) => editarCelula(colaborador.id, "valor", parseFloat(e.target.value) || 0)}
+                          onChange={(e) => editarCelula(item.vendedorId, "valor", parseFloat(e.target.value) || 0)}
                         />
                       </td>
                       <td className="celula-input">
@@ -251,10 +236,10 @@ export function Comissao() {
                           type="number"
                           min={0}
                           step={0.01}
-                          aria-label={`Garantido de ${colaborador.nome}`}
+                          aria-label={`Garantido de ${item.vendedorNome}`}
                           value={valoresLinha.garantido || ""}
                           disabled={bloqueadoParaEdicao}
-                          onChange={(e) => editarCelula(colaborador.id, "garantido", parseFloat(e.target.value) || 0)}
+                          onChange={(e) => editarCelula(item.vendedorId, "garantido", parseFloat(e.target.value) || 0)}
                         />
                       </td>
                     </tr>

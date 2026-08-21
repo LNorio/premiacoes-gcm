@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { bloqueioService, colaboradoresService, descontosService } from "../../adapters";
+import { bloqueioService, descontosService } from "../../adapters";
 import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, MensagemVazia, Modal, Paginacao, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { totaisPorTipo } from "../../services/descontosService";
+import { totaisPorTipo, type ColaboradorComDescontos } from "../../services/descontosService";
 import { useSessao } from "../../state/SessaoContext";
-import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type Colaborador, type TipoDescontoBonificacao } from "../../types";
+import { FILIAL_TODAS, TIPOS_DESCONTO_BONIFICACAO, type TipoDescontoBonificacao } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { normalizarBusca } from "../../utils/texto";
@@ -33,7 +33,7 @@ export function Descontos() {
   const [mesReferencia, setMesReferencia] = useState(obterMesAtualISO());
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  const [colaboradores, setColaboradores] = useState<ColaboradorComDescontos[]>([]);
   const [linhas, setLinhas] = useState<LinhaDesconto[]>([]);
   const [bloqueado, setBloqueado] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -53,26 +53,18 @@ export function Descontos() {
     setCarregando(true);
     setErro(null);
 
-    const [resColaboradores, resDescontos] = await Promise.all([
-      colaboradoresService.listarColaboradores(filialAtiva),
-      descontosService.listarDescontos(filialAtiva, mesReferencia),
-    ]);
+    const resDescontos = await descontosService.listarDescontos(filialAtiva, mesReferencia);
     if (foiCancelado()) return;
 
-    if (resColaboradores.status !== "sucesso") {
-      setErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
-      setCarregando(false);
-      return;
-    }
     if (resDescontos.status !== "sucesso") {
       setErro(resDescontos.status === "erro" ? resDescontos.mensagem : "Falha ao carregar.");
       setCarregando(false);
       return;
     }
 
-    setColaboradores(resColaboradores.dados.filter((c) => c.telas.descontos));
+    setColaboradores(resDescontos.dados.colaboradores);
     setLinhas(
-      resDescontos.dados.map((d) => ({
+      resDescontos.dados.lancamentos.map((d) => ({
         id: d.id,
         vendedorId: d.vendedorId,
         tipo: d.tipo,

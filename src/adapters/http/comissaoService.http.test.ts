@@ -5,54 +5,33 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
-const USUARIOS_100 = [
-  {
-    "id colaborador": 4,
-    codigo: "V001",
-    nome: "Carlos Eduardo Silva",
-    cpf: "123.456.789-01",
-    funcao: "Consultor de Vendas Interno",
-    email: "carlos.silva@comercialmariano.com.br",
-    usuario: "carlos.silva",
-    role: "vendedor",
-    filial: "100",
-    "plano saude": true,
-    "plano odontologico": false,
-    telas: [2],
-  },
-];
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe("comissaoServiceHttp.listarComissoes", () => {
-  it("mapeia a resposta de GET /api/comissoes, cruzando a filial com /api/usuarios", async () => {
-    const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("/api/usuarios")) return Promise.resolve(jsonResponse(USUARIOS_100));
-      if (url.includes("/api/comissoes")) {
-        return Promise.resolve(
-          jsonResponse({
-            dados: [
-              {
-                "id colaborador": 4,
-                "nome colaborador": "Carlos Eduardo Silva",
-                cpf: "123.456.789-01",
-                funcao: "Consultor de Vendas Interno",
-                pev: 100,
-                comissao: "500.00",
-                garantido: "100.00",
-              },
-            ],
-            "total pev": 100,
-            "total comissao": 500,
-            "total garantido": 100,
-          }),
-        );
-      }
-      return Promise.resolve(jsonResponse({}));
-    });
+  it("mapeia a resposta de GET /api/comissoes usando codigo/cpf/filial da própria resposta, sem chamar /api/usuarios", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        dados: [
+          {
+            "id colaborador": 4,
+            codigo: "V001",
+            "nome colaborador": "Carlos Eduardo Silva",
+            cpf: "123.456.789-01",
+            filial: "100",
+            funcao: "Consultor de Vendas Interno",
+            pev: 100,
+            comissao: "500.00",
+            garantido: "100.00",
+          },
+        ],
+        "total pev": 100,
+        "total comissao": 500,
+        "total garantido": 100,
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const resultado = await comissaoServiceHttp.listarComissoes("100", "2026-08");
@@ -63,6 +42,9 @@ describe("comissaoServiceHttp.listarComissoes", () => {
         id: "4-2026-08",
         vendedorId: "4",
         vendedorNome: "Carlos Eduardo Silva",
+        codigo: "V001",
+        cpf: "123.456.789-01",
+        cargo: "Consultor de Vendas Interno",
         filial: "100",
         mesReferencia: "2026-08",
         pev: 100,
@@ -71,24 +53,56 @@ describe("comissaoServiceHttp.listarComissoes", () => {
       },
     ]);
 
-    const chamadaComissoes = fetchMock.mock.calls.map((c) => c[0] as string).find((u) => u.includes("/api/comissoes"))!;
+    // uma única chamada, sem passar por /api/usuarios (Claude/API (19).md — roster completo já vem pronto)
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const chamadaComissoes = fetchMock.mock.calls[0][0] as string;
+    expect(chamadaComissoes).toContain("/api/comissoes");
     expect(chamadaComissoes).toContain("mes_de_referencia=2026-08-01");
     expect(chamadaComissoes).toContain("filial=100");
+  });
+
+  it("traz colaborador do roster sem comissão lançada ainda (comissao/garantido zerados)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        dados: [
+          {
+            "id colaborador": 9,
+            codigo: "V009",
+            "nome colaborador": "Alguém Sem Lançamento",
+            cpf: "999.999.999-99",
+            filial: "100",
+            funcao: "Consultor de Vendas Externa",
+            pev: 0,
+            comissao: 0,
+            garantido: 0,
+          },
+        ],
+        "total pev": 0,
+        "total comissao": 0,
+        "total garantido": 0,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultado = await comissaoServiceHttp.listarComissoes("100", "2026-08");
+    const dados = resultado.status === "sucesso" ? resultado.dados : [];
+    expect(dados[0]).toMatchObject({ vendedorId: "9", valor: 0, garantido: 0 });
   });
 });
 
 describe("comissaoServiceHttp.salvarComissao", () => {
   it("faz PUT /api/comissoes com o corpo esperado e devolve o registro relistado", async () => {
-    const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
       if (init?.method === "PUT") return Promise.resolve(jsonResponse({ mensagem: "dados salvos com sucesso" }));
-      if (url.includes("/api/usuarios")) return Promise.resolve(jsonResponse(USUARIOS_100));
       return Promise.resolve(
         jsonResponse({
           dados: [
             {
               "id colaborador": 4,
+              codigo: "V001",
               "nome colaborador": "Carlos Eduardo Silva",
               cpf: "123.456.789-01",
+              filial: "100",
               funcao: "Consultor de Vendas Interno",
               pev: 0,
               comissao: "300.00",
@@ -110,6 +124,9 @@ describe("comissaoServiceHttp.salvarComissao", () => {
         id: "4-2026-08",
         vendedorId: "4",
         vendedorNome: "Carlos Eduardo Silva",
+        codigo: "V001",
+        cpf: "123.456.789-01",
+        cargo: "Consultor de Vendas Interno",
         filial: "100",
         mesReferencia: "2026-08",
         pev: 0,

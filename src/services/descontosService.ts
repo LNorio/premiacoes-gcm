@@ -8,8 +8,24 @@ export interface NovoLancamentoDesconto {
   observacoes: string;
 }
 
+/** Roster mínimo de quem tem a tela "Descontos e Bonificações" — id/código/nome, o suficiente pra montar uma linha editável mesmo sem nenhum lançamento no mês. */
+export interface ColaboradorComDescontos {
+  id: string;
+  codigo: string;
+  nome: string;
+}
+
 export interface DescontosService {
-  listarDescontos(filial: string, mesReferencia: string): Promise<Resultado<DescontoBonificacao[]>>;
+  /**
+   * `GET /api/descontos-bonificacoes` já traz o roster inteiro do mês (`Claude/API (18).md`
+   * — ganhou `codigo`; `Claude/API (17).md` já trazia id/cpf/nome/filial) — devolve os
+   * colaboradores habilitados junto com os lançamentos, sem precisar de uma chamada
+   * separada a colaboradores só pra montar a lista de quem pode lançar.
+   */
+  listarDescontos(
+    filial: string,
+    mesReferencia: string,
+  ): Promise<Resultado<{ colaboradores: ColaboradorComDescontos[]; lancamentos: DescontoBonificacao[] }>>;
   salvarDescontos(lancamentos: (NovoLancamentoDesconto & { id?: string })[]): Promise<Resultado<DescontoBonificacao[]>>;
   removerDesconto(id: string): Promise<Resultado<void>>;
   /** CSV gerado pelo backend (`GET /api/descontos-bonificacoes/exportar-csv`) — colunas fixas do próprio backend, não as exibidas em tela. */

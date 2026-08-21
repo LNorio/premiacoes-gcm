@@ -1,18 +1,10 @@
 import { useState } from "react";
-import { bloqueioService, colaboradoresService, planoSaudeService } from "../../adapters";
+import { bloqueioService, planoSaudeService } from "../../adapters";
 import { AjudaPopover, Button, Carregando, LinhaVazia, MensagemErro, Paginacao, Table } from "../../components/ui";
 import { usuarioEstaBloqueadoNaTela } from "../../services/bloqueioService";
-import { encontrarPeriodoPlano, listarPessoasPlanoSaude, type PessoaPlanoSaude } from "../../services/planoSaudeService";
+import type { PessoaLancamentoPlanoSaude } from "../../services/planoSaudeService";
 import { useSessao } from "../../state/SessaoContext";
-import {
-  FILIAL_TODAS,
-  type Colaborador,
-  type PlanoSaudeDependente,
-  type PlanoSaudeLancamento,
-  type PlanoSaudePeriodo,
-  type TipoPlanoSaude,
-  type TotaisDesligadosPlano,
-} from "../../types";
+import { FILIAL_TODAS, type TipoPlanoSaude, type TotaisDesligadosPlano } from "../../types";
 import { formatarMoeda } from "../../utils/formatadores";
 import { obterMesAtualISO } from "../../utils/periodo";
 import { normalizarBusca } from "../../utils/texto";
@@ -39,8 +31,8 @@ const ROTULOS_TIPO_PLANO: Record<TipoPlanoSaude, { titulo: string; rotuloTitular
  * dependente aparecer sem o titular correspondente no array (ex.: busca bateu só no
  * dependente), ele vira seu próprio grupo, em vez de quebrar.
  */
-export function agruparPorTitular(pessoas: PessoaPlanoSaude[]): PessoaPlanoSaude[][] {
-  const grupos: PessoaPlanoSaude[][] = [];
+export function agruparPorTitular(pessoas: PessoaLancamentoPlanoSaude[]): PessoaLancamentoPlanoSaude[][] {
+  const grupos: PessoaLancamentoPlanoSaude[][] = [];
   const indicePorTitular = new Map<string, number>();
   for (const pessoa of pessoas) {
     if (pessoa.tipo === "titular") {
@@ -61,10 +53,10 @@ export function LancamentoPlanoSaude() {
   const [mesReferencia, setMesReferencia] = useState(obterMesAtualISO());
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [titulares, setTitulares] = useState<Colaborador[]>([]);
-  const [dependentes, setDependentes] = useState<PlanoSaudeDependente[]>([]);
-  const [lancamentos, setLancamentos] = useState<PlanoSaudeLancamento[]>([]);
-  const [periodos, setPeriodos] = useState<PlanoSaudePeriodo[]>([]);
+  // GET /api/lancamentos já traz o roster inteiro pronto (Claude/API (19).md) — titular e
+  // dependente ativos, com o valor já calculado do período vigente — não precisa mais de
+  // chamadas separadas a colaboradores, dependentes (uma por titular) nem períodos.
+  const [pessoas, setPessoas] = useState<PessoaLancamentoPlanoSaude[]>([]);
   const [valoresExtras, setValoresExtras] = useState<Record<string, ValoresExtras>>({});
   const [desligadosPorColuna, setDesligadosPorColuna] = useState<TotaisDesligadosPlano>(DESLIGADOS_ZERADOS);
   const [bloqueado, setBloqueado] = useState(false);
@@ -82,64 +74,46 @@ export function LancamentoPlanoSaude() {
   const podeEditarDesligados = !mostrarFilial;
   const rotulos = ROTULOS_TIPO_PLANO[tipoPlano];
 
+  async function carregar(foiCancelado: () => boolean = () => false) {
+    if (!sessao) return;
+    setCarregando(true);
+    setErro(null);
+
+    const resLancamentos = await planoSaudeService.listarLancamentosPlanoSaude(filialAtiva, mesReferencia, tipoPlano);
+    if (foiCancelado()) return;
+
+    if (resLancamentos.status !== "sucesso") {
+      setErro(resLancamentos.status === "erro" ? resLancamentos.mensagem : "Falha ao carregar.");
+      setCarregando(false);
+      return;
+    }
+
+    setPessoas(resLancamentos.dados.pessoas);
+    setDesligadosPorColuna(resLancamentos.dados.totalDesligados);
+
+    const extras: Record<string, ValoresExtras> = {};
+    for (const pessoa of resLancamentos.dados.pessoas) {
+      extras[pessoa.id] = { valorAdicional: pessoa.valorAdicional, valorCoparticipacao: pessoa.valorCoparticipacao };
+    }
+    setValoresExtras(extras);
+
+    if (!mostrarFilial) {
+      const resBloqueio = await bloqueioService.consultarBloqueio("planoSaude", filialAtiva, mesReferencia);
+      if (foiCancelado()) return;
+      setBloqueado(resBloqueio.status === "sucesso" ? resBloqueio.dados : false);
+    } else {
+      setBloqueado(false);
+    }
+
+    setCarregando(false);
+  }
+
   useEfeitoAssincrono(
     (foiCancelado) => {
-      if (!sessao) return;
-      setCarregando(true);
-      setErro(null);
-
-      colaboradoresService.listarColaboradores(filialAtiva).then(async (resColaboradores) => {
-        if (foiCancelado()) return;
-        if (resColaboradores.status !== "sucesso") {
-          setErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
-          setCarregando(false);
-          return;
-        }
-
-        const habilitados = resColaboradores.dados.filter((c) => c.telas.planoSaude);
-        const [respostasDependentes, resLancamentos, resPeriodos] = await Promise.all([
-          Promise.all(habilitados.map((t) => planoSaudeService.listarDependentes(t.id))),
-          planoSaudeService.listarLancamentosPlanoSaude(filialAtiva, mesReferencia, tipoPlano),
-          planoSaudeService.listarPeriodosPlanoSaude(filialAtiva, tipoPlano),
-        ]);
-        if (foiCancelado()) return;
-
-        if (resLancamentos.status !== "sucesso") {
-          setErro(resLancamentos.status === "erro" ? resLancamentos.mensagem : "Falha ao carregar.");
-          setCarregando(false);
-          return;
-        }
-
-        setTitulares(habilitados);
-        setDependentes(respostasDependentes.flatMap((r) => (r.status === "sucesso" ? r.dados : [])));
-        setLancamentos(resLancamentos.dados.lancamentos);
-        setPeriodos(resPeriodos.status === "sucesso" ? resPeriodos.dados : []);
-        setDesligadosPorColuna(resLancamentos.dados.totalDesligados);
-
-        const extras: Record<string, ValoresExtras> = {};
-        for (const lancamento of resLancamentos.dados.lancamentos) {
-          extras[lancamento.pessoaId] = {
-            valorAdicional: lancamento.valorAdicional ?? 0,
-            valorCoparticipacao: lancamento.valorCoparticipacao ?? 0,
-          };
-        }
-        setValoresExtras(extras);
-
-        if (!mostrarFilial) {
-          const resBloqueio = await bloqueioService.consultarBloqueio("planoSaude", filialAtiva, mesReferencia);
-          if (foiCancelado()) return;
-          setBloqueado(resBloqueio.status === "sucesso" ? resBloqueio.dados : false);
-        } else {
-          setBloqueado(false);
-        }
-
-        setCarregando(false);
-      });
+      void carregar(foiCancelado);
     },
     [sessao?.filialAtiva, mesReferencia, tipoPlano],
   );
-
-  const pessoas = listarPessoasPlanoSaude(titulares, dependentes, tipoPlano);
 
   function editarExtra(pessoaId: string, campo: keyof ValoresExtras, valor: number) {
     setValoresExtras((atual) => ({ ...atual, [pessoaId]: { ...(atual[pessoaId] ?? EXTRAS_ZERADOS), [campo]: valor } }));
@@ -159,12 +133,10 @@ export function LancamentoPlanoSaude() {
     setSalvando(true);
     try {
       if (temCamposEditaveis && pessoas.length > 0) {
-        const salvos: PlanoSaudeLancamento[] = [];
         for (const pessoa of pessoas) {
           const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
-          const existente = lancamentos.find((l) => l.pessoaId === pessoa.id);
           const resultado = await planoSaudeService.salvarLancamentoPlanoSaude({
-            id: existente?.id ?? "",
+            id: "",
             pessoaId: pessoa.id,
             titularId: pessoa.titularId,
             mesReferencia,
@@ -176,9 +148,20 @@ export function LancamentoPlanoSaude() {
             mostrarToast(resultado.status === "erro" ? resultado.mensagem : "Falha ao salvar.", "erro");
             return;
           }
-          salvos.push(resultado.dados);
         }
-        setLancamentos(salvos);
+        // Atualiza os totais locais (valorTitular/valorDependente não mudam ao salvar
+        // extras) sem precisar recarregar tudo de novo.
+        setPessoas((atual) =>
+          atual.map((pessoa) => {
+            const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
+            return {
+              ...pessoa,
+              valorAdicional: extras.valorAdicional,
+              valorCoparticipacao: extras.valorCoparticipacao,
+              total: pessoa.valorTitular + pessoa.valorDependente + extras.valorAdicional + extras.valorCoparticipacao,
+            };
+          }),
+        );
       }
 
       if (podeEditarDesligados) {
@@ -236,10 +219,8 @@ export function LancamentoPlanoSaude() {
   let totalAdicional = 0;
   let totalCoparticipacao = 0;
   for (const pessoa of pessoas) {
-    const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
-    const valorFixo = periodo?.valor ?? 0;
-    if (pessoa.tipo === "titular") totalTitular += valorFixo;
-    else totalDependente += valorFixo;
+    totalTitular += pessoa.valorTitular;
+    totalDependente += pessoa.valorDependente;
     if (temCamposEditaveis) {
       const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
       totalAdicional += extras.valorAdicional;
@@ -351,28 +332,26 @@ export function LancamentoPlanoSaude() {
                 />
               ) : (
                 pessoasDaPagina.map((pessoa) => {
-                  const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipoPlano, pessoa.tipo, mesReferencia);
-                  const valorFixo = periodo?.valor ?? 0;
                   const extras = valoresExtras[pessoa.id] ?? EXTRAS_ZERADOS;
-                  // Usa os valores em edição (valoresExtras), não o lançamento já salvo — senão o
+                  // Usa os valores em edição (valoresExtras), não o total já salvo — senão o
                   // total da linha não reagiria ao que o usuário acabou de digitar.
-                  const total = valorFixo + (temCamposEditaveis ? extras.valorAdicional + extras.valorCoparticipacao : 0);
+                  const total = pessoa.valorTitular + pessoa.valorDependente + (temCamposEditaveis ? extras.valorAdicional + extras.valorCoparticipacao : 0);
                   return (
                     <tr key={pessoa.id}>
                       <td>{pessoa.codigo || "—"}</td>
                       <td>
-                        {pessoa.tipo === "dependente" ? "   " : ""}
+                        {pessoa.tipo === "dependente" ? "   " : ""}
                         {pessoa.nome}
                       </td>
                       {mostrarFilial ? <td>Filial {pessoa.filial}</td> : null}
                       <td>{pessoa.tipo === "titular" ? "TITULAR" : "DEPENDENTE"}</td>
                       {pessoa.tipo === "titular" ? (
-                        <td className="celula-numerica">{formatarMoeda(valorFixo)}</td>
+                        <td className="celula-numerica">{formatarMoeda(pessoa.valorTitular)}</td>
                       ) : (
                         <td className="celula-bloqueada">***</td>
                       )}
                       {pessoa.tipo === "dependente" ? (
-                        <td className="celula-numerica">{formatarMoeda(valorFixo)}</td>
+                        <td className="celula-numerica">{formatarMoeda(pessoa.valorDependente)}</td>
                       ) : (
                         <td className="celula-bloqueada">***</td>
                       )}

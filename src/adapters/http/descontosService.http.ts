@@ -1,4 +1,4 @@
-import type { DescontosService, NovoLancamentoDesconto } from "../../services/descontosService";
+import type { ColaboradorComDescontos, DescontosService, NovoLancamentoDesconto } from "../../services/descontosService";
 import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type DescontoBonificacao, type Resultado } from "../../types";
 import { baixarCSVPronto, decodificarCsvBase64 } from "../../utils/exportar";
 import { httpClient } from "./cliente";
@@ -12,8 +12,15 @@ interface RespostaLancamentoDesconto {
   observacao: string;
 }
 
+/**
+ * Linha de `GET /api/descontos-bonificacoes` — ver `Claude/API (18).md`. Roster inteiro do
+ * mês: todo colaborador com a tela "Descontos e Bonificações" aparece, com
+ * `"descontos e bonificacoes": []` quando ainda não lançou nada — `codigo` (API 18) fecha o
+ * que faltava pra não precisar mais de uma chamada separada a colaboradores.
+ */
 interface RespostaLinhaDesconto {
   "id colaborador": number;
+  codigo: string;
   "nome colaborador": string;
   "descontos e bonificacoes": RespostaLancamentoDesconto[];
   total: number;
@@ -42,11 +49,19 @@ function separarIdComposto(id: string): { idColaborador: number; idDesconto: num
   return { idColaborador: Number(idColaborador), idDesconto: Number(idDesconto) };
 }
 
-async function listarDescontosPorApi(filial: string, mesReferencia: string): Promise<DescontoBonificacao[]> {
+async function buscarDescontosPorApi(
+  filial: string,
+  mesReferencia: string,
+): Promise<{ colaboradores: ColaboradorComDescontos[]; lancamentos: DescontoBonificacao[] }> {
   const resposta = await httpClient.get<RespostaDescontos>(
     `/api/descontos-bonificacoes?mes_de_referencia=${mesReferencia}-01${queryFilial(filial)}`,
   );
-  return resposta.dados.flatMap((linha) => {
+  const colaboradores = resposta.dados.map((linha) => ({
+    id: String(linha["id colaborador"]),
+    codigo: linha.codigo,
+    nome: linha["nome colaborador"],
+  }));
+  const lancamentos = resposta.dados.flatMap((linha) => {
     const vendedorId = String(linha["id colaborador"]);
     return linha["descontos e bonificacoes"].map((item) => ({
       id: paraIdComposto(vendedorId, item.id),
@@ -57,12 +72,13 @@ async function listarDescontosPorApi(filial: string, mesReferencia: string): Pro
       observacoes: item.observacao ?? "",
     }));
   });
+  return { colaboradores, lancamentos };
 }
 
 export const descontosServiceHttp: DescontosService = {
-  async listarDescontos(filial, mesReferencia): Promise<Resultado<DescontoBonificacao[]>> {
+  async listarDescontos(filial, mesReferencia) {
     try {
-      return resultadoSucesso(await listarDescontosPorApi(filial, mesReferencia));
+      return resultadoSucesso(await buscarDescontosPorApi(filial, mesReferencia));
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }
@@ -107,7 +123,7 @@ export const descontosServiceHttp: DescontosService = {
       if (!mesReferencia) return resultadoSucesso([]);
 
       const vendedoresAlvo = new Set(lancamentos.map((l) => l.vendedorId));
-      const atuais = await listarDescontosPorApi(FILIAL_TODAS, mesReferencia);
+      const { lancamentos: atuais } = await buscarDescontosPorApi(FILIAL_TODAS, mesReferencia);
       return resultadoSucesso(atuais.filter((d) => vendedoresAlvo.has(d.vendedorId)));
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));

@@ -6,20 +6,22 @@ import { garantirSeed } from "./seed";
 
 const CHAVE = "descontosBonificacoes";
 
-function idsColaboradoresDaFilial(filial: string): Set<string> {
+function habilitadosDaFilial(filial: string): Colaborador[] {
   const colaboradores = lerColecao<Colaborador>("colaboradores");
   const filtrados = filial === FILIAL_TODAS ? colaboradores : colaboradores.filter((c) => c.filial === filial);
-  return new Set(filtrados.map((c) => c.id));
+  return filtrados.filter((c) => c.telas.descontos);
 }
 
 export const descontosServiceMock: DescontosService = {
   async listarDescontos(filial, mesReferencia) {
     garantirSeed();
-    const idsFilial = idsColaboradoresDaFilial(filial);
+    const habilitados = habilitadosDaFilial(filial);
+    const idsFilial = new Set(habilitados.map((c) => c.id));
     const lancamentos = lerColecao<DescontoBonificacao>(CHAVE).filter(
       (d) => d.mesReferencia === mesReferencia && idsFilial.has(d.vendedorId),
     );
-    return resultadoSucesso(lancamentos);
+    const colaboradores = habilitados.map((c) => ({ id: c.id, codigo: c.codigo, nome: c.nome }));
+    return resultadoSucesso({ colaboradores, lancamentos });
   },
 
   async salvarDescontos(lancamentos) {
@@ -38,7 +40,7 @@ export const descontosServiceMock: DescontosService = {
 
   async exportarCSV(filial, mesReferencia) {
     garantirSeed();
-    const idsFilial = idsColaboradoresDaFilial(filial);
+    const idsFilial = new Set(habilitadosDaFilial(filial).map((c) => c.id));
     const lancamentos = lerColecao<DescontoBonificacao>(CHAVE).filter(
       (d) => d.mesReferencia === mesReferencia && idsFilial.has(d.vendedorId),
     );

@@ -1,19 +1,28 @@
 import type { ComissaoService } from "../../services/comissaoService";
 import { FILIAL_TODAS, resultadoErro, resultadoSucesso, type Comissao, type Resultado } from "../../types";
 import { baixarCSVPronto, decodificarCsvBase64 } from "../../utils/exportar";
-import { colaboradoresServiceHttp } from "./colaboradoresService.http";
 import { httpClient } from "./cliente";
 import { ErroHttp } from "./httpClient";
 
-/** Linha de `GET /api/comissoes` — ver Claude/API.md. `pev` é buscado ao vivo em Premiações pela própria API. */
+/**
+ * Linha de `GET /api/comissoes` — ver `Claude/API (19).md`. `pev` é buscado ao vivo em
+ * Premiações pela própria API. `codigo`/`cpf`/`filial` vêm prontos nessa resposta (API
+ * 17/19, "Campos de identificação padronizados") — antes precisava cruzar com
+ * `/api/usuarios` só pra preencher esses campos. **Roster completo do mês** (API 19): a
+ * resposta traz todo colaborador com a tela "Comissão", mesmo sem nada lançado ainda
+ * (`comissao`/`garantido` zerados nesse caso) — não precisa mais de uma chamada separada
+ * a colaboradores só pra montar a lista de quem pode lançar.
+ */
 interface RespostaLinhaComissao {
   "id colaborador": number;
+  codigo: string;
   "nome colaborador": string;
   cpf: string;
+  filial: string;
   funcao: string;
   pev: number;
-  comissao: string;
-  garantido: string;
+  comissao: number | string;
+  garantido: number | string;
 }
 
 interface RespostaComissoes {
@@ -34,16 +43,9 @@ function queryFilial(filial: string): string {
 export const comissaoServiceHttp: ComissaoService = {
   async listarComissoes(filial, mesReferencia): Promise<Resultado<Comissao[]>> {
     try {
-      // GET /api/comissoes não devolve a filial de cada colaborador — cruza com
-      // /api/usuarios (mesmo padrão do Consolidado PEV) para preenchê-la.
-      const [resColaboradores, resposta] = await Promise.all([
-        colaboradoresServiceHttp.listarColaboradores(filial),
-        httpClient.get<RespostaComissoes>(`/api/comissoes?mes_de_referencia=${mesReferencia}-01${queryFilial(filial)}`),
-      ]);
-      if (resColaboradores.status !== "sucesso") {
-        return resultadoErro(resColaboradores.status === "erro" ? resColaboradores.mensagem : "Falha ao carregar.");
-      }
-      const filialPorId = new Map(resColaboradores.dados.map((c) => [c.id, c.filial]));
+      const resposta = await httpClient.get<RespostaComissoes>(
+        `/api/comissoes?mes_de_referencia=${mesReferencia}-01${queryFilial(filial)}`,
+      );
 
       const comissoes: Comissao[] = resposta.dados.map((linha) => {
         const vendedorId = String(linha["id colaborador"]);
@@ -52,7 +54,10 @@ export const comissaoServiceHttp: ComissaoService = {
           id: `${vendedorId}-${mesReferencia}`,
           vendedorId,
           vendedorNome: linha["nome colaborador"],
-          filial: filialPorId.get(vendedorId) ?? filial,
+          codigo: linha.codigo,
+          cpf: linha.cpf,
+          cargo: linha.funcao,
+          filial: linha.filial,
           mesReferencia,
           pev: Number(linha.pev),
           valor: Number(linha.comissao),
@@ -85,6 +90,9 @@ export const comissaoServiceHttp: ComissaoService = {
           id: `${linha.vendedorId}-${mesReferencia}`,
           vendedorId: linha.vendedorId,
           vendedorNome: "",
+          codigo: "",
+          cpf: "",
+          cargo: "",
           filial,
           mesReferencia,
           pev: 0,

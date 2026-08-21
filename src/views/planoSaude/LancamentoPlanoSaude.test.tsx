@@ -34,7 +34,20 @@ function renderComoGerente() {
 
 describe("agruparPorTitular (paginação agrupa titular+dependentes, sem separar entre páginas)", () => {
   function pessoa(id: string, tipo: "titular" | "dependente", titularId: string) {
-    return { id, codigo: id, nome: id, tipo, titularId, filial: "100" };
+    return {
+      id,
+      codigo: id,
+      nome: id,
+      cpf: "",
+      tipo,
+      titularId,
+      filial: "100",
+      valorTitular: 0,
+      valorDependente: 0,
+      valorAdicional: 0,
+      valorCoparticipacao: 0,
+      total: 0,
+    };
   }
 
   it("agrupa titular com seus dependentes num único grupo, na ordem em que aparecem", () => {

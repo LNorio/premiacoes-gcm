@@ -97,12 +97,38 @@ describe("planoSaudeServiceHttp.salvarAdesaoDependente", () => {
 });
 
 describe("planoSaudeServiceHttp.listarLancamentosPlanoSaude", () => {
-  it("mapeia 'dados' do GET /api/lancamentos, distinguindo titular/dependente pelo id dependente, e o total de desligados por coluna", async () => {
+  it("mapeia 'dados' do GET /api/lancamentos (roster completo, já com valores calculados — Claude/API (19).md) e o total de desligados por coluna", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         dados: [
-          { "id colaborador": 4, "id dependente": null, "valor adicional": 20, "valor coparticipacao": 5 },
-          { "id colaborador": 4, "id dependente": 9, "valor adicional": 0, "valor coparticipacao": 0 },
+          {
+            "tipo pessoa": "titular",
+            "id colaborador": 4,
+            "id dependente": null,
+            codigo: "V001",
+            cpf: "111.111.111-11",
+            nome: "Carlos Eduardo Silva",
+            filial: "100",
+            "valor titular": 185.27,
+            "valor dependente": 0,
+            "valor adicional": 20,
+            "valor coparticipacao": 5,
+            total: 210.27,
+          },
+          {
+            "tipo pessoa": "dependente",
+            "id colaborador": 4,
+            "id dependente": 9,
+            codigo: "V001",
+            cpf: "222.222.222-22",
+            nome: "Maria Silva",
+            filial: "100",
+            "valor titular": 0,
+            "valor dependente": 185.27,
+            "valor adicional": 0,
+            "valor coparticipacao": 0,
+            total: 185.27,
+          },
         ],
         "total desligados titular": 3000,
         "total desligados dependente": 500,
@@ -116,24 +142,34 @@ describe("planoSaudeServiceHttp.listarLancamentosPlanoSaude", () => {
     expect(resultado).toEqual({
       status: "sucesso",
       dados: {
-        lancamentos: [
+        pessoas: [
           {
-            id: "4-titular-saude-2026-08",
-            pessoaId: "4",
+            id: "4",
+            codigo: "V001",
+            nome: "Carlos Eduardo Silva",
+            cpf: "111.111.111-11",
+            tipo: "titular",
             titularId: "4",
-            mesReferencia: "2026-08",
-            tipoPlano: "saude",
+            filial: "100",
+            valorTitular: 185.27,
+            valorDependente: 0,
             valorAdicional: 20,
             valorCoparticipacao: 5,
+            total: 210.27,
           },
           {
-            id: "4-9-saude-2026-08",
-            pessoaId: "9",
+            id: "9",
+            codigo: "V001",
+            nome: "Maria Silva",
+            cpf: "222.222.222-22",
+            tipo: "dependente",
             titularId: "4",
-            mesReferencia: "2026-08",
-            tipoPlano: "saude",
+            filial: "100",
+            valorTitular: 0,
+            valorDependente: 185.27,
             valorAdicional: 0,
             valorCoparticipacao: 0,
+            total: 185.27,
           },
         ],
         totalDesligados: { titular: 3000, dependente: 500, adicional: 200, coparticipacao: 100 },

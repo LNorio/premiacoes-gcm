@@ -1,5 +1,5 @@
 import { encontrarPeriodoPlano, listarPessoasPlanoSaude } from "../../services/planoSaudeService";
-import type { PlanoSaudeService } from "../../services/planoSaudeService";
+import type { PessoaLancamentoPlanoSaude, PlanoSaudeService } from "../../services/planoSaudeService";
 import {
   FILIAL_TODAS,
   resultadoErro,
@@ -78,15 +78,41 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
 
   async listarLancamentosPlanoSaude(filial, mesReferencia, tipo) {
     garantirSeed();
+    // GET /api/lancamentos real já devolve o roster inteiro pronto (Claude/API (19).md) —
+    // titular/dependente ativos com adesão, valor já calculado do período vigente, mesmo
+    // sem nenhum "valor adicional"/"valor coparticipacao" lançado. Monta a mesma coisa aqui.
     const colaboradores = lerColecao<Colaborador>("colaboradores");
-    const titulares = filial === FILIAL_TODAS ? colaboradores : colaboradores.filter((c) => c.filial === filial);
-    const idsTitulares = new Set(titulares.map((t) => t.id));
-    const dependentes = lerColecao<PlanoSaudeDependente>(CHAVE_DEPENDENTES).filter((d) => idsTitulares.has(d.vendedorId));
-    const idsPessoas = new Set([...idsTitulares, ...dependentes.map((d) => d.id)]);
-
-    const lancamentos = lerColecao<PlanoSaudeLancamento>(CHAVE_LANCAMENTOS).filter(
-      (l) => l.mesReferencia === mesReferencia && l.tipoPlano === tipo && idsPessoas.has(l.pessoaId),
+    const titulares = (filial === FILIAL_TODAS ? colaboradores : colaboradores.filter((c) => c.filial === filial)).filter(
+      (c) => c.telas.planoSaude && !c.desligado,
     );
+    const dependentes = lerColecao<PlanoSaudeDependente>(CHAVE_DEPENDENTES).filter((d) =>
+      titulares.some((t) => t.id === d.vendedorId),
+    );
+    const pessoasBase = listarPessoasPlanoSaude(titulares, dependentes, tipo);
+
+    const periodos = lerColecao<PlanoSaudePeriodo>(CHAVE_PERIODOS).filter((p) => p.tipoPlano === tipo);
+    const lancamentosSalvos = lerColecao<PlanoSaudeLancamento>(CHAVE_LANCAMENTOS).filter(
+      (l) => l.mesReferencia === mesReferencia && l.tipoPlano === tipo,
+    );
+    const dependentesPorId = new Map(dependentes.map((d) => [d.id, d]));
+
+    const pessoas: PessoaLancamentoPlanoSaude[] = pessoasBase.map((pessoa) => {
+      const periodo = encontrarPeriodoPlano(periodos, pessoa.filial, tipo, pessoa.tipo, mesReferencia);
+      const valorFixo = periodo?.valor ?? 0;
+      const extras = lancamentosSalvos.find((l) => l.pessoaId === pessoa.id);
+      const cpf = pessoa.tipo === "titular" ? (titulares.find((t) => t.id === pessoa.id)?.cpf ?? "") : (dependentesPorId.get(pessoa.id)?.cpf ?? "");
+      const valorAdicional = extras?.valorAdicional ?? 0;
+      const valorCoparticipacao = extras?.valorCoparticipacao ?? 0;
+      return {
+        ...pessoa,
+        cpf,
+        valorTitular: pessoa.tipo === "titular" ? valorFixo : 0,
+        valorDependente: pessoa.tipo === "dependente" ? valorFixo : 0,
+        valorAdicional,
+        valorCoparticipacao,
+        total: valorFixo + (tipo === "saude" ? valorAdicional + valorCoparticipacao : 0),
+      };
+    });
 
     const registrosDesligados = lerColecao<RegistroDesligados>(CHAVE_DESLIGADOS).filter(
       (d) => d.tipoPlano === tipo && d.mesReferencia === mesReferencia && (filial === FILIAL_TODAS || d.filial === filial),
@@ -101,7 +127,7 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
       DESLIGADOS_ZERADOS,
     );
 
-    return resultadoSucesso({ lancamentos, totalDesligados });
+    return resultadoSucesso({ pessoas, totalDesligados });
   },
 
   async salvarLancamentoPlanoSaude(lancamento) {
@@ -187,7 +213,7 @@ export const planoSaudeServiceMock: PlanoSaudeService = {
   async exportarCSV(filial, mesReferencia, tipoPlano) {
     garantirSeed();
     const colaboradores = lerColecao<Colaborador>("colaboradores").filter(
-      (c) => (filial === FILIAL_TODAS || c.filial === filial) && c.telas.planoSaude,
+      (c) => (filial === FILIAL_TODAS || c.filial === filial) && c.telas.planoSaude && !c.desligado,
     );
     const dependentes = lerColecao<PlanoSaudeDependente>(CHAVE_DEPENDENTES).filter((d) =>
       colaboradores.some((c) => c.id === d.vendedorId),

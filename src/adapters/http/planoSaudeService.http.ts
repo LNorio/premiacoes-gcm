@@ -1,10 +1,9 @@
-import type { PlanoSaudeService } from "../../services/planoSaudeService";
+import type { PessoaLancamentoPlanoSaude, PlanoSaudeService } from "../../services/planoSaudeService";
 import {
   FILIAL_TODAS,
   resultadoErro,
   resultadoSucesso,
   type PlanoSaudeDependente,
-  type PlanoSaudeLancamento,
   type PlanoSaudePeriodo,
   type TipoPlanoSaude,
 } from "../../types";
@@ -49,12 +48,26 @@ function paraDependente(resposta: RespostaDependente): PlanoSaudeDependente {
 
 // ---------- Lançamentos ----------
 
-/** Linha de `GET /api/lancamentos` (confirmado ao vivo contra a API real) — vem dentro de `"dados"`, já com o valor calculado (não usado aqui: a tela recalcula a partir do período, ver `encontrarPeriodoPlano`). */
+/**
+ * Linha de `GET /api/lancamentos` — ver `Claude/API (19).md`. Roster inteiro pronto: todo
+ * titular/dependente ativo com adesão ao tipo de plano aparece, com `"valor titular"`/
+ * `"valor dependente"` já calculados do período vigente — mesmo sem nenhum `"valor adicional"`/
+ * `"valor coparticipacao"` lançado. Numa linha de dependente, `codigo`/`cpf`/`nome` são os
+ * dele mesmo (código herdado do titular), não os do titular.
+ */
 interface RespostaLinhaLancamento {
+  "tipo pessoa": "titular" | "dependente";
   "id colaborador": number;
   "id dependente": number | null;
+  codigo: string;
+  cpf: string;
+  nome: string;
+  filial: string;
+  "valor titular": number;
+  "valor dependente": number;
   "valor adicional": number;
   "valor coparticipacao": number;
+  total: number;
 }
 interface RespostaLancamentos {
   dados: RespostaLinhaLancamento[];
@@ -64,19 +77,22 @@ interface RespostaLancamentos {
   "total desligados coparticipacao": number;
 }
 
-function paraLancamento(linha: RespostaLinhaLancamento, tipoPlano: TipoPlanoSaude, mesReferencia: string): PlanoSaudeLancamento {
+function paraPessoaLancamento(linha: RespostaLinhaLancamento): PessoaLancamentoPlanoSaude {
   const titularId = String(linha["id colaborador"]);
   const idDependente = linha["id dependente"];
-  const pessoaId = idDependente !== null ? String(idDependente) : titularId;
   return {
-    // API não tem id de lançamento — chave sintética, mesmo padrão de Premiação/Comissão.
-    id: `${titularId}-${idDependente ?? "titular"}-${tipoPlano}-${mesReferencia}`,
-    pessoaId,
+    id: idDependente !== null ? String(idDependente) : titularId,
+    codigo: linha.codigo,
+    nome: linha.nome,
+    cpf: linha.cpf,
+    tipo: linha["tipo pessoa"],
     titularId,
-    mesReferencia,
-    tipoPlano,
+    filial: linha.filial,
+    valorTitular: Number(linha["valor titular"]),
+    valorDependente: Number(linha["valor dependente"]),
     valorAdicional: Number(linha["valor adicional"] ?? 0),
     valorCoparticipacao: Number(linha["valor coparticipacao"] ?? 0),
+    total: Number(linha.total),
   };
 }
 
@@ -177,7 +193,7 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
         `/api/lancamentos?mes_de_referencia=${mesReferencia}-01&tipo_plano=${tipoPlano}${queryFilial(filial)}`,
       );
       return resultadoSucesso({
-        lancamentos: resposta.dados.map((linha) => paraLancamento(linha, tipoPlano, mesReferencia)),
+        pessoas: resposta.dados.map(paraPessoaLancamento),
         totalDesligados: {
           titular: Number(resposta["total desligados titular"] ?? 0),
           dependente: Number(resposta["total desligados dependente"] ?? 0),
@@ -206,8 +222,12 @@ export const planoSaudeServiceHttp: PlanoSaudeService = {
       // PUT não devolve o registro salvo (mesmo padrão de Comissão/Premiação) — relista pra obter a verdade.
       const resLista = await planoSaudeServiceHttp.listarLancamentosPlanoSaude(FILIAL_TODAS, lancamento.mesReferencia, lancamento.tipoPlano);
       if (resLista.status !== "sucesso") return resultadoErro(resLista.status === "erro" ? resLista.mensagem : "Falha ao salvar.");
-      const salvo = resLista.dados.lancamentos.find((l) => l.pessoaId === lancamento.pessoaId);
-      return resultadoSucesso(salvo ?? lancamento);
+      const salvo = resLista.dados.pessoas.find((p) => p.id === lancamento.pessoaId);
+      return resultadoSucesso(
+        salvo
+          ? { ...lancamento, id: salvo.id, valorAdicional: salvo.valorAdicional, valorCoparticipacao: salvo.valorCoparticipacao }
+          : lancamento,
+      );
     } catch (erro) {
       return resultadoErro(paraMensagemErro(erro));
     }

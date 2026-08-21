@@ -11,13 +11,14 @@ afterEach(() => {
 });
 
 describe("descontosServiceHttp.listarDescontos", () => {
-  it("achata 'descontos e bonificacoes' por colaborador num array plano, com id composto", async () => {
+  it("achata 'descontos e bonificacoes' por colaborador num array plano, com id composto, e traz o roster completo (Claude/API (18).md — codigo)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         total: 80,
         dados: [
           {
             "id colaborador": 4,
+            codigo: "V001",
             "nome colaborador": "Carlos Eduardo Silva",
             "descontos e bonificacoes": [
               { id: 2, tipo: "Multa", valor: "50.00", observacao: "atraso" },
@@ -25,7 +26,13 @@ describe("descontosServiceHttp.listarDescontos", () => {
             ],
             total: 80,
           },
-          { "id colaborador": 5, "nome colaborador": "Fernanda Souza Lima", "descontos e bonificacoes": [], total: 0 },
+          {
+            "id colaborador": 5,
+            codigo: "V005",
+            "nome colaborador": "Fernanda Souza Lima",
+            "descontos e bonificacoes": [],
+            total: 0,
+          },
         ],
       }),
     );
@@ -34,12 +41,21 @@ describe("descontosServiceHttp.listarDescontos", () => {
     const resultado = await descontosServiceHttp.listarDescontos("100", "2026-08");
     expect(resultado).toEqual({
       status: "sucesso",
-      dados: [
-        { id: "4:2", vendedorId: "4", mesReferencia: "2026-08", tipo: "Multa", valor: 50, observacoes: "atraso" },
-        { id: "4:4", vendedorId: "4", mesReferencia: "2026-08", tipo: "Farmácia", valor: 30, observacoes: "" },
-      ],
+      dados: {
+        // roster inteiro — inclusive Fernanda, que ainda não tem lançamento nenhum.
+        colaboradores: [
+          { id: "4", codigo: "V001", nome: "Carlos Eduardo Silva" },
+          { id: "5", codigo: "V005", nome: "Fernanda Souza Lima" },
+        ],
+        lancamentos: [
+          { id: "4:2", vendedorId: "4", mesReferencia: "2026-08", tipo: "Multa", valor: 50, observacoes: "atraso" },
+          { id: "4:4", vendedorId: "4", mesReferencia: "2026-08", tipo: "Farmácia", valor: 30, observacoes: "" },
+        ],
+      },
     });
 
+    // uma única chamada, sem passar por /api/usuarios
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toContain("mes_de_referencia=2026-08-01");
     expect(url).toContain("filial=100");

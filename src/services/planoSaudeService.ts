@@ -19,6 +19,11 @@ export interface PlanoSaudeService {
 
   // Sub-aba Lançamento
   /**
+   * `GET /api/lancamentos` já traz o roster inteiro pronto (`Claude/API (19).md`) — todo
+   * titular/dependente ativo, com adesão ao tipo de plano, já com o valor calculado a partir
+   * do período vigente (mesmo sem nenhum "valor adicional"/"valor coparticipacao" lançado).
+   * Não precisa mais de chamadas separadas a colaboradores, dependentes (uma por titular) nem
+   * períodos só pra montar a grade — tudo vem numa chamada só.
    * `totalDesligados` vem do mesmo `GET /api/lancamentos` — total agregado (não itemizado por
    * pessoa, mas separado por Titular/Dependente/Adicional/Coopart.) dos colaboradores desligados;
    * em `filial=Todas`, já vem somado pela API.
@@ -27,7 +32,7 @@ export interface PlanoSaudeService {
     filial: string,
     mesReferencia: string,
     tipo: TipoPlanoSaude,
-  ): Promise<Resultado<{ lancamentos: PlanoSaudeLancamento[]; totalDesligados: TotaisDesligadosPlano }>>;
+  ): Promise<Resultado<{ pessoas: PessoaLancamentoPlanoSaude[]; totalDesligados: TotaisDesligadosPlano }>>;
   salvarLancamentoPlanoSaude(lancamento: PlanoSaudeLancamento): Promise<Resultado<PlanoSaudeLancamento>>;
   /** Só permitido numa filial específica — a API não aceita gravar o total agregado de "todas". */
   salvarTotalDesligadosPlanoSaude(
@@ -67,6 +72,21 @@ export interface PessoaPlanoSaude {
   tipo: "titular" | "dependente";
   titularId: string;
   filial: string;
+}
+
+/**
+ * `PessoaPlanoSaude` já com CPF e os valores calculados prontos — vêm direto de
+ * `GET /api/lancamentos` (`Claude/API (19).md`) no HTTP, ou computados a partir do período
+ * vigente no mock (`encontrarPeriodoPlano`). É o shape que `listarLancamentosPlanoSaude`
+ * devolve — a grade de Lançamento consome isso direto, sem recalcular nada.
+ */
+export interface PessoaLancamentoPlanoSaude extends PessoaPlanoSaude {
+  cpf: string;
+  valorTitular: number;
+  valorDependente: number;
+  valorAdicional: number;
+  valorCoparticipacao: number;
+  total: number;
 }
 
 /** Primeiro e último dia (YYYY-MM-DD) do mês de referência (YYYY-MM), para comparar com o período. */
